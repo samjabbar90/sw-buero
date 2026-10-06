@@ -96,6 +96,12 @@
       }
     } catch {
     }
+    try {
+      const breite = 92 * 32, hoehe = 72 * 32;
+      WA.ui.actionBar.addButton({ id: "sw-uebersicht", label: "\u{1F5FA} \xDCbersicht", callback: () => WA.camera.set(breite / 2, hoehe / 2, breite, hoehe, false, true) });
+      WA.ui.actionBar.addButton({ id: "sw-zu-mir", label: "\u{1F4CD} Zu mir", callback: () => WA.camera.followPlayer(true) });
+    } catch {
+    }
     setInterval(() => melden("heartbeat"), 3e4);
     window.addEventListener("pagehide", () => melden("verlassen"));
   });
