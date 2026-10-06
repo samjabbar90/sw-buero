@@ -68,7 +68,7 @@ WA.onInit().then(async () => {
   const alle = []; (function lauf(ls) { ls.forEach(l => { if (l.type === 'group') lauf(l.layers); else alle.push(l); }); })(k.layers);
   kollision = (alle.find(l => l.name === 'collisions') || { data: [] }).data;
   alle.filter(l => l.type === 'objectgroup').forEach(l => l.objects.forEach(o => {
-    if ((o.class === 'area' || o.type === 'area') && o.name && o.name !== 'start') raeume.push({ name: o.name, x: o.x, y: o.y, w: o.width, h: o.height });
+    if ((o.class === 'area' || o.type === 'area') && o.name && o.name !== 'start' && !o.name.startsWith('zu-')) raeume.push({ name: o.name, x: o.x, y: o.y, w: o.width, h: o.height });
   }));
   // Eigene Büros zuerst alphabetisch, gemeinsame Räume oben
   raeume.sort((a, b) => (a.name.startsWith('Büro') - b.name.startsWith('Büro')) || a.name.localeCompare(b.name, 'de'));

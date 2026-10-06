@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Info</title>
+<script src="https://play.workadventu.re/iframe_api.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: transparent; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .karte { background: rgba(15, 23, 42, .86); color: #e2e8f0; border-radius: 12px; padding: 9px 12px; font-size: 13px; line-height: 1.55; }
+  .zeile { display: flex; gap: 7px; align-items: center; white-space: nowrap; }
+  b { color: #fff; }
+  button { margin-top: 5px; width: 100%; border: 0; border-radius: 8px; padding: 5px 8px; background: #0d9488; color: #fff; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+  button.an { background: #b45309; }
+</style>
+</head>
+<body>
+<div class="karte">
+  <div class="zeile">⏱ Online seit <b id="online">–</b></div>
+  <div class="zeile">🕐 <b id="uhr">–</b></div>
+  <div class="zeile" id="tuerZeile" style="display:none">🚪 Deine Tür: <b id="tuer">–</b></div>
+  <div class="zeile">👥 <b id="leute">–</b></div>
+  <button id="fokus" style="display:none"></button>
+</div>
+<script>
+// Infofenster (06.10.2026, Sam): Online-Zeit (nur für einen selbst, nichts wird gespeichert/gesendet), Uhrzeit,
+// eigener Tür-Status, Kollegen im Büro, Fokus-Timer (25 Min Tür auf „besetzt“, danach Pause-Hinweis).
+const start = Date.now();
+const FOKUS_MIN = 25;
+let meineVar = null, vorFokus = null;
+const $ = id => document.getElementById(id);
+const dauer = ms => { const m = Math.floor(ms / 60000); return m < 60 ? m + ' Min' : Math.floor(m / 60) + ':' + String(m % 60).padStart(2, '0') + ' Std'; };
+const STATUS = { frei: '🟢 frei', besetzt: '🟡 besetzt', zu: '🔴 zu' };
+
+function fokusBis() { try { return Number(localStorage.getItem('swFokusBis') || 0); } catch { return 0; } }
+function zeichnen() {
+  $('online').textContent = dauer(Date.now() - start);
+  $('uhr').textContent = new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) + ' · ' + new Date().toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' });
+  if (meineVar) $('tuer').textContent = STATUS[WA.state[meineVar] || 'frei'] || '🟢 frei';
+  try { const n = [...WA.players.list()].length; $('leute').textContent = n === 1 ? '1 Kollege im Büro' : n + ' Kollegen im Büro'; } catch { $('leute').textContent = 'Büro'; }
+  const bis = fokusBis(), b = $('fokus');
+  if (meineVar) {
+    b.style.display = '';
+    if (bis > Date.now()) { b.className = 'an'; b.textContent = '🎯 Fokus: noch ' + Math.ceil((bis - Date.now()) / 60000) + ' Min · beenden'; }
+    else { b.className = ''; b.textContent = '🎯 ' + FOKUS_MIN + ' Min Fokus'; }
+    if (bis && bis <= Date.now()) fokusEnde(true);
+  }
+}
+function fokusEnde(abgelaufen) {
+  try { localStorage.removeItem('swFokusBis'); } catch { /* egal */ }
+  if (meineVar && WA.state[meineVar] === 'besetzt') WA.state.saveVariable(meineVar, vorFokus || 'frei');
+  if (abgelaufen) { try { const m = WA.ui.displayActionMessage({ message: '☕ Fokuszeit vorbei – Zeit für eine kurze Pause!', callback: () => {} }); setTimeout(() => { try { m.remove(); } catch {} }, 10000); } catch {} }
+}
+$('fokus').addEventListener('click', () => {
+  if (fokusBis() > Date.now()) return fokusEnde(false), zeichnen();
+  vorFokus = WA.state[meineVar] || 'frei';
+  try { localStorage.setItem('swFokusBis', String(Date.now() + FOKUS_MIN * 60000)); } catch { /* egal */ }
+  if (vorFokus !== 'zu') WA.state.saveVariable(meineVar, 'besetzt');
+  zeichnen();
+});
+
+WA.onInit().then(async () => {
+  try { await WA.players.configureTracking({ players: true, movement: false }); } catch { /* egal */ }
+  try {
+    let k = await (await fetch(WA.room.mapURL)).json();
+    if (!k.layers && k.mapUrl) k = await (await fetch(new URL(k.mapUrl, WA.room.mapURL).toString())).json();
+    const ich = String(WA.player.name || '').trim().split(/\s+/)[0].toLowerCase();
+    const lauf = ls => ls.forEach(l => { if (l.type === 'group') lauf(l.layers || []); if (l.type === 'objectgroup') (l.objects || []).forEach(o => {
+      const p = n => ((o.properties || []).find(x => x.name === n) || {}).value;
+      if (p('tuerVariable') && String(p('besitzer')).toLowerCase() === ich) meineVar = p('tuerVariable');
+    }); });
+    lauf(k.layers || []);
+  } catch { /* ohne Tür */ }
+  if (meineVar) { $('tuerZeile').style.display = ''; WA.state.onVariableChange(meineVar).subscribe(zeichnen); }
+  zeichnen(); setInterval(zeichnen, 20000);
+});
+</script>
+</body>
+</html>

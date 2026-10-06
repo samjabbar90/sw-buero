@@ -80,7 +80,7 @@
       const lauf = (ls) => ls.forEach((l) => {
         if (l.type === "group") lauf(l.layers || []);
         if (l.type === "objectgroup") (l.objects || []).forEach((o) => {
-          if ((o.class === "area" || o.type === "area") && o.name && o.name !== "start" && !namen.includes(o.name)) namen.push(o.name);
+          if ((o.class === "area" || o.type === "area") && o.name && o.name !== "start" && !o.name.startsWith("zu-") && !namen.includes(o.name)) namen.push(o.name);
         });
       });
       lauf(karte2.layers || []);
@@ -177,7 +177,7 @@
         if (l.type === "group") lauf(l.layers || []);
         if (l.type === "objectgroup") (l.objects || []).forEach((o) => {
           const pr = (n) => ((o.properties || []).find((x) => x.name === n) || {}).value;
-          if (pr("tuerVariable")) tueren.push({ raum: o.name, besitzer: pr("besitzer"), variable: pr("tuerVariable"), felder: JSON.parse(pr("tuerFelder")), schild: JSON.parse(pr("schildFelder")) });
+          if (pr("tuerVariable")) tueren.push({ raum: o.name, besitzer: pr("besitzer"), variable: pr("tuerVariable"), felder: JSON.parse(pr("tuerFelder")), schild: JSON.parse(pr("schildFelder")), rechteck: [o.x / 32, o.y / 32, o.width / 32, o.height / 32] });
         });
       });
       lauf(k.layers || []);
@@ -229,10 +229,86 @@
       setTimeout(() => tuerAnwenden(t), 30500);
     });
   }
+  var INFO = "https://swdigitaltest.de/buero-praesenz/info";
+  var info = { durchsage: null, geburtstage: [], reservierungen: [] };
+  var durchsageGezeigt = null;
+  var begruesst = false;
+  var ballonsGesetzt = "";
+  var hm = (d) => d.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin" });
+  function kurzMeldung(text, ms = 7e3) {
+    try {
+      const m = WA.ui.displayActionMessage({ message: text, callback: () => {
+      } });
+      setTimeout(() => {
+        try {
+          m.remove();
+        } catch {
+        }
+      }, ms);
+    } catch {
+    }
+  }
+  function reservierungZeigen(raum) {
+    const jetzt = hm(/* @__PURE__ */ new Date());
+    const r = (info.reservierungen || []).filter((x) => x.raum === raum && x.bis > jetzt);
+    if (!r.length) return;
+    const aktiv = r.find((x) => x.von <= jetzt);
+    const teil = (x) => `${x.von}\u2013${x.bis} (${x.wer}${x.thema ? " \xB7 " + x.thema : ""})`;
+    kurzMeldung(aktiv ? `\u{1F4C5} ${raum} ist gerade belegt: ${teil(aktiv)}` : `\u{1F4C5} ${raum} heute reserviert: ${r.map(teil).join(", ")}`);
+  }
+  function ballonsSetzen() {
+    const zonen = (karte && karte.tilesets || []).find((t) => t.name === "WA_Decoration");
+    if (!zonen) return;
+    const ballon = zonen.firstgid + 94, kinder = (info.geburtstage || []).map((n) => n.toLowerCase());
+    const schluessel = kinder.join(",");
+    if (schluessel === ballonsGesetzt) return;
+    ballonsGesetzt = schluessel;
+    const kacheln = [];
+    for (const t of tueren) {
+      const [x, y, w] = t.rechteck, an = kinder.includes(t.besitzer.toLowerCase());
+      for (const fx of [x, x + w - 1]) kacheln.push({ x: fx, y, tile: an ? ballon : null, layer: "above/above2" });
+    }
+    try {
+      WA.room.setTiles(kacheln);
+    } catch {
+    }
+  }
+  async function infoLaden() {
+    try {
+      info = await (await fetch(INFO, { headers: { "X-Buero-Key": BUERO_KEY } })).json();
+    } catch {
+      return;
+    }
+    try {
+      const d = info.durchsage;
+      if (d && d.id !== durchsageGezeigt) {
+        durchsageGezeigt = d.id;
+        WA.ui.banner.openBanner({ id: "sw-durchsage", text: `\u{1F4E2} ${d.text} \u2014 ${d.von}`, bgColor: "#0d9488", textColor: "#ffffff", closable: true, timeToClose: 0 });
+      }
+      if (!d && durchsageGezeigt) {
+        durchsageGezeigt = null;
+        WA.ui.banner.closeBanner();
+      }
+    } catch {
+    }
+    ballonsSetzen();
+    if (!begruesst) {
+      begruesst = true;
+      const v = String(WA.player.name || "").split(/\s+/)[0], h = (/* @__PURE__ */ new Date()).getHours();
+      const gruss = h < 11 ? "Guten Morgen" : h < 17 ? "Hallo" : "Guten Abend";
+      const teile = [];
+      if ((info.geburtstage || []).some((n) => n.toLowerCase() === v.toLowerCase())) teile.push("\u{1F389} Alles Gute zum Geburtstag!");
+      const andere = (info.geburtstage || []).filter((n) => n.toLowerCase() !== v.toLowerCase());
+      if (andere.length) teile.push(`\u{1F382} ${andere.join(", ")} ${andere.length === 1 ? "hat" : "haben"} heute Geburtstag`);
+      if ((info.reservierungen || []).length) teile.push(`\u{1F4C5} ${info.reservierungen.length} Raum-Reservierung${info.reservierungen.length === 1 ? "" : "en"} heute`);
+      kurzMeldung(`${gruss} ${v}! ` + (teile.join(" \xB7 ") || "Sch\xF6n, dass du da bist."), 9e3);
+    }
+  }
   function beobachten(name, api) {
     api.onEnter(name).subscribe(() => {
       aktuellerBereich = name;
       bereit.then(() => melden("betreten"));
+      reservierungZeigen(name);
     });
     api.onLeave(name).subscribe(() => {
       if (aktuellerBereich === name) aktuellerBereich = null;
@@ -251,6 +327,19 @@
     } catch {
     }
     await tuerenStarten();
+    infoLaden();
+    setInterval(infoLaden, 3e4);
+    try {
+      await WA.ui.website.open({
+        url: "https://samjabbar90.github.io/sw-buero/info.html",
+        allowApi: true,
+        visible: true,
+        position: { vertical: "top", horizontal: "right" },
+        size: { width: "240px", height: "150px" },
+        margin: { top: "80px", right: "12px" }
+      });
+    } catch {
+    }
     try {
       const breite = (karte && karte.width || 92) * 32, hoehe = (karte && karte.height || 72) * 32;
       WA.ui.actionBar.addButton({ id: "sw-uebersicht", label: "\u{1F5FA} \xDCbersicht", callback: () => WA.camera.set(breite / 2, hoehe / 2, breite, hoehe, false, true) });
