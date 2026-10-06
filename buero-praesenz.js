@@ -121,6 +121,12 @@
       WA.state.saveVariable(t.variable, naechster);
     } });
   }
+  function tuerWache(raum) {
+    const t = tueren.find((x) => x.raum === raum);
+    if (!t || !t.draussen || tuerStatus(t) !== "zu" || istBesitzer(t) || (freigabe.get(t.variable) || 0) > Date.now()) return;
+    WA.player.teleport(t.draussen[0] * 32 + 16, t.draussen[1] * 32 + 16);
+    kurzMeldung(`\u{1F512} ${t.raum} ist abgeschlossen \u2013 Leertaste vor der T\xFCr = anklopfen`, 6e3);
+  }
   var hinweis = null;
   var hinweisTuer = null;
   var geklopft = /* @__PURE__ */ new Map();
@@ -181,6 +187,19 @@
         });
       });
       lauf(k.layers || []);
+      const alle = [];
+      (function f(ls) {
+        ls.forEach((l) => {
+          if (l.type === "group") f(l.layers || []);
+          else alle.push(l);
+        });
+      })(k.layers || []);
+      const kol = (alle.find((l) => l.name === "collisions") || { data: [] }).data, W = k.width;
+      for (const t of tueren) {
+        const [rx, ry, rw, rh] = t.rechteck, drin = (x, y) => x >= rx && x < rx + rw && y >= ry && y < ry + rh;
+        for (const [x, y] of t.felder) for (const [dx, dy] of [[0, 1], [0, -1], [1, 0], [-1, 0]])
+          if (!t.draussen && !drin(x + dx, y + dy) && !kol[(y + dy) * W + x + dx] && !t.felder.some(([a, b]) => a === x + dx && b === y + dy)) t.draussen = [x + dx, y + dy];
+      }
     } catch {
       return;
     }
@@ -307,6 +326,7 @@
   function beobachten(name, api) {
     api.onEnter(name).subscribe(() => {
       aktuellerBereich = name;
+      tuerWache(name);
       bereit.then(() => melden("betreten"));
       reservierungZeigen(name);
     });
