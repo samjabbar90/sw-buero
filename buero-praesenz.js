@@ -329,6 +329,74 @@
       kurzMeldung(`${gruss} ${v}! ` + (teile.join(" \xB7 ") || "Sch\xF6n, dass du da bist."), 9e3);
     }
   }
+  var FOTO_SEITE = "https://samjabbar90.github.io/sw-buero/foto.html";
+  var FOTO_GROESSE = 30;
+  var FOTO_ABSTAND = 78;
+  var fotos = /* @__PURE__ */ new Map();
+  function fotoAdresse(name) {
+    return "https://swdigitaltest.de/buero-praesenz/foto?n=" + encodeURIComponent(name) + "&k=" + BUERO_KEY + "&t=" + (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+  }
+  function fotoSetzen(schluessel, name, x, y) {
+    const f = fotos.get(schluessel);
+    if (f === "kein" || f === "laedt") return;
+    if (f) {
+      try {
+        f.x = Math.round(x - FOTO_GROESSE / 2);
+        f.y = Math.round(y - FOTO_ABSTAND);
+      } catch {
+      }
+      return;
+    }
+    fotos.set(schluessel, "laedt");
+    const url = fotoAdresse(name);
+    fetch(url, { method: "HEAD" }).then(async (r) => {
+      if (!r.ok) {
+        fotos.set(schluessel, "kein");
+        return;
+      }
+      try {
+        const seite = await WA.room.website.create({
+          name: "sw-foto-" + schluessel,
+          url: FOTO_SEITE + "#" + encodeURIComponent(url),
+          visible: true,
+          allowApi: false,
+          origin: "map",
+          scale: 1,
+          position: { x: Math.round(x - FOTO_GROESSE / 2), y: Math.round(y - FOTO_ABSTAND), width: FOTO_GROESSE, height: FOTO_GROESSE }
+        });
+        fotos.set(schluessel, seite);
+      } catch {
+        fotos.set(schluessel, "kein");
+      }
+    }).catch(() => fotos.set(schluessel, "kein"));
+  }
+  function fotoWeg(schluessel) {
+    const f = fotos.get(schluessel);
+    if (f && typeof f === "object") {
+      try {
+        f.delete();
+      } catch {
+      }
+    }
+    fotos.delete(schluessel);
+  }
+  async function fotosStarten() {
+    try {
+      await WA.players.configureTracking({ players: true, movement: true });
+      await bereit;
+      const p = await WA.player.getPosition();
+      fotoSetzen("ich", WA.player.name, p.x, p.y);
+      WA.player.onPlayerMove((e) => fotoSetzen("ich", WA.player.name, e.x, e.y));
+      for (const s of WA.players.list()) fotoSetzen(String(s.playerId), s.name, s.position.x, s.position.y);
+      WA.players.onPlayerEnters.subscribe((s) => fotoSetzen(String(s.playerId), s.name, s.position.x, s.position.y));
+      WA.players.onPlayerMoves.subscribe((ev) => {
+        const s = ev.player;
+        fotoSetzen(String(s.playerId), s.name, ev.newPosition.x, ev.newPosition.y);
+      });
+      WA.players.onPlayerLeaves.subscribe((s) => fotoWeg(String(s.playerId)));
+    } catch {
+    }
+  }
   function beobachten(name, api) {
     api.onEnter(name).subscribe(() => {
       aktuellerBereich = name;
@@ -424,6 +492,7 @@
       });
     } catch {
     }
+    fotosStarten();
     setInterval(() => melden("heartbeat"), 3e4);
     window.addEventListener("pagehide", () => melden("verlassen"));
   });
