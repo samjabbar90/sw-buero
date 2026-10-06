@@ -28,7 +28,53 @@
     }).catch(() => {
     });
   }
-  var TILED_BEREICHE = ["Townhall", "Payroll", "Besprechung 1", "Besprechung 2", "Sam's Buero"];
+  var ERSATZ_BEREICHE = [
+    "B\xFCro Sam",
+    "B\xFCro Emre",
+    "B\xFCro Kadir",
+    "B\xFCro Noura",
+    "Townhall",
+    "B\xFCro Attila",
+    "B\xFCro Ferhat",
+    "B\xFCro Angelina",
+    "B\xFCro Leutrim",
+    "Besprechung 1",
+    "Besprechung 2",
+    "B\xFCro Katharina",
+    "B\xFCro Tanja",
+    "B\xFCro Kerstin",
+    "B\xFCro Kubilay",
+    "B\xFCro Bin",
+    "B\xFCro Ilona",
+    "K\xFCche & Kaffee",
+    "B\xFCro Angelika",
+    "B\xFCro Bahjat",
+    "B\xFCro Christiane",
+    "B\xFCro Dilber",
+    "B\xFCro Fatih",
+    "B\xFCro Jana",
+    "B\xFCro Julien",
+    "B\xFCro Leonita",
+    "B\xFCro Onur",
+    "Chill-Zone"
+  ];
+  async function kartenBereiche() {
+    try {
+      let karte = await (await fetch(WA.room.mapURL)).json();
+      if (!karte.layers && karte.mapUrl) karte = await (await fetch(new URL(karte.mapUrl, WA.room.mapURL).toString())).json();
+      const namen = [];
+      const lauf = (ls) => ls.forEach((l) => {
+        if (l.type === "group") lauf(l.layers || []);
+        if (l.type === "objectgroup") (l.objects || []).forEach((o) => {
+          if ((o.class === "area" || o.type === "area") && o.name && o.name !== "start" && !namen.includes(o.name)) namen.push(o.name);
+        });
+      });
+      lauf(karte.layers || []);
+      return namen.length ? namen : ERSATZ_BEREICHE;
+    } catch {
+      return ERSATZ_BEREICHE;
+    }
+  }
   function beobachten(name, api) {
     api.onEnter(name).subscribe(() => {
       aktuellerBereich = name;
@@ -39,13 +85,14 @@
       bereit.then(() => melden("betreten"));
     });
   }
-  WA.onInit().then(() => {
+  WA.onInit().then(async () => {
     bereit = melden("betreten", true);
-    for (const name of TILED_BEREICHE) beobachten(name, WA.room.area);
+    const tiled = await kartenBereiche();
+    for (const name of tiled) beobachten(name, WA.room.area);
     try {
       for (const area of WA.mapEditor.area.list()) {
         const name = area.name;
-        if (name && !TILED_BEREICHE.includes(name)) beobachten(name, WA.mapEditor.area);
+        if (name && !tiled.includes(name)) beobachten(name, WA.mapEditor.area);
       }
     } catch {
     }
