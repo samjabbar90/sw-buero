@@ -360,9 +360,10 @@
         url: "https://samjabbar90.github.io/sw-buero/info.html",
         allowApi: true,
         visible: true,
-        position: { vertical: "top", horizontal: "right" },
-        size: { width: "240px", height: "150px" },
-        margin: { top: "80px", right: "12px" }
+        // genau so groß wie die Leiste (kein weißer Rand): mit eigener Tür breiter (Tür + Fokus), sonst nur Uhrzeit + Kollegen
+        position: { vertical: "bottom", horizontal: "middle" },
+        size: { width: meineTuer() ? "430px" : "230px", height: "40px" },
+        margin: { bottom: "14px" }
       });
     } catch {
     }
