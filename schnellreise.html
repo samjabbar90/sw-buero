@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Schnellreise</title>
+<script src="https://play.workadventu.re/iframe_api.js"></script>
+<style>
+  :root { --bg: #1e293b; --karte: #273449; --text: #e2e8f0; --leise: #94a3b8; --akzent: #0d9488; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); padding: 14px; }
+  input { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid #475569; background: #0f172a; color: var(--text); font-size: 15px; margin-bottom: 12px; }
+  h2 { font-size: 12px; letter-spacing: .6px; text-transform: uppercase; color: var(--leise); margin: 14px 0 6px; }
+  .liste { display: grid; gap: 6px; }
+  button { text-align: left; width: 100%; padding: 10px 12px; border: 1px solid #334155; border-radius: 10px; background: var(--karte); color: var(--text); font-size: 14px; cursor: pointer; display: flex; gap: 8px; align-items: center; }
+  button:hover { border-color: var(--akzent); }
+  .leer { color: var(--leise); font-size: 13px; }
+  .punkt { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; flex-shrink: 0; }
+</style>
+</head>
+<body>
+<input id="suche" placeholder="Raum oder Kollege suchen …" autocomplete="off">
+<h2>Kollegen im Büro</h2>
+<div class="liste" id="leute"><div class="leer">Lädt …</div></div>
+<h2>Räume</h2>
+<div class="liste" id="raeume"><div class="leer">Lädt …</div></div>
+<script>
+// Schnellreise (06.10.2026): Räume aus der Karte + Kollegen im Büro; Klick = sofort dort (WA.player.teleport).
+// Ziel ist immer ein freies Feld (ohne Kollision) nahe der Raummitte bzw. neben dem Kollegen.
+const T = 32;
+let karte = null, kollision = null, raeume = [];
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+function freiesFeld(px, py, box) {
+  // nächstes Feld ohne Kollision (Breitensuche), optional innerhalb eines Rechtecks
+  const W = karte.width, H = karte.height, sx = Math.floor(px / T), sy = Math.floor(py / T);
+  const drin = (x, y) => x >= 0 && y >= 0 && x < W && y < H && (!box || (x >= box.x0 && x <= box.x1 && y >= box.y0 && y <= box.y1));
+  const gesehen = new Set([sx + ',' + sy]), q = [[sx, sy]];
+  while (q.length) {
+    const [x, y] = q.shift();
+    if (drin(x, y) && !kollision[y * W + x]) return { x: x * T + T / 2, y: y * T + T / 2 };
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const k = (x + dx) + ',' + (y + dy); if (!gesehen.has(k) && drin(x + dx, y + dy)) { gesehen.add(k); q.push([x + dx, y + dy]); } }
+  }
+  return { x: px, y: py };
+}
+function reisen(ziel) { WA.player.teleport(ziel.x, ziel.y); WA.ui.modal.closeModal(); }
+
+function zeichnen() {
+  const s = document.getElementById('suche').value.trim().toLowerCase();
+  const passt = n => !s || n.toLowerCase().includes(s);
+  const r = raeume.filter(x => passt(x.name));
+  document.getElementById('raeume').innerHTML = r.length ? r.map((x, i) => `<button data-raum="${raeume.indexOf(x)}">🚪 ${esc(x.name)}</button>`).join('') : '<div class="leer">Kein Raum gefunden</div>';
+  const leute = [...WA.players.list()].filter(p => passt(p.name)).sort((a, b) => a.name.localeCompare(b.name, 'de'));
+  document.getElementById('leute').innerHTML = leute.length ? leute.map(p => `<button data-spieler="${esc(p.playerId)}"><span class="punkt"></span>${esc(p.name)}</button>`).join('') : '<div class="leer">Gerade niemand außer dir</div>';
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.raum) { const r = raeume[+b.dataset.raum]; reisen(freiesFeld(r.x + r.w / 2, r.y + r.h / 2, { x0: r.x / T, y0: r.y / T, x1: (r.x + r.w) / T - 1, y1: (r.y + r.h) / T - 1 })); }
+  if (b.dataset.spieler) { const p = [...WA.players.list()].find(x => String(x.playerId) === b.dataset.spieler); if (p) reisen(freiesFeld(p.position.x + T, p.position.y)); }
+});
+document.getElementById('suche').addEventListener('input', zeichnen);
+
+WA.onInit().then(async () => {
+  await WA.players.configureTracking({ players: true, movement: true });
+  let k = await (await fetch(WA.room.mapURL)).json();
+  if (!k.layers && k.mapUrl) k = await (await fetch(new URL(k.mapUrl, WA.room.mapURL).toString())).json();
+  karte = k;
+  const alle = []; (function lauf(ls) { ls.forEach(l => { if (l.type === 'group') lauf(l.layers); else alle.push(l); }); })(k.layers);
+  kollision = (alle.find(l => l.name === 'collisions') || { data: [] }).data;
+  alle.filter(l => l.type === 'objectgroup').forEach(l => l.objects.forEach(o => {
+    if ((o.class === 'area' || o.type === 'area') && o.name && o.name !== 'start') raeume.push({ name: o.name, x: o.x, y: o.y, w: o.width, h: o.height });
+  }));
+  // Eigene Büros zuerst alphabetisch, gemeinsame Räume oben
+  raeume.sort((a, b) => (a.name.startsWith('Büro') - b.name.startsWith('Büro')) || a.name.localeCompare(b.name, 'de'));
+  zeichnen();
+  WA.players.onPlayerEnters.subscribe(zeichnen); WA.players.onPlayerLeaves.subscribe(zeichnen);
+  document.getElementById('suche').focus();
+});
+</script>
+</body>
+</html>
