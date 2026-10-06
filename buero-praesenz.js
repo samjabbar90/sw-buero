@@ -7,6 +7,9 @@
   var aktuellerBereich = null;
   var beendet = false;
   var bereit = Promise.resolve();
+  var position = null;
+  var gespraech = /* @__PURE__ */ new Set();
+  var zuletztGemeldet = 0;
   function beenden() {
     if (beendet) return;
     beendet = true;
@@ -18,6 +21,7 @@
   }
   function melden(event, start = false) {
     if (beendet) return Promise.resolve();
+    zuletztGemeldet = Date.now();
     const meine = meineTuer();
     return fetch(ENDPOINT, {
       method: "POST",
@@ -28,7 +32,9 @@
         event,
         sitzung: SITZUNG,
         start,
-        tuer: meine ? { raum: meine.raum, status: tuerStatus(meine) } : null
+        tuer: meine ? { raum: meine.raum, status: tuerStatus(meine) } : null,
+        pos: position,
+        gespraech: [...gespraech]
       }),
       keepalive: true
     }).then((r) => r.json()).then((d) => {
@@ -384,6 +390,37 @@
         allowApi: true,
         position: "right"
       }) });
+    } catch {
+    }
+    try {
+      const p = await WA.player.getPosition();
+      position = { x: p.x, y: p.y };
+    } catch {
+    }
+    WA.player.onPlayerMove((e) => {
+      position = { x: e.x, y: e.y };
+      if (Date.now() - zuletztGemeldet > 5e3) melden("heartbeat");
+    });
+    try {
+      const pm = WA.player.proximityMeeting;
+      const neu = () => melden("heartbeat");
+      pm.onJoin().subscribe((leute) => {
+        gespraech.clear();
+        (leute || []).forEach((p) => p && p.name && gespraech.add(p.name));
+        neu();
+      });
+      pm.onParticipantJoin().subscribe((p) => {
+        if (p && p.name) gespraech.add(p.name);
+        neu();
+      });
+      pm.onParticipantLeave().subscribe((p) => {
+        if (p && p.name) gespraech.delete(p.name);
+        neu();
+      });
+      pm.onLeave().subscribe(() => {
+        gespraech.clear();
+        neu();
+      });
     } catch {
     }
     setInterval(() => melden("heartbeat"), 3e4);
