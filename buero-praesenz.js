@@ -254,7 +254,21 @@
     try {
       const breite = (karte && karte.width || 92) * 32, hoehe = (karte && karte.height || 72) * 32;
       WA.ui.actionBar.addButton({ id: "sw-uebersicht", label: "\u{1F5FA} \xDCbersicht", callback: () => WA.camera.set(breite / 2, hoehe / 2, breite, hoehe, false, true) });
-      WA.ui.actionBar.addButton({ id: "sw-zu-mir", label: "\u{1F4CD} Zu mir", callback: () => WA.camera.followPlayer(true) });
+      let blick = 0;
+      const blicken = async (felder) => {
+        try {
+          blick += felder;
+          const p = await WA.player.getPosition();
+          WA.camera.set(p.x, p.y + blick * 32, void 0, void 0, true, true);
+        } catch {
+        }
+      };
+      WA.ui.actionBar.addButton({ id: "sw-blick-hoch", label: "\u2B06 Blick hoch", callback: () => blicken(-6) });
+      WA.ui.actionBar.addButton({ id: "sw-blick-runter", label: "\u2B07 Blick runter", callback: () => blicken(6) });
+      WA.ui.actionBar.addButton({ id: "sw-zu-mir", label: "\u{1F4CD} Zu mir", callback: () => {
+        blick = 0;
+        WA.camera.followPlayer(true);
+      } });
       WA.ui.actionBar.addButton({ id: "sw-schnellreise", label: "\u{1F680} Schnellreise", callback: () => WA.ui.modal.openModal({
         title: "Schnellreise",
         src: "https://samjabbar90.github.io/sw-buero/schnellreise.html",
