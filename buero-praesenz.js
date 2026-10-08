@@ -137,8 +137,8 @@
   var hinweisTuer = null;
   var geklopft = /* @__PURE__ */ new Map();
   function naheTuer(px, py) {
-    const fx = Math.floor(px / 32), fy = Math.floor(py / 32);
-    return tueren.find((t) => !istBesitzer(t) && tuerStatus(t) !== "frei" && aktuellerBereich !== t.raum && t.felder.some(([x, y]) => Math.max(Math.abs(x - fx), Math.abs(y - fy)) <= 2)) || null;
+    const fx2 = Math.floor(px / 32), fy = Math.floor(py / 32);
+    return tueren.find((t) => !istBesitzer(t) && tuerStatus(t) !== "frei" && aktuellerBereich !== t.raum && t.felder.some(([x, y]) => Math.max(Math.abs(x - fx2), Math.abs(y - fy)) <= 2)) || null;
   }
   function hinweisZeigen(t) {
     if ((t ? t.variable : null) === hinweisTuer) return;
@@ -291,7 +291,7 @@
     const kacheln = [];
     for (const t of tueren) {
       const [x, y, w] = t.rechteck, an = kinder.includes(t.besitzer.toLowerCase());
-      for (const fx of [x, x + w - 1]) kacheln.push({ x: fx, y, tile: an ? ballon : null, layer: "above/above2" });
+      for (const fx2 of [x, x + w - 1]) kacheln.push({ x: fx2, y, tile: an ? ballon : null, layer: "above/above2" });
     }
     try {
       WA.room.setTiles(kacheln);
@@ -311,6 +311,29 @@
       if (tuerVorTelefon === "frei" && tuerStatus(t) === "besetzt") WA.state.saveVariable(t.variable, "frei");
       tuerVorTelefon = null;
     }
+  }
+  var fxStand = {};
+  function fx(name, an) {
+    if (fxStand[name] === an) return;
+    fxStand[name] = an;
+    try {
+      an ? WA.room.showLayer(name) : WA.room.hideLayer(name);
+    } catch {
+    }
+  }
+  function effekte() {
+    const glasBelegt = aktuellerBereich === "Besprechung Glas" || (info.belegt || []).includes("Besprechung Glas");
+    fx("fx-glas-besetzt", glasBelegt);
+    fx("fx-glas-frei", !glasBelegt);
+    const teile = (/* @__PURE__ */ new Date()).toLocaleString("sv-SE", { timeZone: "Europe/Berlin" }).split(/[- :]/).map(Number);
+    const monat = teile[1], min = teile[3] * 60 + teile[4];
+    const nacht = min >= 20 * 60 || min < 6 * 60 + 30, abend = !nacht && (min >= 18 * 60 || min < 7 * 60 + 30);
+    fx("fx-nacht", nacht);
+    fx("fx-lichter", nacht);
+    fx("fx-abend", abend);
+    const winter = monat === 12 || monat <= 2;
+    fx("fx-schnee", winter);
+    fx("fx-schneefall", winter);
   }
   async function infoLaden() {
     try {
@@ -332,6 +355,7 @@
     }
     ballonsSetzen();
     telefonTuer();
+    effekte();
     if (!begruesst) {
       begruesst = true;
       const v = String(WA.player.name || "").split(/\s+/)[0], h = (/* @__PURE__ */ new Date()).getHours();
@@ -350,10 +374,12 @@
       tuerWache(name);
       bereit.then(() => melden("betreten"));
       reservierungZeigen(name);
+      effekte();
     });
     api.onLeave(name).subscribe(() => {
       if (aktuellerBereich === name) aktuellerBereich = null;
       bereit.then(() => melden("betreten"));
+      effekte();
     });
   }
   WA.onInit().then(async () => {
@@ -368,6 +394,8 @@
     } catch {
     }
     await tuerenStarten();
+    effekte();
+    setInterval(effekte, 6e4);
     infoLaden();
     setInterval(infoLaden, 15e3);
     try {
