@@ -439,12 +439,12 @@
       });
     }
   }
-  var HELPCENTER = [{ x: 13, y: 27 }, { x: 38, y: 4 }];
+  var HELPCENTER = [{ x: 12, y: 27 }, { x: 39, y: 4 }];
   var hcFenster = null;
   var hcHinweis = null;
   function helpcenterRoboter() {
     HELPCENTER.forEach((h, i) => {
-      const n = i + 1, bereich = { x: (h.x - 1) * 32, y: (h.y + 1) * 32, w: 5 * 32, h: 5 * 32 };
+      const n = i + 1, bereich = { x: (h.x - 1) * 32, y: (h.y + 3) * 32, w: 8 * 32, h: 3 * 32 };
       const rein = () => {
         fx(`fx-hc${n}-aktiv`, true);
         fx(`fx-hc${n}-ruhe`, false);
