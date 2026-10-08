@@ -524,6 +524,55 @@
     } catch {
     }
   }
+  var FITNESS = { x: 60, y: 7 };
+  function fitnessEmpfang() {
+    const b = { x: (FITNESS.x - 1) * 32, y: (FITNESS.y + 3) * 32, w: 8 * 32, h: 3 * 32 };
+    let fenster = null, hinweis2 = null;
+    const rein = () => {
+      fx("fx-fit-aktiv", true);
+      fx("fx-fit-ruhe", false);
+      try {
+        hinweis2 = WA.ui.displayActionMessage({ message: "\u2764\uFE0F Health & Wellbeing \xB7 Leertaste", callback: async () => {
+          try {
+            hinweis2 && hinweis2.remove();
+          } catch {
+          }
+          try {
+            fenster = await WA.nav.openCoWebSite(SEITEN + "health.html?name=" + encodeURIComponent(WA.player.name || "") + "&t=" + Date.now());
+          } catch {
+          }
+        } });
+      } catch {
+      }
+    };
+    const raus = () => {
+      fx("fx-fit-aktiv", false);
+      fx("fx-fit-ruhe", true);
+      try {
+        hinweis2 && hinweis2.remove();
+      } catch {
+      }
+      hinweis2 = null;
+      try {
+        fenster && fenster.close();
+      } catch {
+      }
+      fenster = null;
+    };
+    try {
+      WA.room.area.create({ name: "fitness-empfang", x: b.x, y: b.y, width: b.w, height: b.h });
+      WA.room.area.onEnter("fitness-empfang").subscribe(rein);
+      WA.room.area.onLeave("fitness-empfang").subscribe(raus);
+    } catch {
+      let drin = false;
+      WA.player.onPlayerMove((e) => {
+        const j = e.x >= b.x && e.x < b.x + b.w && e.y >= b.y && e.y < b.y + b.h;
+        if (j && !drin) rein();
+        if (!j && drin) raus();
+        drin = j;
+      });
+    }
+  }
   async function infoLaden() {
     try {
       info = await (await fetch(INFO, { headers: { "X-Buero-Key": BUERO_KEY } })).json();
@@ -602,6 +651,7 @@
     newsTafel();
     helpcenterRoboter();
     lernzimmer();
+    fitnessEmpfang();
     try {
       const breite = 74 * 32, hoehe = 46 * 32;
       void karte;
