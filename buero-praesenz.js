@@ -645,6 +645,7 @@
       console.warn("K\xFCche: Tileset nicht geladen", e);
       return;
     }
+    for (const k of Object.keys(fxStand)) delete fxStand[k];
     try {
       WA.room.setTiles(KUECHE.kacheln.map(([x, y, layer, k]) => ({ x, y, layer, tile: erste + k })));
       WA.room.setTiles(KUECHE.sperren.map(([x, y]) => ({ x, y, layer: "collisions", tile: kollisionGid })));
@@ -804,6 +805,7 @@
   }
   WA.onInit().then(async () => {
     bereit = melden("betreten", true);
+    await kueche();
     const tiled = await kartenBereiche();
     for (const name of tiled) beobachten(name, WA.room.area);
     try {
@@ -835,7 +837,6 @@
     lernzimmer();
     fitnessEmpfang();
     ranglistenTafel();
-    kueche();
     fussball();
     fussgaengerAmpel();
     try {
