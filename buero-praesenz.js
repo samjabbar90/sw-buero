@@ -383,7 +383,8 @@
     } catch {
     }
     try {
-      const breite = (karte && karte.width || 92) * 32, hoehe = (karte && karte.height || 72) * 32;
+      const breite = 74 * 32, hoehe = 46 * 32;
+      void karte;
       WA.ui.actionBar.addButton({ id: "sw-uebersicht", label: "\u{1F5FA} \xDCbersicht", callback: () => WA.camera.set(breite / 2, hoehe / 2, breite, hoehe, false, true) });
       let blick = 0;
       const blicken = async (felder) => {
