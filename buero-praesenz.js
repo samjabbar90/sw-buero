@@ -448,7 +448,7 @@
     } catch {
     }
   }
-  var FITNESS = { x: 74, y: 7 };
+  var FITNESS = { x: 74, y: 8 };
   function fitnessEmpfang() {
     const b = { x: (FITNESS.x - 1) * 32, y: (FITNESS.y + 3) * 32, w: 8 * 32, h: 3 * 32 };
     let fenster = null, hinweis2 = null;
@@ -545,7 +545,7 @@
       });
     }
   }
-  var OFFENE_RAEUME = [18, 23, 28].flatMap((x) => [18, 26].map((y) => ({ x, y, w: 5, h: 4 })));
+  var OFFENE_RAEUME = [16, 21, 26, 31].flatMap((x) => [18, 26].map((y) => ({ x, y, w: 5, h: 4 })));
   var ideenFenster = null;
   var ideenHinweis = null;
   async function ideenOeffnen() {
@@ -681,7 +681,7 @@
     fitnessEmpfang();
     ranglistenTafel();
     try {
-      const breite = 87 * 32, hoehe = 58 * 32;
+      const breite = 87 * 32, hoehe = 62 * 32;
       void karte;
       WA.ui.actionBar.addButton({ id: "sw-uebersicht", label: "\u{1F5FA} \xDCbersicht", callback: () => WA.camera.set(breite / 2, hoehe / 2, breite, hoehe, false, true) });
       let blick = 0;
