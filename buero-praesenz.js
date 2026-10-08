@@ -805,7 +805,7 @@
   }
   WA.onInit().then(async () => {
     bereit = melden("betreten", true);
-    await Promise.race([kueche(), new Promise((r) => setTimeout(r, 8e3))]);
+    void kueche;
     const tiled = await kartenBereiche();
     for (const name of tiled) beobachten(name, WA.room.area);
     try {
