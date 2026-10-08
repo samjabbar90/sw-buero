@@ -1,4 +1,7 @@
 (() => {
+  // kueche-daten.ts
+  var KUECHE = { "tileset": "https://swdigitaltest.de/buero-praesenz/bild/SW_Kueche.json", "geraete": ["kuehlschrank", "herd", "kaffee"], "kacheln": [[68, 34, "kueche-kuehlschrank-aus", 0], [68, 34, "kueche-kuehlschrank-an", 0], [69, 34, "kueche-kuehlschrank-aus", 0], [69, 34, "kueche-kuehlschrank-an", 0], [68, 35, "kueche-kuehlschrank-aus", 1], [68, 35, "kueche-kuehlschrank-an", 1], [69, 35, "kueche-kuehlschrank-aus", 1], [69, 35, "kueche-kuehlschrank-an", 2], [70, 35, "kueche-kuehlschrank-aus", 3], [70, 35, "kueche-kuehlschrank-an", 4], [71, 35, "kueche", 5], [72, 35, "kueche", 6], [73, 35, "kueche", 7], [74, 35, "kueche", 8], [75, 35, "kueche", 5], [76, 35, "kueche-herd-aus", 9], [76, 35, "kueche-herd-an", 10], [77, 35, "kueche", 5], [78, 35, "kueche", 5], [79, 35, "kueche", 11], [80, 35, "kueche", 12], [81, 35, "kueche", 5], [82, 35, "kueche", 5], [83, 35, "kueche", 13], [68, 36, "kueche-kuehlschrank-aus", 14], [68, 36, "kueche-kuehlschrank-an", 14], [69, 36, "kueche-kuehlschrank-aus", 14], [69, 36, "kueche-kuehlschrank-an", 14], [70, 36, "kueche-kuehlschrank-aus", 15], [70, 36, "kueche-kuehlschrank-an", 15], [71, 36, "kueche", 16], [72, 36, "kueche", 17], [73, 36, "kueche", 16], [74, 36, "kueche", 18], [75, 36, "kueche", 16], [76, 36, "kueche-herd-aus", 19], [76, 36, "kueche-herd-an", 20], [77, 36, "kueche", 15], [78, 36, "kueche", 16], [79, 36, "kueche", 17], [80, 36, "kueche", 16], [81, 36, "kueche", 18], [82, 36, "kueche", 16], [83, 36, "kueche-kaffee-aus", 21], [83, 36, "kueche-kaffee-an", 21], [83, 37, "kueche-kaffee-aus", 22], [83, 37, "kueche-kaffee-an", 23], [70, 38, "kueche", 24], [71, 38, "kueche", 25], [72, 38, "kueche", 26], [73, 38, "kueche", 25], [74, 38, "kueche", 27], [75, 38, "kueche", 28], [76, 38, "kueche", 29], [77, 38, "kueche", 30], [78, 38, "kueche", 25], [79, 38, "kueche", 31], [80, 38, "kueche", 32], [83, 38, "kueche-kaffee-aus", 33], [83, 38, "kueche-kaffee-an", 34], [70, 39, "kueche", 35], [71, 39, "kueche", 36], [72, 39, "kueche", 37], [73, 39, "kueche", 38], [74, 39, "kueche", 39], [75, 39, "kueche", 40], [76, 39, "kueche", 41], [77, 39, "kueche", 42], [78, 39, "kueche", 38], [79, 39, "kueche", 43], [80, 39, "kueche", 44], [83, 39, "kueche", 45], [70, 40, "kueche", 46], [71, 40, "kueche", 16], [72, 40, "kueche", 17], [73, 40, "kueche", 18], [74, 40, "kueche", 17], [75, 40, "kueche", 16], [76, 40, "kueche", 17], [77, 40, "kueche", 18], [78, 40, "kueche", 17], [79, 40, "kueche", 16], [80, 40, "kueche", 46], [83, 40, "kueche", 33], [70, 41, "kueche", 47], [71, 41, "kueche", 47], [72, 41, "kueche", 47], [73, 41, "kueche", 47], [74, 41, "kueche", 47], [75, 41, "kueche", 47], [76, 41, "kueche", 47], [77, 41, "kueche", 47], [78, 41, "kueche", 47], [79, 41, "kueche", 47], [80, 41, "kueche", 47], [83, 41, "kueche", 48], [83, 42, "kueche", 46]], "sperren": [[68, 34], [69, 34], [68, 35], [69, 35], [70, 35], [71, 35], [72, 35], [73, 35], [74, 35], [75, 35], [76, 35], [77, 35], [78, 35], [79, 35], [80, 35], [81, 35], [82, 35], [83, 35], [68, 36], [69, 36], [70, 36], [71, 36], [72, 36], [73, 36], [74, 36], [75, 36], [76, 36], [77, 36], [78, 36], [79, 36], [80, 36], [81, 36], [82, 36], [83, 36], [83, 37], [70, 38], [71, 38], [72, 38], [73, 38], [74, 38], [75, 38], [76, 38], [77, 38], [78, 38], [79, 38], [80, 38], [83, 38], [70, 39], [71, 39], [72, 39], [73, 39], [74, 39], [75, 39], [76, 39], [77, 39], [78, 39], [79, 39], [80, 39], [83, 39], [70, 40], [71, 40], [72, 40], [73, 40], [74, 40], [75, 40], [76, 40], [77, 40], [78, 40], [79, 40], [80, 40], [83, 40], [83, 41], [83, 42]] };
+
   // main.ts
   var ENDPOINT = "https://swdigitaltest.de/buero-praesenz/melden";
   var BUERO_KEY = "a21b2aa2a42fe6189b05773c07bbc9ad78e38b34ba3bb6fe";
@@ -600,6 +603,158 @@
       }
     });
   }
+  function leertasteBereich(name, b, text, aktion, raus) {
+    let hinweis2 = null;
+    const zeigen = () => {
+      try {
+        hinweis2 = WA.ui.displayActionMessage({ message: typeof text === "function" ? text() : text, callback: () => {
+          aktion();
+          setTimeout(() => {
+            if (drin) zeigen();
+          }, 1500);
+        } });
+      } catch {
+      }
+    };
+    let drin = false;
+    const rein = () => {
+      drin = true;
+      zeigen();
+    };
+    const weg = () => {
+      drin = false;
+      try {
+        hinweis2 && hinweis2.remove();
+      } catch {
+      }
+      hinweis2 = null;
+      raus && raus();
+    };
+    try {
+      WA.room.area.create({ name, x: b.x * 32, y: b.y * 32, width: b.w * 32, height: b.h * 32 });
+      WA.room.area.onEnter(name).subscribe(rein);
+      WA.room.area.onLeave(name).subscribe(weg);
+    } catch {
+    }
+  }
+  async function kueche() {
+    let erste;
+    try {
+      erste = await WA.room.loadTileset(KUECHE.tileset);
+    } catch (e) {
+      console.warn("K\xFCche: Tileset nicht geladen", e);
+      return;
+    }
+    try {
+      WA.room.setTiles(KUECHE.kacheln.map(([x, y, layer, k]) => ({ x, y, layer, tile: erste + k })));
+      WA.room.setTiles(KUECHE.sperren.map(([x, y]) => ({ x, y, layer: "collisions", tile: kollisionGid })));
+    } catch (e) {
+      console.warn("K\xFCche: Kacheln nicht gesetzt", e);
+      return;
+    }
+    const aus = /* @__PURE__ */ new Map();
+    const benutzen = (g) => {
+      fx("kueche-" + g + "-an", true);
+      fx("kueche-" + g + "-aus", false);
+      clearTimeout(aus.get(g));
+      aus.set(g, setTimeout(() => {
+        fx("kueche-" + g + "-an", false);
+        fx("kueche-" + g + "-aus", true);
+      }, 8e3));
+    };
+    try {
+      WA.event.on("sw-kueche").subscribe((ev) => {
+        const g = ev && ev.data && ev.data.g;
+        if (KUECHE.geraete.includes(g)) benutzen(g);
+      });
+    } catch {
+    }
+    const los = (g) => {
+      benutzen(g);
+      try {
+        WA.event.broadcast("sw-kueche", { g });
+      } catch {
+      }
+    };
+    leertasteBereich("kueche-kuehlschrank", { x: 67, y: 37, w: 4, h: 1 }, "\u{1F9CA} K\xFChlschrank \xF6ffnen \xB7 Leertaste", () => los("kuehlschrank"));
+    leertasteBereich("kueche-herd", { x: 75, y: 37, w: 3, h: 1 }, "\u{1F373} Spiegelei braten \xB7 Leertaste", () => los("herd"));
+    leertasteBereich("kueche-kaffee", { x: 81, y: 36, w: 2, h: 4 }, "\u2615 Kaffee holen \xB7 Leertaste", () => {
+      los("kaffee");
+      kurzMeldung("\u2615 Lass ihn dir schmecken!", 4e3);
+    });
+  }
+  var FUSSBALL = {
+    tore: [
+      { name: "platz-tor-oben", x: 146, y: 5, w: 13, h: 6 },
+      { name: "platz-tor-unten", x: 146, y: 34, w: 13, h: 6 },
+      { name: "bolzplatz-tor-oben", x: 172, y: 5, w: 7, h: 4 },
+      { name: "bolzplatz-tor-unten", x: 172, y: 23, w: 7, h: 4 }
+    ],
+    vereinsheim: { x: 168, y: 38, w: 14, h: 2 }
+  };
+  function torGeschossen(wer, wo) {
+    try {
+      WA.ui.banner.openBanner({ id: "sw-tor", text: `\u26BD TOOOR! ${wer} trifft ${wo}!`, bgColor: "#0f766e", textColor: "#ffffff", closable: true, timeToClose: 6e3 });
+    } catch {
+      kurzMeldung(`\u26BD TOOOR! ${wer} trifft ${wo}!`, 6e3);
+    }
+  }
+  function fussball() {
+    try {
+      WA.event.on("sw-tor").subscribe((ev) => {
+        const d = ev && ev.data;
+        if (d && d.wer) torGeschossen(d.wer, d.wo);
+      });
+    } catch {
+    }
+    for (const t of FUSSBALL.tore) {
+      const wo = t.name.startsWith("bolz") ? "auf dem Bolzplatz" : "auf dem Fu\xDFballplatz";
+      leertasteBereich(t.name, t, "\u26BD Torschuss \xB7 Leertaste", () => {
+        if (Math.random() >= 0.65) {
+          kurzMeldung(["Knapp vorbei! \u{1F62C}", "Pfosten! \u{1F945}", "Gehalten! \u{1F9E4}", "Dr\xFCber! \u2601\uFE0F"][Math.floor(Math.random() * 4)], 3500);
+          return;
+        }
+        const wer = String(WA.player.name || "Jemand").split(/\s+/)[0];
+        torGeschossen(wer, wo);
+        try {
+          WA.event.broadcast("sw-tor", { wer, wo });
+        } catch {
+        }
+        try {
+          const tore = JSON.parse(String(WA.state.fussball_tore || "{}"));
+          tore[WA.player.name] = (tore[WA.player.name] || 0) + 1;
+          WA.state.saveVariable("fussball_tore", JSON.stringify(tore));
+        } catch {
+        }
+      });
+    }
+    let fenster = null;
+    leertasteBereich("vereinsheim", FUSSBALL.vereinsheim, "\u{1F3DF} Vereinsheim FC SW Digital \xB7 Leertaste", async () => {
+      try {
+        fenster = await WA.nav.openCoWebSite(SEITEN + "vereinsheim.html?t=" + Date.now(), true);
+      } catch {
+      }
+    }, () => {
+      try {
+        fenster && fenster.close();
+      } catch {
+      }
+      fenster = null;
+    });
+  }
+  var AMPEL_START = Date.now();
+  var AMPEL_KREUZUNGEN = [{ x: 89, y: 67, sv: 4, sh: 6 }, { x: 89, y: 84, sv: 4, sh: 4 }];
+  function ampelText() {
+    const ZYK = 128 * 120, t = (Date.now() - AMPEL_START) % ZYK, f = Math.floor(t / 120);
+    const status = (von, bis) => {
+      const drin = f >= von && f < bis, ziel = drin ? bis : von, rest = Math.ceil(((ziel * 120 - t) % ZYK + ZYK) % ZYK / 1e3);
+      return drin ? `\u{1F7E2} gehen (noch ${rest} s)` : `\u{1F534} warten (${rest} s)`;
+    };
+    return `\u{1F6A6} \xDCber die Hauptstra\xDFe: ${status(64, 128)} \xB7 \xDCber die Querstra\xDFe: ${status(0, 72)}`;
+  }
+  function fussgaengerAmpel() {
+    AMPEL_KREUZUNGEN.forEach((k, i) => [[k.x - 1, k.y - 1], [k.x + k.sv, k.y - 1], [k.x - 1, k.y + k.sh], [k.x + k.sv, k.y + k.sh]].forEach(([x, y], j) => leertasteBereich(`ampel-${i + 1}-${j + 1}`, { x, y, w: 3, h: 3 }, "\u{1F6A6} Fu\xDFg\xE4nger-Ampel \xB7 Leertaste", () => kurzMeldung(ampelText(), 6e3))));
+  }
   async function infoLaden() {
     try {
       info = await (await fetch(INFO, { headers: { "X-Buero-Key": BUERO_KEY } })).json();
@@ -680,6 +835,9 @@
     lernzimmer();
     fitnessEmpfang();
     ranglistenTafel();
+    kueche();
+    fussball();
+    fussgaengerAmpel();
     try {
       const breite = 87 * 32, hoehe = 62 * 32;
       void karte;

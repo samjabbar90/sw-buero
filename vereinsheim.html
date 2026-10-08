@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Vereinsheim</title>
+<script src="https://play.workadventu.re/iframe_api.js"></script>
+<style>
+  * { box-sizing:border-box; }
+  body { margin:0; background:#f8fafc; color:#0f172a; font-family:system-ui,-apple-system,"Segoe UI",sans-serif; }
+  header { position:sticky; top:0; background:#0f766e; color:#fff; padding:14px 16px; }
+  header h1 { margin:0; font-size:18px; } header .u { font-size:12.5px; opacity:.85; margin-top:2px; }
+  main { padding:12px; display:flex; flex-direction:column; gap:8px; }
+  h2 { font-size:14px; margin:10px 2px 2px; color:#0f766e; }
+  .z { display:flex; align-items:center; gap:10px; background:#fff; border:1.5px solid #e2e8f0; border-radius:10px; padding:9px 12px; }
+  .z.ich { border-color:#0d9488; background:#ecfeff; }
+  .r { width:28px; font-size:16px; text-align:center; }
+  .n { flex:1; font-weight:700; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .p { font-weight:700; color:#0f766e; font-size:14px; }
+  .leer { color:#64748b; text-align:center; padding:22px 0; }
+  .tipp { background:#fff; border:1.5px dashed #cbd5e1; border-radius:10px; padding:10px 12px; font-size:13px; line-height:1.5; color:#334155; }
+</style>
+</head>
+<body>
+<header><h1>🏟 Vereinsheim FC SW Digital</h1><div class="u">Torjägerliste vom Fußballplatz und Bolzplatz</div></header>
+<main>
+  <h2>⚽ Torjäger</h2>
+  <div id="liste"><div class="leer">Lade …</div></div>
+  <h2>So geht's</h2>
+  <div class="tipp">Lauf in einen Strafraum auf dem großen Platz oder vor ein Tor auf dem Bolzplatz und drück die <b>Leertaste</b>.
+    Ungefähr jeder dritte Schuss geht daneben. Jeder Treffer zählt hier und alle im Büro sehen „TOOOR!“.</div>
+</main>
+<script>
+// Vereinsheim (09.10.2026, Sam: Layout 3 mit Fußball): Torjägerliste aus der Karten-Variable fussball_tore
+const M = ["🥇", "🥈", "🥉"];
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+function zeigen(ich) {
+  let tore = {}; try { tore = JSON.parse(String(WA.state.fussball_tore || "{}")); } catch { /* leer */ }
+  const liste = Object.entries(tore).sort((a, b) => b[1] - a[1]);
+  document.getElementById("liste").innerHTML = liste.length ? liste.map(([n, t], i) =>
+    `<div class="z${n === ich ? " ich" : ""}"><div class="r">${M[i] || (i + 1) + "."}</div><div class="n">${esc(n)}</div><div class="p">${t} ${t === 1 ? "Tor" : "Tore"}</div></div>`).join("")
+    : '<div class="leer">Noch keine Tore — sei der Erste! ⚽</div>';
+}
+WA.onInit().then(() => {
+  const ich = WA.player.name;
+  zeigen(ich);
+  try { WA.state.onVariableChange("fussball_tore").subscribe(() => zeigen(ich)); } catch { /* ältere Version */ }
+});
+</script>
+</body>
+</html>
