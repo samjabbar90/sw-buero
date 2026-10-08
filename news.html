@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SW News</title>
+<style>
+  * { box-sizing:border-box; }
+  body { margin:0; background:#f8fafc; color:#0f172a; font-family:system-ui,-apple-system,"Segoe UI",sans-serif; }
+  header { position:sticky; top:0; background:#0f766e; color:#fff; padding:16px 18px; display:flex; justify-content:space-between; align-items:center; }
+  header h1 { margin:0; font-size:20px; }
+  #neu { font-size:13px; opacity:.9; }
+  main { padding:14px; display:flex; flex-direction:column; gap:12px; }
+  .karte { background:#fff; border:1.5px solid #e2e8f0; border-radius:12px; padding:12px 14px; position:relative; box-shadow:0 2px 4px rgba(0,0,0,.05); }
+  .karte.pin { background:#fffbeb; border-color:#fbbf24; }
+  .pinkopf { font-size:12px; font-weight:700; color:#b45309; margin-bottom:4px; }
+  .text { font-size:14px; line-height:1.45; white-space:pre-wrap; word-wrap:break-word; padding-right:44px; }
+  .wer { font-size:12px; color:#64748b; margin-top:8px; }
+  .badge { position:absolute; right:12px; top:10px; background:#ef4444; color:#fff; font-size:11px; font-weight:700; border-radius:9px; padding:2px 8px; }
+  .leer { color:#64748b; text-align:center; padding:30px 0; }
+</style>
+</head>
+<body>
+<header><h1>📰 News</h1><span id="neu"></span></header>
+<main id="liste"><div class="leer">Lade …</div></main>
+<script>
+// News-Fenster im Büro (08.10.2026, Sam: Variante C) — dieselben News wie im Dashboard. „NEU“ = seit dem letzten Öffnen
+// in diesem Browser (wird hier gemerkt, das Büro-Skript liest denselben Wert für den Hinweis an der Tafel).
+const KEY = "a21b2aa2a42fe6189b05773c07bbc9ad78e38b34ba3bb6fe";
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const datum = iso => iso ? new Date(iso).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" }) : "";
+let gesehen = ""; try { gesehen = localStorage.getItem("swNewsGesehen") || ""; } catch {}
+(async () => {
+  try {
+    const news = await (await fetch("https://swdigitaltest.de/buero-praesenz/news", { headers: { "X-Buero-Key": KEY } })).json();
+    const neu = n => !gesehen || String(n.am) > gesehen;
+    const anzahl = news.filter(neu).length;
+    document.getElementById("neu").textContent = anzahl ? anzahl + " neu" : "alles gelesen";
+    document.getElementById("liste").innerHTML = news.length ? news.map(n =>
+      '<div class="karte' + (n.angepinnt ? " pin" : "") + '">' + (neu(n) ? '<span class="badge">NEU</span>' : "") +
+      (n.angepinnt ? '<div class="pinkopf">📌 Angepinnt</div>' : "") + '<div class="text">' + esc(n.text) + '</div>' +
+      '<div class="wer">' + esc(n.autor) + (n.am ? " · " + datum(n.am) : "") + '</div></div>').join("") : '<div class="leer">Noch keine News.</div>';
+    const neueste = news.map(n => String(n.am || "")).sort().pop();
+    if (neueste) try { localStorage.setItem("swNewsGesehen", neueste); } catch {}
+  } catch { document.getElementById("liste").innerHTML = '<div class="leer">News konnten nicht geladen werden.</div>'; }
+})();
+</script>
+</body>
+</html>

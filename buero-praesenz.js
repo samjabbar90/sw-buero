@@ -356,6 +356,93 @@
       setTimeout(() => fx("fx-blitz", false), 80);
     }, 260);
   }, 4e3);
+  var SEITEN = "https://samjabbar90.github.io/sw-buero/";
+  var NEWS_SCHIRM = { x: 41.25 * 32, y: 29.9 * 32, w: 224, h: 100 };
+  var NEWS_BEREICH = { x: 41 * 32, y: 33 * 32, w: 8 * 32, h: 3 * 32 };
+  var newsFenster = null;
+  var newsHinweis = null;
+  async function newsNeu() {
+    try {
+      const news = await (await fetch("https://swdigitaltest.de/buero-praesenz/news", { headers: { "X-Buero-Key": BUERO_KEY } })).json();
+      let gesehen = "";
+      try {
+        gesehen = localStorage.getItem("swNewsGesehen") || "";
+      } catch {
+      }
+      return news.filter((n) => !gesehen || String(n.am) > gesehen).length;
+    } catch {
+      return 0;
+    }
+  }
+  async function newsOeffnen() {
+    try {
+      newsHinweis && newsHinweis.remove();
+    } catch {
+    }
+    try {
+      newsFenster = await WA.nav.openCoWebSite(SEITEN + "news.html?t=" + Date.now());
+    } catch {
+    }
+  }
+  async function newsBetreten() {
+    const n = await newsNeu();
+    try {
+      newsHinweis = WA.ui.displayActionMessage({ message: n ? `\u{1F4F0} ${n} neue News \xB7 Leertaste: News lesen` : "\u{1F4F0} Leertaste: alle News lesen", callback: () => {
+        newsOeffnen();
+      } });
+    } catch {
+    }
+  }
+  function newsVerlassen() {
+    try {
+      newsHinweis && newsHinweis.remove();
+    } catch {
+    }
+    newsHinweis = null;
+    try {
+      newsFenster && newsFenster.close();
+    } catch {
+    }
+    newsFenster = null;
+  }
+  function newsTafel() {
+    try {
+      WA.room.website.create({
+        name: "news-bildschirm",
+        url: SEITEN + "news-bildschirm.html",
+        visible: true,
+        allowApi: false,
+        origin: "map",
+        scale: 1,
+        position: { x: NEWS_SCHIRM.x, y: NEWS_SCHIRM.y, width: NEWS_SCHIRM.w, height: NEWS_SCHIRM.h }
+      });
+    } catch {
+    }
+    try {
+      const zonen = (karte && karte.tilesets || []).find((t) => t.name === "WA_Special_Zones");
+      if (zonen) {
+        const k = [];
+        for (let x = 42; x <= 47; x++) for (const y of [31, 32]) k.push({ x, y, tile: zonen.firstgid + 2, layer: "collisions" });
+        WA.room.setTiles(k);
+      }
+    } catch {
+    }
+    try {
+      WA.room.area.create({ name: "news-tafel", x: NEWS_BEREICH.x, y: NEWS_BEREICH.y, width: NEWS_BEREICH.w, height: NEWS_BEREICH.h });
+      WA.room.area.onEnter("news-tafel").subscribe(() => {
+        newsBetreten();
+      });
+      WA.room.area.onLeave("news-tafel").subscribe(() => newsVerlassen());
+    } catch {
+      let drin = false;
+      WA.player.onPlayerMove((e) => {
+        const jetzt = e.x >= NEWS_BEREICH.x && e.x < NEWS_BEREICH.x + NEWS_BEREICH.w && e.y >= NEWS_BEREICH.y && e.y < NEWS_BEREICH.y + NEWS_BEREICH.h;
+        if (jetzt && !drin) newsBetreten();
+        if (!jetzt && drin) newsVerlassen();
+        drin = jetzt;
+      });
+    }
+  }
   async function infoLaden() {
     try {
       info = await (await fetch(INFO, { headers: { "X-Buero-Key": BUERO_KEY } })).json();
@@ -431,6 +518,7 @@
       });
     } catch {
     }
+    newsTafel();
     try {
       const breite = 74 * 32, hoehe = 46 * 32;
       void karte;
