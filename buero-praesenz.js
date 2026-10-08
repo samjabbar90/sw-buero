@@ -1,7 +1,4 @@
 (() => {
-  // kueche-daten.ts
-  var KUECHE = { "tileset": "https://swdigitaltest.de/buero-praesenz/bild/SW_Kueche.json", "geraete": ["kuehlschrank", "herd", "kaffee"], "kacheln": [[68, 34, "kueche-kuehlschrank-aus", 0], [68, 34, "kueche-kuehlschrank-an", 0], [69, 34, "kueche-kuehlschrank-aus", 0], [69, 34, "kueche-kuehlschrank-an", 0], [68, 35, "kueche-kuehlschrank-aus", 1], [68, 35, "kueche-kuehlschrank-an", 1], [69, 35, "kueche-kuehlschrank-aus", 1], [69, 35, "kueche-kuehlschrank-an", 2], [70, 35, "kueche-kuehlschrank-aus", 3], [70, 35, "kueche-kuehlschrank-an", 4], [71, 35, "kueche", 5], [72, 35, "kueche", 6], [73, 35, "kueche", 7], [74, 35, "kueche", 8], [75, 35, "kueche", 5], [76, 35, "kueche-herd-aus", 9], [76, 35, "kueche-herd-an", 10], [77, 35, "kueche", 5], [78, 35, "kueche", 5], [79, 35, "kueche", 11], [80, 35, "kueche", 12], [81, 35, "kueche", 5], [82, 35, "kueche", 5], [83, 35, "kueche", 13], [68, 36, "kueche-kuehlschrank-aus", 14], [68, 36, "kueche-kuehlschrank-an", 14], [69, 36, "kueche-kuehlschrank-aus", 14], [69, 36, "kueche-kuehlschrank-an", 14], [70, 36, "kueche-kuehlschrank-aus", 15], [70, 36, "kueche-kuehlschrank-an", 15], [71, 36, "kueche", 16], [72, 36, "kueche", 17], [73, 36, "kueche", 16], [74, 36, "kueche", 18], [75, 36, "kueche", 16], [76, 36, "kueche-herd-aus", 19], [76, 36, "kueche-herd-an", 20], [77, 36, "kueche", 15], [78, 36, "kueche", 16], [79, 36, "kueche", 17], [80, 36, "kueche", 16], [81, 36, "kueche", 18], [82, 36, "kueche", 16], [83, 36, "kueche-kaffee-aus", 21], [83, 36, "kueche-kaffee-an", 21], [83, 37, "kueche-kaffee-aus", 22], [83, 37, "kueche-kaffee-an", 23], [70, 38, "kueche", 24], [71, 38, "kueche", 25], [72, 38, "kueche", 26], [73, 38, "kueche", 25], [74, 38, "kueche", 27], [75, 38, "kueche", 28], [76, 38, "kueche", 29], [77, 38, "kueche", 30], [78, 38, "kueche", 25], [79, 38, "kueche", 31], [80, 38, "kueche", 32], [83, 38, "kueche-kaffee-aus", 33], [83, 38, "kueche-kaffee-an", 34], [70, 39, "kueche", 35], [71, 39, "kueche", 36], [72, 39, "kueche", 37], [73, 39, "kueche", 38], [74, 39, "kueche", 39], [75, 39, "kueche", 40], [76, 39, "kueche", 41], [77, 39, "kueche", 42], [78, 39, "kueche", 38], [79, 39, "kueche", 43], [80, 39, "kueche", 44], [83, 39, "kueche", 45], [70, 40, "kueche", 46], [71, 40, "kueche", 16], [72, 40, "kueche", 17], [73, 40, "kueche", 18], [74, 40, "kueche", 17], [75, 40, "kueche", 16], [76, 40, "kueche", 17], [77, 40, "kueche", 18], [78, 40, "kueche", 17], [79, 40, "kueche", 16], [80, 40, "kueche", 46], [83, 40, "kueche", 33], [70, 41, "kueche", 47], [71, 41, "kueche", 47], [72, 41, "kueche", 47], [73, 41, "kueche", 47], [74, 41, "kueche", 47], [75, 41, "kueche", 47], [76, 41, "kueche", 47], [77, 41, "kueche", 47], [78, 41, "kueche", 47], [79, 41, "kueche", 47], [80, 41, "kueche", 47], [83, 41, "kueche", 48], [83, 42, "kueche", 46]], "sperren": [[68, 34], [69, 34], [68, 35], [69, 35], [70, 35], [71, 35], [72, 35], [73, 35], [74, 35], [75, 35], [76, 35], [77, 35], [78, 35], [79, 35], [80, 35], [81, 35], [82, 35], [83, 35], [68, 36], [69, 36], [70, 36], [71, 36], [72, 36], [73, 36], [74, 36], [75, 36], [76, 36], [77, 36], [78, 36], [79, 36], [80, 36], [81, 36], [82, 36], [83, 36], [83, 37], [70, 38], [71, 38], [72, 38], [73, 38], [74, 38], [75, 38], [76, 38], [77, 38], [78, 38], [79, 38], [80, 38], [83, 38], [70, 39], [71, 39], [72, 39], [73, 39], [74, 39], [75, 39], [76, 39], [77, 39], [78, 39], [79, 39], [80, 39], [83, 39], [70, 40], [71, 40], [72, 40], [73, 40], [74, 40], [75, 40], [76, 40], [77, 40], [78, 40], [79, 40], [80, 40], [83, 40], [83, 41], [83, 42]] };
-
   // main.ts
   var ENDPOINT = "https://swdigitaltest.de/buero-praesenz/melden";
   var BUERO_KEY = "a21b2aa2a42fe6189b05773c07bbc9ad78e38b34ba3bb6fe";
@@ -637,22 +634,8 @@
     } catch {
     }
   }
-  async function kueche() {
-    let erste;
-    try {
-      erste = await WA.room.loadTileset(KUECHE.tileset);
-    } catch (e) {
-      console.warn("K\xFCche: Tileset nicht geladen", e);
-      return;
-    }
-    for (const k of Object.keys(fxStand)) delete fxStand[k];
-    try {
-      WA.room.setTiles(KUECHE.kacheln.map(([x, y, layer, k]) => ({ x, y, layer, tile: erste + k })));
-      WA.room.setTiles(KUECHE.sperren.map(([x, y]) => ({ x, y, layer: "collisions", tile: kollisionGid })));
-    } catch (e) {
-      console.warn("K\xFCche: Kacheln nicht gesetzt", e);
-      return;
-    }
+  var KUECHE_GERAETE = ["kuehlschrank", "herd", "kaffee"];
+  function kueche() {
     const aus = /* @__PURE__ */ new Map();
     const benutzen = (g) => {
       fx("kueche-" + g + "-an", true);
@@ -666,7 +649,7 @@
     try {
       WA.event.on("sw-kueche").subscribe((ev) => {
         const g = ev && ev.data && ev.data.g;
-        if (KUECHE.geraete.includes(g)) benutzen(g);
+        if (KUECHE_GERAETE.includes(g)) benutzen(g);
       });
     } catch {
     }
@@ -805,7 +788,6 @@
   }
   WA.onInit().then(async () => {
     bereit = melden("betreten", true);
-    void kueche;
     const tiled = await kartenBereiche();
     for (const name of tiled) beobachten(name, WA.room.area);
     try {
@@ -837,6 +819,7 @@
     lernzimmer();
     fitnessEmpfang();
     ranglistenTafel();
+    kueche();
     fussball();
     fussgaengerAmpel();
     try {
