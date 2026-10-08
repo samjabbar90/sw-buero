@@ -298,6 +298,20 @@
     } catch {
     }
   }
+  var tuerVorTelefon = null;
+  function telefonTuer() {
+    const t = meineTuer();
+    if (!t) return;
+    const ich = vorname(WA.player.name), telefoniere = (info.telefoniert || []).some((n) => String(n).toLowerCase() === ich);
+    if (telefoniere && tuerVorTelefon === null) {
+      tuerVorTelefon = tuerStatus(t);
+      if (tuerVorTelefon === "frei") WA.state.saveVariable(t.variable, "besetzt");
+      kurzMeldung("\u{1F4DE} Du telefonierst \u2013 deine T\xFCr steht auf \u201Ebesetzt\u201C", 5e3);
+    } else if (!telefoniere && tuerVorTelefon !== null) {
+      if (tuerVorTelefon === "frei" && tuerStatus(t) === "besetzt") WA.state.saveVariable(t.variable, "frei");
+      tuerVorTelefon = null;
+    }
+  }
   async function infoLaden() {
     try {
       info = await (await fetch(INFO, { headers: { "X-Buero-Key": BUERO_KEY } })).json();
@@ -317,6 +331,7 @@
     } catch {
     }
     ballonsSetzen();
+    telefonTuer();
     if (!begruesst) {
       begruesst = true;
       const v = String(WA.player.name || "").split(/\s+/)[0], h = (/* @__PURE__ */ new Date()).getHours();
@@ -354,7 +369,7 @@
     }
     await tuerenStarten();
     infoLaden();
-    setInterval(infoLaden, 3e4);
+    setInterval(infoLaden, 15e3);
     try {
       await WA.ui.website.open({
         url: "https://samjabbar90.github.io/sw-buero/info.html",
