@@ -362,84 +362,8 @@
     }, 260);
   }, 4e3);
   var SEITEN = "https://samjabbar90.github.io/sw-buero/";
-  var NEWS_SCHIRM = { x: 1325, y: 962, w: 214, h: 70 };
   var NEWS_BEREICH = { x: 41 * 32, y: 33 * 32, w: 8 * 32, h: 3 * 32 };
-  var newsFenster = null;
-  var newsHinweis = null;
-  async function newsNeu() {
-    try {
-      const news = await (await fetch("https://swdigitaltest.de/buero-praesenz/news", { headers: { "X-Buero-Key": BUERO_KEY } })).json();
-      let gesehen = "";
-      try {
-        gesehen = localStorage.getItem("swNewsGesehen") || "";
-      } catch {
-      }
-      return news.filter((n) => !gesehen || String(n.am) > gesehen).length;
-    } catch {
-      return 0;
-    }
-  }
-  async function newsOeffnen() {
-    try {
-      newsHinweis && newsHinweis.remove();
-    } catch {
-    }
-    try {
-      newsFenster = await WA.nav.openCoWebSite(SEITEN + "news.html?t=" + Date.now());
-    } catch {
-    }
-  }
-  async function newsBetreten() {
-    const n = await newsNeu();
-    try {
-      newsHinweis = WA.ui.displayActionMessage({ message: n ? `\u{1F4F0} ${n} neue News \xB7 Leertaste: News lesen` : "\u{1F4F0} Leertaste: alle News lesen", callback: () => {
-        newsOeffnen();
-      } });
-    } catch {
-    }
-  }
-  function newsVerlassen() {
-    try {
-      newsHinweis && newsHinweis.remove();
-    } catch {
-    }
-    newsHinweis = null;
-    try {
-      newsFenster && newsFenster.close();
-    } catch {
-    }
-    newsFenster = null;
-  }
-  function newsTafel() {
-    try {
-      WA.room.website.create({
-        name: "news-bildschirm",
-        url: SEITEN + "news-bildschirm.html",
-        visible: true,
-        allowApi: false,
-        origin: "map",
-        scale: 1,
-        position: { x: NEWS_SCHIRM.x, y: NEWS_SCHIRM.y, width: NEWS_SCHIRM.w, height: NEWS_SCHIRM.h }
-      });
-    } catch {
-    }
-    try {
-      WA.room.area.create({ name: "news-tafel", x: NEWS_BEREICH.x, y: NEWS_BEREICH.y, width: NEWS_BEREICH.w, height: NEWS_BEREICH.h });
-      WA.room.area.onEnter("news-tafel").subscribe(() => {
-        newsBetreten();
-      });
-      WA.room.area.onLeave("news-tafel").subscribe(() => newsVerlassen());
-    } catch {
-      let drin = false;
-      WA.player.onPlayerMove((e) => {
-        const jetzt = e.x >= NEWS_BEREICH.x && e.x < NEWS_BEREICH.x + NEWS_BEREICH.w && e.y >= NEWS_BEREICH.y && e.y < NEWS_BEREICH.y + NEWS_BEREICH.h;
-        if (jetzt && !drin) newsBetreten();
-        if (!jetzt && drin) newsVerlassen();
-        drin = jetzt;
-      });
-    }
-  }
-  var HELPCENTER = [{ x: 12, y: 27 }, { x: 39, y: 4 }];
+  var HELPCENTER = [{ x: 53, y: 22 }];
   var hcFenster = null;
   var hcHinweis = null;
   function helpcenterRoboter() {
@@ -524,7 +448,7 @@
     } catch {
     }
   }
-  var FITNESS = { x: 60, y: 7 };
+  var FITNESS = { x: 74, y: 7 };
   function fitnessEmpfang() {
     const b = { x: (FITNESS.x - 1) * 32, y: (FITNESS.y + 3) * 32, w: 8 * 32, h: 3 * 32 };
     let fenster = null, hinweis2 = null;
@@ -575,10 +499,10 @@
   }
   function ranglistenTafel() {
     try {
-      WA.room.website.create({ name: "rangliste", url: SEITEN + "rangliste-bildschirm.html", visible: true, allowApi: false, origin: "map", scale: 1, position: { x: 1847, y: 128, width: 184, height: 54 } });
+      WA.room.website.create({ name: "rangliste", url: SEITEN + "rangliste-bildschirm.html", visible: true, allowApi: false, origin: "map", scale: 1, position: { x: 2284, y: 128, width: 184, height: 54 } });
     } catch {
     }
-    const b = { x: 57 * 32, y: 6 * 32, w: 7 * 32, h: 2 * 32 };
+    const b = { x: 71 * 32, y: 6 * 32, w: 7 * 32, h: 2 * 32 };
     let fenster = null, hinweis2 = null;
     const rein = () => {
       try {
@@ -620,6 +544,61 @@
         drin = j;
       });
     }
+  }
+  var OFFENE_RAEUME = [18, 23, 28].flatMap((x) => [18, 26].map((y) => ({ x, y, w: 5, h: 4 })));
+  var ideenFenster = null;
+  var ideenHinweis = null;
+  async function ideenOeffnen() {
+    try {
+      ideenHinweis && ideenHinweis.remove();
+    } catch {
+    }
+    try {
+      ideenFenster = await WA.nav.openCoWebSite(SEITEN + "ideen.html?t=" + Date.now());
+    } catch {
+    }
+  }
+  function ideenHinweisZeigen() {
+    try {
+      ideenHinweis = WA.ui.displayActionMessage({ message: "\u{1F4A1} Meine Ideen \xB7 Leertaste", callback: () => {
+        ideenOeffnen();
+      } });
+    } catch {
+    }
+  }
+  function ideenHinweisWeg() {
+    try {
+      ideenHinweis && ideenHinweis.remove();
+    } catch {
+    }
+    ideenHinweis = null;
+    try {
+      ideenFenster && ideenFenster.close();
+    } catch {
+    }
+    ideenFenster = null;
+  }
+  function ideen() {
+    try {
+      WA.ui.actionBar.addButton({ id: "sw-ideen", label: "\u{1F4A1} Ideen", callback: () => {
+        ideenOeffnen();
+      } });
+    } catch {
+    }
+    try {
+      const eigen = "B\xFCro " + String(WA.player.name || "").split(/s+/)[0];
+      WA.room.area.onEnter(eigen).subscribe(ideenHinweisZeigen);
+      WA.room.area.onLeave(eigen).subscribe(ideenHinweisWeg);
+    } catch {
+    }
+    OFFENE_RAEUME.forEach((o, i) => {
+      try {
+        WA.room.area.create({ name: "offen-" + (i + 1), x: o.x * 32, y: o.y * 32, width: o.w * 32, height: o.h * 32 });
+        WA.room.area.onEnter("offen-" + (i + 1)).subscribe(ideenHinweisZeigen);
+        WA.room.area.onLeave("offen-" + (i + 1)).subscribe(ideenHinweisWeg);
+      } catch {
+      }
+    });
   }
   async function infoLaden() {
     try {
@@ -696,13 +675,13 @@
       });
     } catch {
     }
-    newsTafel();
+    ideen();
     helpcenterRoboter();
     lernzimmer();
     fitnessEmpfang();
     ranglistenTafel();
     try {
-      const breite = 74 * 32, hoehe = 46 * 32;
+      const breite = 87 * 32, hoehe = 58 * 32;
       void karte;
       WA.ui.actionBar.addButton({ id: "sw-uebersicht", label: "\u{1F5FA} \xDCbersicht", callback: () => WA.camera.set(breite / 2, hoehe / 2, breite, hoehe, false, true) });
       let blick = 0;

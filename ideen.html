@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Meine Ideen</title>
+<style>
+  * { box-sizing:border-box; }
+  body { margin:0; background:#f8fafc; color:#0f172a; font-family:system-ui,-apple-system,"Segoe UI",sans-serif; }
+  header { position:sticky; top:0; z-index:2; background:#0f766e; color:#fff; padding:14px 16px; display:flex; align-items:center; gap:10px; }
+  header h1 { margin:0; font-size:18px; flex:1; } header .schloss { font-size:12px; font-weight:700; opacity:.9; }
+  main { padding:14px; display:flex; flex-direction:column; gap:10px; }
+  .box { background:#fff; border:1.5px solid #e2e8f0; border-radius:12px; padding:12px; }
+  label { display:block; font-size:12px; font-weight:700; color:#475569; margin:8px 0 4px; }
+  input, select, textarea { width:100%; font:inherit; font-size:14px; padding:8px 10px; border:1.5px solid #cbd5e1; border-radius:8px; background:#fff; color:#0f172a; }
+  textarea { min-height:60px; resize:vertical; }
+  .reihe { display:flex; gap:8px; } .reihe > * { flex:1; }
+  button { font:inherit; font-size:14px; font-weight:700; border-radius:9px; padding:9px 12px; cursor:pointer; border:1.5px solid #0d9488; background:#0d9488; color:#fff; }
+  button.leicht { background:#fff; color:#0f766e; } button.klein { font-size:12px; padding:5px 9px; }
+  .idee { background:#fff; border:1.5px solid #e2e8f0; border-radius:12px; padding:10px 12px; }
+  .idee.erledigt { opacity:.6; } .idee.erledigt .t { text-decoration:line-through; }
+  .t { font-weight:700; font-size:14px; } .m { font-size:12px; color:#64748b; margin-top:3px; } .x { font-size:13px; margin-top:6px; white-space:pre-wrap; }
+  .prio { font-size:11px; font-weight:700; border-radius:6px; padding:2px 7px; margin-left:6px; }
+  .p-hoch { background:#fee2e2; color:#b91c1c; } .p-mittel { background:#fef9c3; color:#a16207; } .p-niedrig { background:#dcfce7; color:#15803d; }
+  .aktionen { display:flex; gap:6px; margin-top:8px; flex-wrap:wrap; }
+  .fehler { color:#b91c1c; font-size:13px; font-weight:600; min-height:18px; margin-top:6px; }
+  .leer { color:#64748b; text-align:center; padding:20px 0; }
+</style>
+</head>
+<body>
+<header><span style="font-size:22px">💡</span><h1 id="kopf">Meine Ideen</h1><span class="schloss">🔒 nur du</span></header>
+<main id="inhalt"><div class="leer">Lade …</div></main>
+<script>
+// „Meine Ideen“ im virtuellen Büro (08.10.2026, Sam) — dasselbe Board wie im Dashboard. Privat: Zugriff nur mit dem
+// Büro-Ausweis (einmal pro Gerät Benutzername + Büro-PIN), der Token liegt nur in diesem Browser.
+const KEY = "a21b2aa2a42fe6189b05773c07bbc9ad78e38b34ba3bb6fe", API = "https://swdigitaltest.de/buero-praesenz";
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const ausweis = { holen: () => { try { return localStorage.getItem("swBueroAusweis") || ""; } catch { return ""; } }, setzen: t => { try { t ? localStorage.setItem("swBueroAusweis", t) : localStorage.removeItem("swBueroAusweis"); } catch {} } };
+async function api(pfad, opt = {}) {
+  const r = await fetch(API + pfad, { ...opt, headers: { "X-Buero-Key": KEY, "X-Buero-Ausweis": ausweis.holen(), "Content-Type": "application/json" } });
+  const d = await r.json().catch(() => ({}));
+  if (r.status === 401 && /ausweis/.test(d.error || "")) { ausweis.setzen(""); throw new Error("ausweis"); }
+  if (!r.ok) throw new Error(d.error || "Fehler"); return d;
+}
+function ausweisFormular(meldung) {
+  $("kopf").textContent = "Büro-Ausweis";
+  $("inhalt").innerHTML = `<div class="box"><div style="font-size:14px">Einmal pro Gerät: damit nur <b>du</b> deine Ideen siehst.</div>
+    <div class="m">Die Büro-PIN erzeugst du im Dashboard auf der Startseite unter 🔑 Büro-PIN.</div>
+    <label>Benutzername</label><input id="ben" autocomplete="username">
+    <label>Büro-PIN</label><input id="pin" inputmode="numeric" autocomplete="one-time-code" maxlength="7">
+    <div class="fehler" id="fe">${esc(meldung || "")}</div><button id="los" style="width:100%">Ausweis speichern</button></div>`;
+  $("los").onclick = async () => {
+    $("los").disabled = true; $("fe").textContent = "";
+    try {
+      const r = await fetch(API + "/ausweis", { method: "POST", headers: { "X-Buero-Key": KEY, "Content-Type": "application/json" }, body: JSON.stringify({ benutzer: $("ben").value.trim(), pin: $("pin").value.trim() }) });
+      const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || (r.status === 429 ? "Zu viele Versuche – bitte 15 Minuten warten." : "Fehler"));
+      ausweis.setzen(d.token); laden();
+    } catch (e) { $("fe").textContent = e.message; $("los").disabled = false; }
+  };
+}
+const PRIO = { hoch: "Hoch", mittel: "Mittel", niedrig: "Niedrig" }, STATUS = { offen: "offen", in_bearbeitung: "in Arbeit", erledigt: "erledigt" };
+async function laden() {
+  if (!ausweis.holen()) return ausweisFormular();
+  try {
+    const d = await api("/ideen");
+    $("kopf").textContent = "Meine Ideen · " + String(d.name || "").split(" ")[0];
+    $("inhalt").innerHTML = `<div class="box"><label style="margin-top:0">Neue Idee</label><input id="nt" placeholder="Titel *" maxlength="200">
+      <div class="reihe"><div><label>Thema</label><input id="nth" placeholder="z. B. Fibu" maxlength="60"></div><div><label>Frist</label><input id="nf" type="date"></div>
+      <div><label>Priorität</label><select id="np"><option value="hoch">Hoch</option><option value="mittel" selected>Mittel</option><option value="niedrig">Niedrig</option></select></div></div>
+      <label>Notiz</label><textarea id="nx" maxlength="4000"></textarea><div class="fehler" id="fe"></div><button id="neu" style="width:100%">💡 Idee speichern</button></div>` +
+      (d.ideen.length ? d.ideen.map(n => `<div class="idee${n.status === "erledigt" ? " erledigt" : ""}"><div class="t">${esc(n.titel)}<span class="prio p-${esc(n.prioritaet)}">${PRIO[n.prioritaet] || ""}</span></div>
+        <div class="m">${esc(n.thema || "")}${n.thema && n.frist ? " · " : ""}${n.frist ? "Frist " + new Date(n.frist + "T12:00:00").toLocaleDateString("de-DE") : ""} · ${STATUS[n.status] || n.status}</div>
+        ${n.text ? `<div class="x">${esc(n.text)}</div>` : ""}
+        <div class="aktionen">${n.status !== "erledigt" ? `<button class="klein" data-s="${esc(n._id)}" data-w="erledigt">✓ Erledigt</button>` : `<button class="klein leicht" data-s="${esc(n._id)}" data-w="offen">↺ Wieder offen</button>`}
+        ${n.status === "offen" ? `<button class="klein leicht" data-s="${esc(n._id)}" data-w="in_bearbeitung">In Arbeit</button>` : ""}<button class="klein leicht" data-l="${esc(n._id)}">Löschen</button></div></div>`).join("")
+        : '<div class="leer">Noch keine Ideen – leg oben die erste an.</div>');
+    $("neu").onclick = async () => {
+      if (!$("nt").value.trim()) { $("fe").textContent = "Bitte einen Titel angeben"; return; }
+      $("neu").disabled = true;
+      try { await api("/ideen", { method: "POST", body: JSON.stringify({ titel: $("nt").value.trim(), thema: $("nth").value.trim(), frist: $("nf").value, prioritaet: $("np").value, text: $("nx").value }) }); laden(); }
+      catch (e) { if (e.message === "ausweis") return ausweisFormular("Dein Ausweis ist nicht mehr gültig – bitte neu anmelden."); $("fe").textContent = e.message; $("neu").disabled = false; }
+    };
+    document.querySelectorAll("[data-s]").forEach(b => b.onclick = async () => { try { await api("/ideen/" + encodeURIComponent(b.dataset.s), { method: "PUT", body: JSON.stringify({ status: b.dataset.w }) }); laden(); } catch (e) { if (e.message === "ausweis") ausweisFormular(); else alert(e.message); } });
+    document.querySelectorAll("[data-l]").forEach(b => b.onclick = async () => { if (!confirm("Idee wirklich löschen?")) return; try { await api("/ideen/" + encodeURIComponent(b.dataset.l), { method: "DELETE" }); laden(); } catch (e) { if (e.message === "ausweis") ausweisFormular(); else alert(e.message); } });
+  } catch (e) { if (e.message === "ausweis") return ausweisFormular("Dein Ausweis ist nicht mehr gültig – bitte neu anmelden."); $("inhalt").innerHTML = '<div class="leer">' + esc(e.message) + "</div>"; }
+}
+laden();
+</script>
+</body>
+</html>
