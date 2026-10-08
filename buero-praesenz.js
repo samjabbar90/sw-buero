@@ -439,7 +439,7 @@
       });
     }
   }
-  var HELPCENTER = [{ x: 13, y: 27 }, { x: 62, y: 6 }];
+  var HELPCENTER = [{ x: 13, y: 27 }, { x: 38, y: 4 }];
   var hcFenster = null;
   var hcHinweis = null;
   function helpcenterRoboter() {
