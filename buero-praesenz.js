@@ -443,6 +443,73 @@
       });
     }
   }
+  var BOT = { x: 41 * 32, y: 34.6 * 32, w: 192, h: 110 };
+  var BOT_BEREICH = { x: 41 * 32, y: 38 * 32, w: 7 * 32, h: 2 * 32 };
+  var botFenster = null;
+  var botHinweis = null;
+  function swBot() {
+    try {
+      WA.room.website.create({
+        name: "sw-bot",
+        url: SEITEN + "sw-bot.html",
+        visible: true,
+        allowApi: false,
+        origin: "map",
+        scale: 1,
+        position: { x: BOT.x, y: BOT.y, width: BOT.w, height: BOT.h }
+      });
+    } catch {
+    }
+    try {
+      const zonen = (karte && karte.tilesets || []).find((t) => t.name === "WA_Special_Zones");
+      if (zonen) {
+        const k = [];
+        for (let x = 41; x <= 46; x++) for (const y of [36, 37]) k.push({ x, y, tile: zonen.firstgid + 2, layer: "collisions" });
+        WA.room.setTiles(k);
+      }
+    } catch {
+    }
+    const rein = () => {
+      try {
+        botHinweis = WA.ui.displayActionMessage({ message: "\u{1F4AC} Mit SW-Bot sprechen \xB7 Leertaste", callback: async () => {
+          try {
+            botHinweis && botHinweis.remove();
+          } catch {
+          }
+          try {
+            botFenster = await WA.nav.openCoWebSite(SEITEN + "helpdesk.html?name=" + encodeURIComponent(WA.player.name || "") + "&t=" + Date.now());
+          } catch {
+          }
+        } });
+      } catch {
+      }
+    };
+    const raus = () => {
+      try {
+        botHinweis && botHinweis.remove();
+      } catch {
+      }
+      botHinweis = null;
+      try {
+        botFenster && botFenster.close();
+      } catch {
+      }
+      botFenster = null;
+    };
+    try {
+      WA.room.area.create({ name: "sw-bot", x: BOT_BEREICH.x, y: BOT_BEREICH.y, width: BOT_BEREICH.w, height: BOT_BEREICH.h });
+      WA.room.area.onEnter("sw-bot").subscribe(rein);
+      WA.room.area.onLeave("sw-bot").subscribe(raus);
+    } catch {
+      let drin = false;
+      WA.player.onPlayerMove((e) => {
+        const j = e.x >= BOT_BEREICH.x && e.x < BOT_BEREICH.x + BOT_BEREICH.w && e.y >= BOT_BEREICH.y && e.y < BOT_BEREICH.y + BOT_BEREICH.h;
+        if (j && !drin) rein();
+        if (!j && drin) raus();
+        drin = j;
+      });
+    }
+  }
   async function infoLaden() {
     try {
       info = await (await fetch(INFO, { headers: { "X-Buero-Key": BUERO_KEY } })).json();
@@ -519,6 +586,7 @@
     } catch {
     }
     newsTafel();
+    swBot();
     try {
       const breite = 74 * 32, hoehe = 46 * 32;
       void karte;

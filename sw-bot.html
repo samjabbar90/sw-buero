@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>SW-Bot</title>
+<style>
+  html, body { margin:0; height:100%; background:transparent; overflow:hidden; }
+  svg { display:block; }
+  /* blinzeln alle paar Sekunden, ab und zu winken, Sprechblase wippt leicht */
+  .auge { animation:blinzeln 4.2s infinite; transform-origin:center; transform-box:fill-box; }
+  @keyframes blinzeln { 0%, 92%, 100% { transform:scaleY(1); } 95% { transform:scaleY(.1); } }
+  .arm { animation:winken 9s infinite; transform-origin:0 0; transform-box:fill-box; }
+  @keyframes winken { 0%, 70%, 100% { transform:rotate(0); } 74% { transform:rotate(-55deg); } 78% { transform:rotate(-35deg); } 82% { transform:rotate(-55deg); } 86% { transform:rotate(-35deg); } 90% { transform:rotate(0); } }
+  .blase { animation:wippen 3s ease-in-out infinite; }
+  @keyframes wippen { 50% { transform:translateY(-2px); } }
+  .antenne { animation:leuchten 1.6s infinite; }
+  @keyframes leuchten { 50% { fill:#fb7185; } }
+</style>
+</head>
+<body>
+<!-- 192 × 110 px = 6 × 3,4 Felder: Sprechblase, SW-Bot hinter dem Tresen „EMPFANG · HELPCENTER“ (08.10.2026, Sam: Figur B) -->
+<svg width="192" height="110" viewBox="0 0 192 110" xmlns="http://www.w3.org/2000/svg" font-family="Arial, sans-serif">
+  <g class="blase">
+    <rect x="47" y="1" width="98" height="20" rx="8" fill="#fff" stroke="#0f766e" stroke-width="1.5"/>
+    <path d="M90 21 L96 27 L102 21 Z" fill="#fff" stroke="#0f766e" stroke-width="1.5"/>
+    <rect x="89" y="19" width="14" height="3" fill="#fff"/>
+    <text x="96" y="15" font-size="10.5" font-weight="700" fill="#0f172a" text-anchor="middle">Kann ich helfen?</text>
+  </g>
+  <!-- SW-Bot -->
+  <g transform="translate(96 30)">
+    <line x1="0" y1="2" x2="0" y2="-3" stroke="#9ca3af" stroke-width="1.2"/>
+    <circle class="antenne" cx="0" cy="-4" r="2" fill="#f43f5e"/>
+    <rect x="-10" y="2" width="20" height="16" rx="6" fill="#f3f4f6" stroke="#9ca3af"/>
+    <rect x="-7.5" y="4.5" width="15" height="10" rx="3.5" fill="#111827"/>
+    <circle class="auge" cx="-3.3" cy="8.5" r="1.7" fill="#5eead4"/>
+    <circle class="auge" cx="3.3" cy="8.5" r="1.7" fill="#5eead4"/>
+    <path d="M-2.6 10.6 Q0 13 2.6 10.6" stroke="#5eead4" stroke-width="1" fill="none"/>
+    <rect x="-10" y="19" width="20" height="16" rx="6" fill="#e5e7eb" stroke="#9ca3af"/>
+    <rect x="-5" y="22.5" width="10" height="6" rx="2" fill="#0d9488"/>
+    <text x="0" y="27.3" font-size="4.6" font-weight="700" fill="#fff" text-anchor="middle">SW</text>
+    <g class="arm"><rect x="9" y="21" width="4" height="10" rx="2" fill="#d1d5db" stroke="#9ca3af" stroke-width=".6"/></g>
+    <rect x="-13" y="21" width="4" height="10" rx="2" fill="#d1d5db" stroke="#9ca3af" stroke-width=".6"/>
+  </g>
+  <!-- Tresen -->
+  <rect x="6" y="66" width="182" height="42" fill="rgba(0,0,0,.2)"/>
+  <rect x="2" y="60" width="182" height="12" rx="4" fill="#f8fafc"/>
+  <rect x="2" y="70" width="182" height="34" fill="#0f766e"/>
+  <rect x="2" y="99" width="182" height="5" fill="#115e59"/>
+  <text x="93" y="91" font-size="12" font-weight="700" fill="#fff" text-anchor="middle" letter-spacing=".5">EMPFANG · HELPCENTER</text>
+  <rect x="142" y="44" width="30" height="20" fill="#111827"/><rect x="145" y="47" width="24" height="14" fill="#38bdf8"/><rect x="155" y="64" width="4" height="4" fill="#3d434b"/>
+  <circle cx="16" cy="55" r="9" fill="#16a34a"/><rect x="10" y="60" width="12" height="9" fill="#b45309"/>
+</svg>
+</body>
+</html>

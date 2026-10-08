@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SW-Bot · Helpcenter</title>
+<style>
+  :root { --teal:#0d9488; --teal-d:#0f766e; --border:#cbd5e1; --text:#0f172a; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:#f8fafc; color:var(--text); font-family:system-ui,-apple-system,"Segoe UI",sans-serif; }
+  header { position:sticky; top:0; z-index:2; background:var(--teal-d); color:#fff; padding:14px 16px; display:flex; align-items:center; gap:10px; }
+  header h1 { margin:0; font-size:18px; }
+  #chat { padding:14px; display:flex; flex-direction:column; gap:10px; padding-bottom:40px; }
+  .bot, .ich { max-width:85%; padding:10px 13px; border-radius:14px; font-size:14px; line-height:1.45; white-space:pre-wrap; }
+  .bot { background:#fff; border:1px solid #e2e8f0; align-self:flex-start; }
+  .ich { background:var(--teal); color:#fff; align-self:flex-end; }
+  .knoepfe { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .knoepfe.eins { grid-template-columns:1fr; }
+  button.k { font:inherit; font-size:13px; font-weight:600; text-align:left; padding:9px 11px; border-radius:10px; border:1.5px solid var(--teal); background:#fff; color:var(--teal-d); cursor:pointer; }
+  button.k:hover { background:#f0fdfa; }
+  button.k.voll { background:var(--teal); color:#fff; }
+  button.k small { display:block; font-weight:400; color:#64748b; font-size:11.5px; margin-top:2px; }
+  #form-content { background:#fff; border:1px solid #e2e8f0; border-radius:14px; padding:12px; }
+  .fg { margin-bottom:12px; } .fg label { display:block; font-size:12.5px; font-weight:700; color:#475569; margin-bottom:4px; }
+  .req { color:#ef4444; }
+  .fc { width:100%; font:inherit; font-size:14px; padding:8px 10px; border:1.5px solid var(--border); border-radius:8px; background:#fff; color:var(--text); }
+  textarea.fc { min-height:80px; resize:vertical; }
+  .form-row { display:flex; gap:10px; } .form-row > .fg { flex:1; }
+  .hinweis { font-size:12px; color:#64748b; }
+  .fehler { color:#b91c1c; font-size:13px; font-weight:600; }
+</style>
+</head>
+<body>
+<header><span style="font-size:22px">🤖</span><h1>SW-Bot · Helpcenter</h1></header>
+<div id="chat"></div>
+<script src="https://swdigitaltest.de/hc-masken.js"></script>
+<script>
+// SW-Bot am Empfang im virtuellen Büro (08.10.2026, Sam: Figur B). Gleiche Bereiche und Masken wie das Helpcenter
+// (hc-masken.js vom Dashboard geladen — dort liegt die einzige Fassung), nur interne Ticket-Arten. Die Seite liegt auf GitHub Pages,
+// weil das Dashboard sich nicht in fremde Fenster einbetten lässt (X-Frame-Options). Das Ticket entsteht über /buero-praesenz/helpdesk/ticket unter dem Büro-Namen.
+const KEY = "a21b2aa2a42fe6189b05773c07bbc9ad78e38b34ba3bb6fe";
+const NAME = new URLSearchParams(location.search).get("name") || "";
+const $chat = document.getElementById("chat");
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+let start = { vorname: null, mitarbeiter: [] };
+// Stubs für Knöpfe in den Masken (nur bei Mandanten-Masken genutzt, die es hier nicht gibt)
+window.mandantGewaehlt = () => {}; window.toggleManuell = () => {}; window.toast = (t) => sag(t);
+function sag(text, ich = false) { const d = document.createElement("div"); d.className = ich ? "ich" : "bot"; d.textContent = text; $chat.appendChild(d); unten(); return d; }
+function unten() { setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" }), 30); }
+function knoepfe(liste, eins = false) {
+  const box = document.createElement("div"); box.className = "knoepfe" + (eins ? " eins" : "");
+  for (const [html, fn, voll] of liste) { const b = document.createElement("button"); b.className = "k" + (voll ? " voll" : ""); b.innerHTML = html; b.onclick = () => { box.querySelectorAll("button").forEach(x => x.disabled = true); fn(b); }; box.appendChild(b); }
+  $chat.appendChild(box); unten(); return box;
+}
+function bereichWaehlen() {
+  sag("Wobei kann ich dir helfen?");
+  const intern = Object.keys(bereiche).filter(k => bereiche[k].p === "intern");
+  knoepfe(intern.map(k => [bereiche[k].i + " " + esc(bereiche[k].t), () => { sag(bereiche[k].t, true); artWaehlen(k); }]));
+}
+function artWaehlen(k) {
+  const b = bereiche[k];
+  sag("Worum geht es genau?");
+  knoepfe(b.subs.map(s => [s.i + " " + esc(s.t) + "<small>" + esc(s.d || "") + "</small>", () => { sag(s.t, true); maske(k, s); }]).concat([["↩︎ Zurück", () => bereichWaehlen()]]), true);
+}
+function maske(k, s) {
+  sag("Alles klar! Bitte noch kurz ausfüllen:");
+  const alt = document.getElementById("form-content"); if (alt) alt.removeAttribute("id");
+  const f = document.createElement("div"); f.id = "form-content"; f.innerHTML = getFormHTML(s.id);
+  // Anhänge gehen nur im Dashboard
+  f.querySelectorAll('input[type="file"]').forEach(e => { const fg = e.closest(".fg"); if (fg) fg.innerHTML = '<span class="hinweis">📎 Anhänge kannst du danach im Dashboard am Ticket ergänzen.</span>'; });
+  // Mitarbeiter-Auswahl (z. B. Offboarding) füllen
+  f.querySelectorAll("select#f-ma, select#f-direkt-ma").forEach(sel => start.mitarbeiter.forEach(n => { const o = document.createElement("option"); o.value = n; o.textContent = n; sel.appendChild(o); }));
+  $chat.appendChild(f);
+  const fehler = document.createElement("div"); fehler.className = "fehler"; $chat.appendChild(fehler);
+  knoepfe([["✉️ Ticket absenden", (btn) => absenden(k, s, f, fehler, btn), true], ["↩︎ Andere Ticket-Art", () => { f.remove(); fehler.remove(); artWaehlen(k); }]], true);
+}
+async function absenden(k, s, f, fehler, btn) {
+  const wert = sel => { const e = f.querySelector(sel); return e ? String(e.value || "").trim() : ""; };
+  let betreff = [...f.querySelectorAll("[id=f-betreff]")].map(e => e.value.trim()).filter(Boolean)[0] || (f.querySelector("#f-betreff") ? "" : s.t);
+  const pflicht = [...f.querySelectorAll(".fg")].filter(fg => fg.querySelector(".req")).find(fg => { const els = [...fg.querySelectorAll("input,select,textarea")].filter(e => e.type !== "file"); if (!els.length) return false;
+    return !els.some(e => (e.type === "checkbox" || e.type === "radio") ? e.checked : String(e.value || "").trim()); });
+  if (!betreff || pflicht) { fehler.textContent = "Bitte noch ausfüllen: " + (!betreff ? "Betreff" : pflicht.querySelector("label").textContent.replace("*", "").trim()); btn.parentElement.querySelectorAll("button").forEach(x => x.disabled = false); return; }
+  fehler.textContent = "";
+  const felder = sammleFelder();
+  const desc = wert("#f-desc");
+  sag("Ticket absenden", true);
+  try {
+    const r = await fetch("https://swdigitaltest.de/buero-praesenz/helpdesk/ticket", { method: "POST", headers: { "Content-Type": "application/json", "X-Buero-Key": KEY },
+      body: JSON.stringify({ name: NAME, typ: s.id, bereich: bereiche[k].t, betreff, prioritaet: wert("#f-prio") || "mittel",
+        beschreibung: (desc + (felder.length ? "\n\n— Angaben aus der Maske —\n" + felder.map(x => x.l + ": " + x.w).join("\n") : "")).trim(), felder }) });
+    const d = await r.json();
+    if (!r.ok || !d.ok) throw new Error(d.error || "Unbekannter Fehler");
+    f.querySelectorAll("input,select,textarea").forEach(e => e.disabled = true);
+    sag(`✅ Danke${start.vorname ? ", " + start.vorname : ""}! Dein Ticket ${d.nummer || ""} „${d.betreff}“ ist in der Aufgaben Box. Das Team kümmert sich darum.`);
+    sag("Du bekommst eine Meldung, sobald sich etwas tut. Alle deine Tickets findest du in der Aufgaben Box im Dashboard.");
+    knoepfe([["➕ Noch etwas anderes", () => bereichWaehlen()], ["👋 Danke, das war’s", () => sag("Gern geschehen! Einen schönen Tag 😊")]], true);
+  } catch (e) {
+    sag("😕 Das hat nicht geklappt: " + e.message);
+    btn.parentElement.querySelectorAll("button").forEach(x => x.disabled = false);
+  }
+}
+(async () => {
+  try { start = await (await fetch("https://swdigitaltest.de/buero-praesenz/helpdesk/start?name=" + encodeURIComponent(NAME), { headers: { "X-Buero-Key": KEY } })).json(); } catch { /* ohne Namen */ }
+  sag(`Hallo${start.vorname ? " " + start.vorname : ""}! 👋 Ich bin der SW-Bot vom Empfang.`);
+  bereichWaehlen();
+})();
+</script>
+</body>
+</html>
