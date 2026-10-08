@@ -491,6 +491,39 @@
       }
     });
   }
+  function lernzimmer() {
+    let fenster = null, hinweis2 = null;
+    try {
+      WA.room.area.onEnter("Lernzimmer").subscribe(() => {
+        try {
+          hinweis2 = WA.ui.displayActionMessage({ message: "\u{1F393} Schulungen \xB7 Leertaste", callback: async () => {
+            try {
+              hinweis2 && hinweis2.remove();
+            } catch {
+            }
+            try {
+              fenster = await WA.nav.openCoWebSite(SEITEN + "lernen.html?name=" + encodeURIComponent(WA.player.name || "") + "&t=" + Date.now());
+            } catch {
+            }
+          } });
+        } catch {
+        }
+      });
+      WA.room.area.onLeave("Lernzimmer").subscribe(() => {
+        try {
+          hinweis2 && hinweis2.remove();
+        } catch {
+        }
+        hinweis2 = null;
+        try {
+          fenster && fenster.close();
+        } catch {
+        }
+        fenster = null;
+      });
+    } catch {
+    }
+  }
   async function infoLaden() {
     try {
       info = await (await fetch(INFO, { headers: { "X-Buero-Key": BUERO_KEY } })).json();
@@ -568,8 +601,9 @@
     }
     newsTafel();
     helpcenterRoboter();
+    lernzimmer();
     try {
-      const breite = 74 * 32, hoehe = 46 * 32;
+      const breite = 80 * 32, hoehe = 58 * 32;
       void karte;
       WA.ui.actionBar.addButton({ id: "sw-uebersicht", label: "\u{1F5FA} \xDCbersicht", callback: () => WA.camera.set(breite / 2, hoehe / 2, breite, hoehe, false, true) });
       let blick = 0;
