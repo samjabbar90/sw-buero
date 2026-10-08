@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Rangliste</title>
+<style>
+  * { box-sizing:border-box; }
+  /* füllt die Anzeige-Fläche der Tafel randlos (Rahmen = Kacheln, 08.10.) */
+  html, body { margin:0; height:100%; overflow:hidden; font-family:system-ui,-apple-system,"Segoe UI",sans-serif; background:linear-gradient(#0f766e,#134e4a); color:#fff; }
+  .kopf { display:flex; justify-content:space-between; font-size:10px; font-weight:700; padding:3px 6px 1px; }
+  .live { color:#fbbf24; font-size:8.5px; } .live::before { content:"● "; animation:b 1.6s infinite; } @keyframes b { 50% { opacity:.25; } }
+  .z { display:flex; align-items:center; gap:5px; font-size:9.5px; font-weight:700; padding:0 6px; height:11.5px; }
+  .n { width:62px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .b { flex:1; height:5px; background:rgba(255,255,255,.18); border-radius:3px; overflow:hidden; } .b > div { height:100%; background:#5eead4; }
+  .z:first-of-type .b > div { background:#fbbf24; }
+  .p { width:30px; text-align:right; color:#e6fffb; }
+</style>
+</head>
+<body>
+<div class="kopf"><span>🏆 Rangliste</span><span class="live">live</span></div>
+<div id="liste"></div>
+<script>
+// Ranglisten-Tafel im Fitnessraum (08.10.2026, Sam): Top 3 aus Health & Wellbeing, jede Minute neu
+const KEY = "a21b2aa2a42fe6189b05773c07bbc9ad78e38b34ba3bb6fe", M = ["🥇", "🥈", "🥉"];
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+async function laden() {
+  try {
+    const d = await (await fetch("https://swdigitaltest.de/buero-praesenz/health/rangliste", { headers: { "X-Buero-Key": KEY } })).json();
+    document.getElementById("liste").innerHTML = d.liste.length ? d.liste.slice(0, 3).map((x, i) => `<div class="z"><span class="n">${M[i]} ${esc(String(x.name).split(" ")[0])}</span><span class="b"><div style="width:${Math.min(100, x.prozent)}%"></div></span><span class="p">${Math.round(x.prozent)} %</span></div>`).join("")
+      : '<div class="z">Noch niemand dabei</div>';
+  } catch { /* nächster Versuch */ }
+}
+laden(); setInterval(laden, 60000);
+</script>
+</body>
+</html>

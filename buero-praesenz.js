@@ -573,6 +573,54 @@
       });
     }
   }
+  function ranglistenTafel() {
+    try {
+      WA.room.website.create({ name: "rangliste", url: SEITEN + "rangliste-bildschirm.html", visible: true, allowApi: false, origin: "map", scale: 1, position: { x: 1847, y: 128, width: 184, height: 54 } });
+    } catch {
+    }
+    const b = { x: 57 * 32, y: 6 * 32, w: 7 * 32, h: 2 * 32 };
+    let fenster = null, hinweis2 = null;
+    const rein = () => {
+      try {
+        hinweis2 = WA.ui.displayActionMessage({ message: "\u{1F3C6} Rangliste \xB7 Leertaste", callback: async () => {
+          try {
+            hinweis2 && hinweis2.remove();
+          } catch {
+          }
+          try {
+            fenster = await WA.nav.openCoWebSite(SEITEN + "rangliste.html?name=" + encodeURIComponent(WA.player.name || "") + "&t=" + Date.now());
+          } catch {
+          }
+        } });
+      } catch {
+      }
+    };
+    const raus = () => {
+      try {
+        hinweis2 && hinweis2.remove();
+      } catch {
+      }
+      hinweis2 = null;
+      try {
+        fenster && fenster.close();
+      } catch {
+      }
+      fenster = null;
+    };
+    try {
+      WA.room.area.create({ name: "rangliste-tafel", x: b.x, y: b.y, width: b.w, height: b.h });
+      WA.room.area.onEnter("rangliste-tafel").subscribe(rein);
+      WA.room.area.onLeave("rangliste-tafel").subscribe(raus);
+    } catch {
+      let drin = false;
+      WA.player.onPlayerMove((e) => {
+        const j = e.x >= b.x && e.x < b.x + b.w && e.y >= b.y && e.y < b.y + b.h;
+        if (j && !drin) rein();
+        if (!j && drin) raus();
+        drin = j;
+      });
+    }
+  }
   async function infoLaden() {
     try {
       info = await (await fetch(INFO, { headers: { "X-Buero-Key": BUERO_KEY } })).json();
@@ -652,6 +700,7 @@
     helpcenterRoboter();
     lernzimmer();
     fitnessEmpfang();
+    ranglistenTafel();
     try {
       const breite = 74 * 32, hoehe = 46 * 32;
       void karte;
