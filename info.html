@@ -18,6 +18,9 @@
   #tuer:hover { background:rgba(255,255,255,.08); }
   #fokus { background:#0d9488; color:#fff; font-weight:700; border-radius:999px; margin-left:4px; border-left:0 !important; }
   #fokus.an { background:#b45309; }
+  /* News (08.10., Sam: Nr. 1 – Knopf in der Info-Leiste, rote Zahl = neu) */
+  #news { position:relative; background:#0d9488; color:#fff; font-weight:700; border-radius:999px; margin-left:4px; border-left:0 !important; }
+  #news .zahl { position:absolute; top:-5px; right:-4px; min-width:16px; height:16px; padding:0 4px; border-radius:8px; background:#ef4444; color:#fff; font-size:10px; line-height:16px; text-align:center; }
 </style>
 </head>
 <body>
@@ -26,6 +29,7 @@
   <button class="teil" id="tuer" style="display:none" title="Tippen: frei → besetzt → zu">–</button>
   <span class="teil">👥 <b id="leute">–</b>&nbsp;im Büro</span>
   <button class="teil" id="fokus" style="display:none">🎯 Fokus</button>
+  <button class="teil" id="news" title="News öffnen">📰 News<span class="zahl" id="newsZahl" style="display:none"></span></button>
 </div>
 <script>
 // Info-Leiste unten mittig (07.10.2026, Sam: Layout 2 statt Fenster oben rechts): Uhrzeit, eigene Tür (Tippen schaltet
@@ -61,6 +65,22 @@ $('tuer').addEventListener('click', () => {
   const naechster = { frei: 'besetzt', besetzt: 'zu', zu: 'frei' }[WA.state[meineVar] || 'frei'] || 'frei';
   WA.state.saveVariable(meineVar, naechster);
 });
+
+// News: ungelesene zählen (gelesen = seit dem letzten Öffnen von news.html in diesem Browser, gleicher Speicher)
+const NEWS_KEY = "a21b2aa2a42fe6189b05773c07bbc9ad78e38b34ba3bb6fe";
+async function newsZaehlen() {
+  try {
+    const news = await (await fetch("https://swdigitaltest.de/buero-praesenz/news", { headers: { "X-Buero-Key": NEWS_KEY } })).json();
+    let gesehen = ""; try { gesehen = localStorage.getItem("swNewsGesehen") || ""; } catch { /* egal */ }
+    const n = news.filter(x => !gesehen || String(x.am) > gesehen).length, z = $('newsZahl');
+    z.textContent = n > 9 ? '9+' : String(n); z.style.display = n ? '' : 'none';
+  } catch { /* nächster Versuch */ }
+}
+$('news').addEventListener('click', async () => {
+  try { await WA.nav.openCoWebSite('https://samjabbar90.github.io/sw-buero/news.html?t=' + Date.now()); } catch { /* ältere Version */ }
+  setTimeout(newsZaehlen, 4000);
+});
+newsZaehlen(); setInterval(newsZaehlen, 60000);
 
 WA.onInit().then(async () => {
   try { await WA.players.configureTracking({ players: true, movement: false }); } catch { /* egal */ }

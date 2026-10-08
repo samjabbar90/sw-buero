@@ -670,7 +670,7 @@
         visible: true,
         // genau so groß wie die Leiste (kein weißer Rand): mit eigener Tür breiter (Tür + Fokus), sonst nur Uhrzeit + Kollegen
         position: { vertical: "bottom", horizontal: "middle" },
-        size: { width: meineTuer() ? "430px" : "230px", height: "40px" },
+        size: { width: meineTuer() ? "530px" : "330px", height: "40px" },
         margin: { bottom: "14px" }
       });
     } catch {
