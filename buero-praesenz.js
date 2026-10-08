@@ -331,10 +331,31 @@
     fx("fx-nacht", nacht);
     fx("fx-lichter", nacht);
     fx("fx-abend", abend);
-    const winter = monat === 12 || monat <= 2;
-    fx("fx-schnee", winter);
-    fx("fx-schneefall", winter);
+    const w = info.wetter;
+    if (w) {
+      fx("fx-regen", !!w.regen);
+      fx("fx-trueb", !!(w.regen || w.nebel || w.trueb || w.gewitter));
+      fx("fx-schneefall", !!w.schnee);
+      fx("fx-schnee", !!w.schneeLiegt);
+    } else {
+      const winter = monat === 12 || monat <= 2;
+      fx("fx-schnee", winter);
+      fx("fx-schneefall", winter);
+      fx("fx-regen", false);
+      fx("fx-trueb", false);
+    }
+    gewitter = !!(w && w.gewitter);
   }
+  var gewitter = false;
+  setInterval(() => {
+    if (!gewitter || Math.random() > 0.15) return;
+    fx("fx-blitz", true);
+    setTimeout(() => fx("fx-blitz", false), 120);
+    setTimeout(() => {
+      fx("fx-blitz", true);
+      setTimeout(() => fx("fx-blitz", false), 80);
+    }, 260);
+  }, 4e3);
   async function infoLaden() {
     try {
       info = await (await fetch(INFO, { headers: { "X-Buero-Key": BUERO_KEY } })).json();
