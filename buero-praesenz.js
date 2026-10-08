@@ -362,7 +362,7 @@
     }, 260);
   }, 4e3);
   var SEITEN = "https://samjabbar90.github.io/sw-buero/";
-  var NEWS_SCHIRM = { x: 41.25 * 32, y: 29.9 * 32, w: 224, h: 100 };
+  var NEWS_SCHIRM = { x: 1325, y: 962, w: 214, h: 70 };
   var NEWS_BEREICH = { x: 41 * 32, y: 33 * 32, w: 8 * 32, h: 3 * 32 };
   var newsFenster = null;
   var newsHinweis = null;
@@ -424,15 +424,6 @@
     } catch {
     }
     try {
-      const zonen = (karte && karte.tilesets || []).find((t) => t.name === "WA_Special_Zones");
-      if (zonen) {
-        const k = [];
-        for (let x = 42; x <= 47; x++) for (const y of [31, 32]) k.push({ x, y, tile: zonen.firstgid + 2, layer: "collisions" });
-        WA.room.setTiles(k);
-      }
-    } catch {
-    }
-    try {
       WA.room.area.create({ name: "news-tafel", x: NEWS_BEREICH.x, y: NEWS_BEREICH.y, width: NEWS_BEREICH.w, height: NEWS_BEREICH.h });
       WA.room.area.onEnter("news-tafel").subscribe(() => {
         newsBetreten();
@@ -448,72 +439,57 @@
       });
     }
   }
-  var BOT = { x: 41 * 32, y: 34.6 * 32, w: 192, h: 110 };
-  var BOT_BEREICH = { x: 41 * 32, y: 38 * 32, w: 7 * 32, h: 2 * 32 };
-  var botFenster = null;
-  var botHinweis = null;
-  function swBot() {
-    try {
-      WA.room.website.create({
-        name: "sw-bot",
-        url: SEITEN + "sw-bot.html",
-        visible: true,
-        allowApi: false,
-        origin: "map",
-        scale: 1,
-        position: { x: BOT.x, y: BOT.y, width: BOT.w, height: BOT.h }
-      });
-    } catch {
-    }
-    try {
-      const zonen = (karte && karte.tilesets || []).find((t) => t.name === "WA_Special_Zones");
-      if (zonen) {
-        const k = [];
-        for (let x = 41; x <= 46; x++) for (const y of [36, 37]) k.push({ x, y, tile: zonen.firstgid + 2, layer: "collisions" });
-        WA.room.setTiles(k);
-      }
-    } catch {
-    }
-    const rein = () => {
+  var HELPCENTER = [{ x: 13, y: 27 }, { x: 62, y: 6 }];
+  var hcFenster = null;
+  var hcHinweis = null;
+  function helpcenterRoboter() {
+    HELPCENTER.forEach((h, i) => {
+      const n = i + 1, bereich = { x: (h.x - 1) * 32, y: (h.y + 1) * 32, w: 5 * 32, h: 5 * 32 };
+      const rein = () => {
+        fx(`fx-hc${n}-aktiv`, true);
+        fx(`fx-hc${n}-ruhe`, false);
+        try {
+          hcHinweis = WA.ui.displayActionMessage({ message: "\u{1F4AC} Helpcenter \xB7 Leertaste", callback: async () => {
+            try {
+              hcHinweis && hcHinweis.remove();
+            } catch {
+            }
+            try {
+              hcFenster = await WA.nav.openCoWebSite(SEITEN + "helpdesk.html?name=" + encodeURIComponent(WA.player.name || "") + "&t=" + Date.now());
+            } catch {
+            }
+          } });
+        } catch {
+        }
+      };
+      const raus = () => {
+        fx(`fx-hc${n}-aktiv`, false);
+        fx(`fx-hc${n}-ruhe`, true);
+        try {
+          hcHinweis && hcHinweis.remove();
+        } catch {
+        }
+        hcHinweis = null;
+        try {
+          hcFenster && hcFenster.close();
+        } catch {
+        }
+        hcFenster = null;
+      };
       try {
-        botHinweis = WA.ui.displayActionMessage({ message: "\u{1F4AC} Mit SW-Bot sprechen \xB7 Leertaste", callback: async () => {
-          try {
-            botHinweis && botHinweis.remove();
-          } catch {
-          }
-          try {
-            botFenster = await WA.nav.openCoWebSite(SEITEN + "helpdesk.html?name=" + encodeURIComponent(WA.player.name || "") + "&t=" + Date.now());
-          } catch {
-          }
-        } });
+        WA.room.area.create({ name: "helpcenter-" + n, x: bereich.x, y: bereich.y, width: bereich.w, height: bereich.h });
+        WA.room.area.onEnter("helpcenter-" + n).subscribe(rein);
+        WA.room.area.onLeave("helpcenter-" + n).subscribe(raus);
       } catch {
+        let drin = false;
+        WA.player.onPlayerMove((e) => {
+          const j = e.x >= bereich.x && e.x < bereich.x + bereich.w && e.y >= bereich.y && e.y < bereich.y + bereich.h;
+          if (j && !drin) rein();
+          if (!j && drin) raus();
+          drin = j;
+        });
       }
-    };
-    const raus = () => {
-      try {
-        botHinweis && botHinweis.remove();
-      } catch {
-      }
-      botHinweis = null;
-      try {
-        botFenster && botFenster.close();
-      } catch {
-      }
-      botFenster = null;
-    };
-    try {
-      WA.room.area.create({ name: "sw-bot", x: BOT_BEREICH.x, y: BOT_BEREICH.y, width: BOT_BEREICH.w, height: BOT_BEREICH.h });
-      WA.room.area.onEnter("sw-bot").subscribe(rein);
-      WA.room.area.onLeave("sw-bot").subscribe(raus);
-    } catch {
-      let drin = false;
-      WA.player.onPlayerMove((e) => {
-        const j = e.x >= BOT_BEREICH.x && e.x < BOT_BEREICH.x + BOT_BEREICH.w && e.y >= BOT_BEREICH.y && e.y < BOT_BEREICH.y + BOT_BEREICH.h;
-        if (j && !drin) rein();
-        if (!j && drin) raus();
-        drin = j;
-      });
-    }
+    });
   }
   async function infoLaden() {
     try {
@@ -591,7 +567,7 @@
     } catch {
     }
     newsTafel();
-    swBot();
+    helpcenterRoboter();
     try {
       const breite = 74 * 32, hoehe = 46 * 32;
       void karte;

@@ -5,25 +5,22 @@
 <title>SW News</title>
 <style>
   * { box-sizing:border-box; }
-  html, body { margin:0; height:100%; background:transparent; overflow:hidden; font-family:system-ui,-apple-system,"Segoe UI",sans-serif; }
-  .geraet { position:absolute; left:0; top:0; width:224px; height:80px; padding:5px; background:#111827; border-radius:7px; box-shadow:4px 5px 0 rgba(0,0,0,.28); }
-  .schirm { height:100%; border-radius:3px; background:linear-gradient(#0f766e,#134e4a); color:#fff; padding:5px 8px; overflow:hidden; }
+  /* füllt die Anzeige-Fläche im Rahmen randlos (Rahmen + Fuß sind Kacheln in der Karte, 08.10.) */
+  html, body { margin:0; height:100%; overflow:hidden; font-family:system-ui,-apple-system,"Segoe UI",sans-serif; background:linear-gradient(#0f766e,#134e4a); }
+  .schirm { height:100%; color:#fff; padding:5px 8px; overflow:hidden; }
   .kopf { display:flex; justify-content:space-between; font-size:12px; font-weight:700; margin-bottom:3px; }
   .live { color:#fbbf24; font-weight:600; font-size:10px; }
   .live::before { content:"● "; animation:blink 1.6s infinite; }
   @keyframes blink { 50% { opacity:.25; } }
   .zeile { font-size:10.5px; line-height:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; opacity:.95; }
-  .fuss { position:absolute; left:104px; top:80px; width:16px; height:16px; background:#3d434b; }
-  .sockel { position:absolute; left:88px; top:94px; width:48px; height:5px; border-radius:2px; background:#3d434b; }
 </style>
 </head>
 <body>
-<div class="geraet"><div class="schirm">
+<div class="schirm">
   <div class="kopf"><span>📰 SW News</span><span class="live">live</span></div>
   <div class="zeile" id="z1">…</div>
   <div class="zeile" id="z2"></div>
-</div></div>
-<div class="fuss"></div><div class="sockel"></div>
+</div>
 <script>
 // News-Bildschirm am Empfang (08.10.2026, Sam: Variante C) — steht als Webseite direkt in der Karte und zeigt
 // die 2 neuesten News (angepinnte zuerst) aus dem Dashboard; aktualisiert sich jede Minute.
