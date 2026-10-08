@@ -448,7 +448,7 @@
     } catch {
     }
   }
-  var FITNESS = { x: 74, y: 8 };
+  var FITNESS = { x: 78, y: 6 };
   function fitnessEmpfang() {
     const b = { x: (FITNESS.x - 1) * 32, y: (FITNESS.y + 3) * 32, w: 8 * 32, h: 3 * 32 };
     let fenster = null, hinweis2 = null;
