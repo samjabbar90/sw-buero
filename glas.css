@@ -54,3 +54,9 @@ html.glas body { text-shadow: 0 1px 2px rgba(0, 0, 0, .6); }
 /* Handy (09.10., Vorschlag 3): Fenster sitzt als Karte über der Daumen-Leiste — keine Ziehstellen, Leiste oben etwas größer zum Tippen */
 @media (max-width: 767px) { #glas-rand, #glas-ecke { display: none; } html.glas header.glas-kopf { cursor: auto; padding-right: 136px !important; }
   .glas-k { width: 36px; height: 36px; line-height: 34px; } #glas-leiste .glas-k:nth-child(3), #glas-leiste .glas-k:nth-child(4) { display: none; } /* ↺ und ⛶ braucht man am Handy nicht */ }
+/* Arbeiten = fest (09.10.2026, Sam: „überall durchsichtig, und wenn man arbeitet, wird es dunkel“): Maus im Fenster oder Tippen →
+   Hintergrund und Karten werden dunkel und fest, das Büro scheint nicht mehr durch; Maus raus → wieder durchsichtig */
+html.glas body { transition: background-color .25s ease; }
+html.glas body:hover, html.glas body:focus-within { background: rgba(22, 24, 29, .97) !important; }
+html.glas body:hover :is(.karte, .box, .idee, .lektion, .z, .bot, #form-content, .tipp, .zeile),
+html.glas body:focus-within :is(.karte, .box, .idee, .lektion, .z, .bot, #form-content, .tipp, .zeile) { background: rgba(255, 255, 255, .06) !important; }
