@@ -30,10 +30,11 @@
 <div class="pille">
   <span class="teil">🕐 <b id="uhr">–</b></span>
   <button class="teil" id="tuer" style="display:none" title="Tippen: frei → besetzt → zu">–</button>
-  <span class="teil">👥 <b id="leute">–</b>&nbsp;im Büro</span>
-  <button class="teil" id="fokus" style="display:none">🎯 Fokus</button>
+  <span class="teil" id="online" style="display:none" title="Heute zum ersten Mal im Büro">🟢 online seit <b id="seit">–</b>&nbsp;·&nbsp;<span id="dauer"></span></span>
+  <span class="teil" title="Kollegen im Büro">👥 <b id="leute">–</b></span>
+  <button class="teil" id="fokus" style="display:none" title="Fokus: 25 Min Tür auf „besetzt“">🎯</button>
   <button class="teil" id="feierabend" style="display:none" title="Arbeitszeit prüfen und Feierabend machen">🚪 Feierabend</button>
-  <button class="teil" id="news" title="News öffnen">📰 News<span class="zahl" id="newsZahl" style="display:none"></span></button>
+  <button class="teil" id="news" title="News öffnen">📰<span class="zahl" id="newsZahl" style="display:none"></span></button>
 </div>
 <script>
 // Info-Leiste unten mittig (07.10.2026, Sam: Layout 2 statt Fenster oben rechts): Uhrzeit, eigene Tür (Tippen schaltet
@@ -51,7 +52,7 @@ function zeichnen() {
   $('tuer').innerHTML = STATUS[WA.state[meineVar] || 'frei'] || STATUS.frei;
   const bis = fokusBis(), b = $('fokus');
   if (bis > Date.now()) { b.className = 'teil an'; b.textContent = '🎯 noch ' + Math.ceil((bis - Date.now()) / 60000) + ' Min ✕'; }
-  else { b.className = 'teil'; b.textContent = '🎯 Fokus'; if (bis) fokusEnde(true); }
+  else { b.className = 'teil'; b.textContent = '🎯'; if (bis) fokusEnde(true); }
 }
 function fokusEnde(abgelaufen) {
   try { localStorage.removeItem('swFokusBis'); } catch { /* egal */ }
@@ -85,6 +86,14 @@ $('news').addEventListener('click', async () => {
   setTimeout(newsZaehlen, 4000);
 });
 newsZaehlen(); setInterval(newsZaehlen, 60000);
+// Online seit (09.10., Sam: Layout 1): erstes Betreten heute laut Dashboard + wie lange schon
+let seitMin = null;
+async function onlineLaden() {
+  try { const d = await (await fetch("https://swdigitaltest.de/buero-praesenz/online?name=" + encodeURIComponent(WA.player.name || ""), { headers: { "X-Buero-Key": NEWS_KEY } })).json();
+    if (d && d.seit) { $('seit').textContent = d.seit; seitMin = d.seitMin; $('online').style.display = ''; onlineDauer(); } } catch { /* später */ }
+}
+function onlineDauer() { if (seitMin == null) return; const j = new Date(), m = j.getHours() * 60 + j.getMinutes() - seitMin; if (m >= 0) $('dauer').textContent = Math.floor(m / 60) + ':' + String(m % 60).padStart(2, '0') + ' h'; }
+setInterval(onlineDauer, 30000);
 if (new URLSearchParams(location.search).has('kz')) { $('feierabend').style.display = '';
   $('feierabend').addEventListener('click', () => { try { WA.player.state.saveVariable('swAktion', { was: 'feierabend', t: Date.now() }, { public: false, persist: false }); } catch { /* ältere Version */ } }); }
 
@@ -103,6 +112,7 @@ WA.onInit().then(async () => {
   if (meineVar) { $('tuer').style.display = ''; $('fokus').style.display = ''; WA.state.onVariableChange(meineVar).subscribe(zeichnen); }
   try { WA.players.onPlayerEnters.subscribe(zeichnen); WA.players.onPlayerLeaves.subscribe(zeichnen); } catch { /* egal */ }
   zeichnen(); setInterval(zeichnen, 20000);
+  onlineLaden(); setInterval(onlineLaden, 5 * 60000);
 });
 </script>
 </body>

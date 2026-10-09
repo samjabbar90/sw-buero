@@ -774,12 +774,6 @@
     ideenFenster = null;
   }
   function ideen() {
-    if (!HANDY) try {
-      WA.ui.actionBar.addButton({ id: "sw-ideen", label: "\u{1F4A1} Ideen", callback: () => {
-        ideenOeffnen();
-      } });
-    } catch {
-    }
     try {
       const eigen = "B\xFCro " + String(WA.player.name || "").split(/\s+/)[0];
       WA.room.area.onEnter(eigen).subscribe(ideenHinweisZeigen);
@@ -962,13 +956,6 @@
       });
     } catch {
     }
-    if (!HANDY) try {
-      WA.ui.actionBar.addButton({ id: "sw-mein-profil", label: "\u{1F464} Mein Profil", callback: () => {
-        glasFenster(SEITEN + "profil.html?ich=1&tore=" + toreVon(WA.player.name || "") + "&t=" + Date.now()).catch(() => {
-        });
-      } });
-    } catch {
-    }
   }
   async function zuPerson(name) {
     try {
@@ -1114,12 +1101,6 @@
       try {
         const r = await fetch(ENDPOINT.replace(/melden$/, "kernzeit/hinweis"), { method: "POST", headers: { "Content-Type": "application/json", "X-Buero-Key": BUERO_KEY }, body: JSON.stringify({ name: WA.player.name }) });
         const d = await r.json();
-        if (d && d.aktiv && !HANDY) {
-          try {
-            WA.ui.actionBar.addButton({ id: "sw-feierabend", label: "\u{1F6AA} Feierabend", callback: feierabendOeffnen });
-          } catch {
-          }
-        }
         if (d && d.zeigen) {
           zuletzt = Date.now();
           glasFenster(SEITEN + "kernzeit.html?t=" + Date.now());
@@ -1158,7 +1139,7 @@
     } catch {
     }
     WA.ui.website.getAll().then((alle) => alle.forEach((w) => {
-      if (!/info\.html|leiste\.html|schloss\.html|tagescheck\.html\?karte/.test(String(w.url || ""))) w.close().catch(() => {
+      if (!/info\.html|leiste\.html|schloss\.html|tagescheck\.html\?karte|oben\.html\?v/.test(String(w.url || ""))) w.close().catch(() => {
       });
     })).catch(() => {
     });
@@ -1273,12 +1254,12 @@
     setInterval(infoLaden, 15e3);
     try {
       await WA.ui.website.open({
-        url: "https://samjabbar90.github.io/sw-buero/info.html" + (kzAktiv ? "?kz=1" : ""),
+        url: "https://samjabbar90.github.io/sw-buero/info.html?v=2" + (kzAktiv ? "&kz=1" : ""),
         allowApi: true,
         visible: true,
         // genau so groß wie die Leiste (kein weißer Rand): mit eigener Tür breiter (Tür + Fokus), sonst nur Uhrzeit + Kollegen
         position: { vertical: HANDY ? "top" : "bottom", horizontal: "middle" },
-        size: { width: HANDY ? Math.min(330, (screen.width || 390) - 20) + "px" : (meineTuer() ? 530 : 330) + (kzAktiv ? 130 : 0) + "px", height: "40px" },
+        size: { width: HANDY ? Math.min(330, (screen.width || 390) - 20) + "px" : 400 + (meineTuer() ? 150 : 0) + (kzAktiv ? 130 : 0) + "px", height: "40px" },
         margin: HANDY ? { top: "64px" } : { bottom: "14px" }
       });
     } catch {
@@ -1330,11 +1311,14 @@
     };
     try {
       if (!HANDY) {
-        WA.ui.actionBar.addButton({ id: "sw-uebersicht", label: "\u{1F5FA} \xDCbersicht", callback: uebersicht });
-        WA.ui.actionBar.addButton({ id: "sw-blick-hoch", label: "\u2B06 Blick hoch", callback: () => blicken(-6) });
-        WA.ui.actionBar.addButton({ id: "sw-blick-runter", label: "\u2B07 Blick runter", callback: () => blicken(6) });
-        WA.ui.actionBar.addButton({ id: "sw-zu-mir", label: "\u{1F4CD} Zu mir", callback: zuMir });
-        WA.ui.actionBar.addButton({ id: "sw-schnellreise", label: "\u{1F680} Schnellreise", callback: schnellreise });
+        await WA.ui.website.open({
+          url: SEITEN + "oben.html?v=2",
+          allowApi: true,
+          visible: true,
+          position: { vertical: "top", horizontal: "middle" },
+          size: { width: "380px", height: "46px" },
+          margin: { top: "8px" }
+        });
       } else {
         await WA.ui.website.open({
           url: SEITEN + "leiste.html?v=" + Date.now(),
@@ -1347,6 +1331,36 @@
       }
     } catch {
     }
+    let menue = null, menueName = "";
+    const menueZu = () => {
+      if (menue) {
+        try {
+          menue.close();
+        } catch {
+        }
+      }
+      menue = null;
+      menueName = "";
+    };
+    const menueUmschalten = async (m) => {
+      const war = menueName;
+      menueZu();
+      if (war === m) return;
+      const n = m === "karte" ? 4 : 2 + (tcAktiv ? 1 : 0) + (kzAktiv ? 2 : 0);
+      menueName = m;
+      try {
+        menue = await WA.ui.website.open({
+          url: SEITEN + "oben.html?menue=" + m + (tcAktiv ? "&tc=1" : "") + (kzAktiv ? "&kz=1" : ""),
+          allowApi: true,
+          visible: true,
+          position: { vertical: "top", horizontal: "middle" },
+          size: { width: "380px", height: n * 37 + 12 + "px" },
+          margin: { top: "58px" }
+        });
+      } catch {
+        menueName = "";
+      }
+    };
     let letzteAktion = 0;
     try {
       letzteAktion = Number((WA.player.state.swAktion || {}).t) || 0;
@@ -1356,9 +1370,12 @@
       WA.player.state.onVariableChange("swAktion").subscribe((v) => {
         if (!v || !v.t || v.t === letzteAktion) return;
         letzteAktion = v.t;
+        if (v.was === "menue") return menueUmschalten(String(v.m || ""));
+        menueZu();
         const tuer = meineTuer();
         ({
           ideen: () => ideenOeffnen(),
+          uebersicht,
           karte: () => uebersichtAn ? zuMir() : uebersicht(),
           zumir: zuMir,
           reise: schnellreise,

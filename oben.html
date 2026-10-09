@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Leiste oben</title>
+<!-- Leiste oben (09.10.2026, Sam: Layout 1 „aufgeräumt“): 🗺 Karte ▾ · 🚀 Schnellreise · ☰ Meins ▾. Die Menüs öffnet das Büro-Skript
+     (menue.html darunter); alle Knöpfe melden über die Spieler-Variable „swAktion“. ?menue=… = als Menü (Liste) statt Leiste. -->
+<script src="https://play.workadventu.re/iframe_api.js"></script>
+<style>
+  * { box-sizing:border-box; }
+  html, body { margin:0; height:100%; background:transparent; overflow:hidden; font-family:system-ui,-apple-system,"Segoe UI",sans-serif; }
+  .leiste { height:100%; display:flex; align-items:center; justify-content:center; gap:4px; background:rgba(30,41,59,.95); border-radius:12px; padding:4px; }
+  button { font:inherit; font-size:14px; color:#e2e8f0; background:transparent; border:0; border-radius:8px; padding:7px 12px; cursor:pointer; white-space:nowrap; }
+  button:hover, button.an { background:rgba(255,255,255,.1); }
+  .menue { position:absolute; top:0; width:190px; background:rgba(30,41,59,.98); border-radius:12px; padding:5px; display:flex; flex-direction:column; }
+  .menue button { text-align:left; width:100%; padding:8px 12px; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+const q = new URLSearchParams(location.search), MENUE = q.get("menue");
+const aktion = (was, extra) => { try { WA.player.state.saveVariable("swAktion", Object.assign({ was, t: Date.now() }, extra || {}), { public: false, persist: false }); } catch (e) { console.warn(e); } };
+const MENUES = {
+  karte: [["uebersicht", "🗺 Übersicht"], ["zumir", "📍 Zu mir"], ["hoch", "⬆ Blick hoch"], ["runter", "⬇ Blick runter"]],
+  meins: [["ideen", "💡 Ideen"], ["meinProfil", "👤 Mein Profil"]].concat(q.has("tc") ? [["tagescheck", "✅ Tages-Check"]] : [], q.has("kz") ? [["arbeitszeit", "⏰ Meine Arbeitszeit"], ["feierabend", "🚪 Feierabend"]] : []),
+};
+const app = document.getElementById("app");
+if (MENUE && MENUES[MENUE]) {
+  // Menü unter dem Knopf: Karte links, Meins rechts
+  app.innerHTML = `<div class="menue" style="${MENUE === "karte" ? "left:0" : "right:0"}">` + MENUES[MENUE].map(([w, t]) => `<button data-w="${w}">${t}</button>`).join("") + "</div>";
+  app.querySelectorAll("[data-w]").forEach(b => b.onclick = () => aktion(b.dataset.w));
+} else {
+  app.innerHTML = '<div class="leiste"><button data-m="karte">🗺 Karte ▾</button><button data-w="reise">🚀 Schnellreise</button><button data-m="meins">☰ Meins ▾</button></div>';
+  app.querySelectorAll("[data-m]").forEach(b => b.onclick = () => aktion("menue", { m: b.dataset.m }));
+  app.querySelectorAll("[data-w]").forEach(b => b.onclick = () => aktion(b.dataset.w));
+}
+</script>
+</body>
+</html>
