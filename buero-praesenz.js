@@ -837,6 +837,60 @@
     }
     konfetti(kinder.join(" & "));
   }
+  function toreVon(name) {
+    try {
+      return Number(JSON.parse(String(WA.state.fussball_tore || "{}"))[name]) || 0;
+    } catch {
+      return 0;
+    }
+  }
+  function profilOeffnen(name) {
+    glasFenster(SEITEN + "profil.html?name=" + encodeURIComponent(name) + "&tore=" + toreVon(name) + "&t=" + Date.now()).catch(() => {
+    });
+  }
+  function profilKarten() {
+    try {
+      WA.ui.onRemotePlayerClicked.subscribe((p) => {
+        try {
+          p.addAction("\u{1F464} Profil ansehen", () => profilOeffnen(String(p.name || "")));
+        } catch {
+        }
+      });
+    } catch {
+    }
+    if (!HANDY) try {
+      WA.ui.actionBar.addButton({ id: "sw-mein-profil", label: "\u{1F464} Mein Profil", callback: () => {
+        glasFenster(SEITEN + "profil.html?ich=1&tore=" + toreVon(WA.player.name || "") + "&t=" + Date.now()).catch(() => {
+        });
+      } });
+    } catch {
+    }
+    setTimeout(async () => {
+      try {
+        const a = localStorage.getItem("swBueroAusweis"), heute = (/* @__PURE__ */ new Date()).toLocaleDateString("sv-SE", { timeZone: "Europe/Berlin" });
+        if (!a || localStorage.getItem("sw-profil-erinnert") === heute) return;
+        const r = await fetch("https://swdigitaltest.de/buero-praesenz/profil?ich=1", { headers: { "X-Buero-Key": BUERO_KEY, "X-Buero-Ausweis": a } });
+        const d = r.ok ? await r.json() : null;
+        if (d && !String(d.ueber || "").trim()) {
+          localStorage.setItem("sw-profil-erinnert", heute);
+          kurzMeldung("\u{1F464} Dein B\xFCro-Profil ist noch leer \u2013 Dashboard \u203A Mein Profil \u203A B\xFCro-Profil (5 Min.)", 9e3);
+        }
+      } catch {
+      }
+    }, 2e4);
+  }
+  async function zuPerson(name) {
+    try {
+      await WA.players.configureTracking({ players: true, movement: false });
+      const p = [...WA.players.list()].find((x) => String(x.name || "").toLowerCase() === name.toLowerCase());
+      if (p && p.position) {
+        await WA.player.moveTo(p.position.x, p.position.y + 32, 10);
+        return;
+      }
+    } catch {
+    }
+    kurzMeldung("\u{1F6B6} " + name.split(/\s+/)[0] + " ist gerade nicht im B\xFCro", 5e3);
+  }
   var BUERO_TEPPICHE = [
     ["fliesen", "Anthrazit-Teppichfliesen"],
     ["petrol", "Petrol mit hellem L\xE4ufer"],
@@ -1021,6 +1075,7 @@
     fussgaengerAmpel();
     klingel();
     teppichVorschau();
+    profilKarten();
     const breite = 87 * 32, hoehe = 62 * 32;
     void karte;
     let blick = 0, uebersichtAn = false;
@@ -1091,6 +1146,8 @@
           mehr: () => glasFenster(SEITEN + "mehr.html?tuer=" + (tuer ? encodeURIComponent(tuerStatus(tuer)) : "") + "&t=" + Date.now()),
           hoch: () => blicken(-6),
           runter: () => blicken(6),
+          zuPerson: () => zuPerson(String(v.name || "")),
+          meinProfil: () => glasFenster(SEITEN + "profil.html?ich=1&tore=" + toreVon(WA.player.name || "") + "&t=" + Date.now()),
           tuer: () => {
             if (tuer) WA.state.saveVariable(tuer.variable, { frei: "besetzt", besetzt: "zu", zu: "frei" }[tuerStatus(tuer)] || "frei");
           }

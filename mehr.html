@@ -24,6 +24,7 @@
 const TUER = new URLSearchParams(location.search).get("tuer") || "";
 const PUNKTE = [
   ...(TUER ? [["tuer", "🚪 Tür umschalten", "jetzt: " + ({ frei: "frei", besetzt: "besetzt", zu: "zu" }[TUER] || TUER) + " → frei / besetzt / zu"]] : []),
+  ["meinProfil", "👤 Mein Profil", "so sehen dich die Kollegen"],
   ["karte", "🗺 Übersicht", "ganzes Haus zeigen (nochmal = zurück zu dir)"],
   ["hoch", "⬆ Blick hoch", "Kamera 6 Felder nach oben"],
   ["runter", "⬇ Blick runter", "Kamera 6 Felder nach unten"],

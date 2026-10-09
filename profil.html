@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Profil</title>
+<script src="https://play.workadventu.re/iframe_api.js"></script>
+<style>
+  /* Profilkarte im Büro (09.10.2026, Sam: Layout 2 „Großes Profil mit Reitern“) — Graphit, Kopfbanner in Petrol */
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #1b1d22; color: #fff; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+  header { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: rgba(0, 0, 0, .45); }
+  header h1 { margin: 0; font-size: 15px; flex: 1; }
+  .banner { height: 96px; background: linear-gradient(120deg, #0f766e, #155e75); position: relative; }
+  .banner .firma { position: absolute; left: 18px; top: 14px; font-size: 11px; font-weight: 800; letter-spacing: .08em; color: rgba(255, 255, 255, .75); }
+  .foto { width: 96px; height: 96px; border-radius: 50%; border: 4px solid #fff; background: #94a3b8 center/cover no-repeat; margin: -50px auto 0; position: relative;
+    display: flex; align-items: center; justify-content: center; font-size: 34px; font-weight: 800; color: #fff; }
+  .name { text-align: center; font-size: 22px; font-weight: 800; margin-top: 10px; }
+  .rolle { text-align: center; font-size: 13px; color: rgba(255, 255, 255, .78); margin-top: 3px; padding: 0 14px; }
+  .abz { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; margin: 10px 14px 0; }
+  .abz span { font-size: 11.5px; font-weight: 700; padding: 4px 9px; border-radius: 999px; background: rgba(255, 255, 255, .1); color: #e2e8f0; }
+  .reiter { display: flex; gap: 6px; justify-content: center; margin: 14px 14px 6px; }
+  .reiter button { font: inherit; font-size: 13px; font-weight: 700; padding: 7px 14px; border-radius: 999px; border: 0; cursor: pointer; background: transparent; color: rgba(255, 255, 255, .78); }
+  .reiter button.an { background: rgba(20, 184, 166, .28); color: #5eead4; }
+  .inhalt { padding: 6px 16px 10px; display: flex; flex-direction: column; gap: 8px; }
+  .z { background: rgba(255, 255, 255, .07); border-radius: 10px; padding: 9px 12px; font-size: 14px; }
+  .z b { display: block; font-size: 11px; letter-spacing: .04em; text-transform: uppercase; color: rgba(255, 255, 255, .6); margin-bottom: 2px; }
+  .gross { font-size: 26px; font-weight: 800; color: #5eead4; }
+  .leer { color: rgba(255, 255, 255, .65); text-align: center; padding: 14px 6px; font-size: 13.5px; }
+  .knoepfe { display: flex; gap: 8px; padding: 6px 16px 16px; }
+  .knoepfe a, .knoepfe button { flex: 1; text-align: center; text-decoration: none; font: inherit; font-size: 14px; font-weight: 700; padding: 10px; border-radius: 10px; border: 0; cursor: pointer;
+    background: rgba(255, 255, 255, .12); color: #fff; }
+  .knoepfe .haupt { background: rgba(15, 118, 110, .9); }
+  .box { background: rgba(255, 255, 255, .07); border-radius: 12px; padding: 12px; margin: 14px; }
+  label { display: block; font-size: 12px; font-weight: 700; color: rgba(255, 255, 255, .8); margin: 8px 0 4px; }
+  input { width: 100%; font: inherit; font-size: 14px; padding: 8px 10px; border: 1.5px solid rgba(255, 255, 255, .3); border-radius: 8px; background: rgba(0, 0, 0, .3); color: #fff; }
+  .fehler { color: #fca5a5; font-size: 13px; font-weight: 600; min-height: 18px; margin-top: 6px; }
+</style>
+<script src="glas.js?v=1791600000"></script>
+</head>
+<body>
+<header><span style="font-size:18px">👤</span><h1 id="kopf">Profil</h1></header>
+<div id="seite"><div class="leer">Lade …</div></div>
+<script>
+// Daten kommen vom Dashboard (GET /buero-praesenz/profil) — nur mit Büro-Ausweis (einmal pro Gerät Benutzername + Büro-PIN),
+// derselbe Ausweis wie bei „Meine Ideen“. Gezeigt wird nur das Büro-Profil, nie Anschrift, Vertrag, Notfallkontakt.
+const KEY = "a21b2aa2a42fe6189b05773c07bbc9ad78e38b34ba3bb6fe", API = "https://swdigitaltest.de/buero-praesenz";
+const q = new URLSearchParams(location.search), NAME = q.get("name") || "", ICH = q.get("ich") === "1", TORE = Number(q.get("tore")) || 0;
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const ausweis = { holen: () => { try { return localStorage.getItem("swBueroAusweis") || ""; } catch { return ""; } }, setzen: t => { try { t ? localStorage.setItem("swBueroAusweis", t) : localStorage.removeItem("swBueroAusweis"); } catch {} } };
+async function api(pfad) {
+  const r = await fetch(API + pfad, { headers: { "X-Buero-Key": KEY, "X-Buero-Ausweis": ausweis.holen() } });
+  const d = await r.json().catch(() => ({}));
+  if (r.status === 401 && /ausweis/.test(d.error || "")) { ausweis.setzen(""); throw new Error("ausweis"); }
+  if (!r.ok) throw new Error(d.error || "Fehler"); return d;
+}
+function ausweisFormular(meldung) {
+  $("kopf").textContent = "Büro-Ausweis";
+  $("seite").innerHTML = `<div class="box"><div style="font-size:14px">Einmal pro Gerät: Profile sehen nur angemeldete Kollegen.</div>
+    <div style="font-size:12px;opacity:.75;margin-top:4px">Die Büro-PIN erzeugst du im Dashboard auf der Startseite unter 🔑 Büro-PIN.</div>
+    <label>Benutzername</label><input id="ben" autocomplete="username">
+    <label>Büro-PIN</label><input id="pin" inputmode="numeric" autocomplete="one-time-code" maxlength="7">
+    <div class="fehler" id="fe">${esc(meldung || "")}</div><div class="knoepfe" style="padding:6px 0 0"><button class="haupt" id="los">Ausweis speichern</button></div></div>`;
+  $("los").onclick = async () => {
+    $("los").disabled = true; $("fe").textContent = "";
+    try {
+      const r = await fetch(API + "/ausweis", { method: "POST", headers: { "X-Buero-Key": KEY, "Content-Type": "application/json" }, body: JSON.stringify({ benutzer: $("ben").value.trim(), pin: $("pin").value.trim() }) });
+      const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || (r.status === 429 ? "Zu viele Versuche – bitte 15 Minuten warten." : "Fehler"));
+      ausweis.setzen(d.token); laden();
+    } catch (e) { $("fe").textContent = e.message; $("los").disabled = false; }
+  };
+}
+let P = null, reiter = "ueber";
+function zeile(titel, wert) { return wert ? `<div class="z"><b>${esc(titel)}</b>${esc(wert)}</div>` : ""; }
+function zeigen() {
+  const p = P, v = String(p.name || "").split(/\s+/)[0];
+  $("kopf").textContent = p.ich ? "Mein Profil" : "Profil von " + v;
+  const initialen = String(p.name || "?").split(/\s+/).map(t => t[0] || "").join("").slice(0, 2).toUpperCase();
+  const abz = [p.seit && "seit " + p.seit + " im Team", p.schulungen && "🎓 " + p.schulungen + " Schulung" + (p.schulungen === 1 ? "" : "en"), p.ideen && "💡 " + p.ideen + " Idee" + (p.ideen === 1 ? "" : "n"), TORE && "⚽ " + TORE + " Tor" + (TORE === 1 ? "" : "e")].filter(Boolean);
+  let inhalt = "";
+  if (reiter === "ueber") inhalt = zeile("Über mich", p.ueber) + zeile("Hobbys", p.hobbys) + zeile("Sprachen", p.sprachen) + zeile("Mein Kaffee", p.kaffee) + zeile("Geburtstag", p.geburtstag)
+    || `<div class="leer">${p.ich ? "Dein Büro-Profil ist noch leer.<br>Fülle es im Dashboard unter <b>Mein Profil › Büro-Profil</b> aus." : esc(v) + " hat das Büro-Profil noch nicht ausgefüllt."}</div>`;
+  if (reiter === "zust") inhalt = `<div class="z"><b>Mandanten</b><span class="gross">${p.mandanten || 0}</span> ${p.mandanten === 1 ? "Mandant" : "Mandanten"} in Betreuung</div>`
+    + zeile("Abteilungen", (p.abteilungen || []).join(", ")) + zeile("Spezialgebiet", p.spezial);
+  if (reiter === "kontakt") inhalt = zeile("Durchwahl", p.durchwahl) + zeile("Bürozeiten", p.buerozeiten) || `<div class="leer">Noch keine Kontaktangaben hinterlegt.</div>`;
+  $("seite").innerHTML = `<div class="banner"><div class="firma">SW DIGITAL TAX</div></div>
+    <div class="foto" style="${p.foto ? "background-image:url('" + p.foto + "')" : ""}">${p.foto ? "" : esc(initialen)}</div>
+    <div class="name">${esc(p.name)}</div><div class="rolle">${esc([p.rolle, (p.abteilungen || []).join(", ")].filter(Boolean).join(" · "))}</div>
+    ${abz.length ? `<div class="abz">${abz.map(a => `<span>${esc(a)}</span>`).join("")}</div>` : ""}
+    <div class="reiter">${[["ueber", "Über mich"], ["zust", "Zuständig"], ["kontakt", "Kontakt"]].map(([k, t]) => `<button data-r="${k}" class="${k === reiter ? "an" : ""}">${t}</button>`).join("")}</div>
+    <div class="inhalt">${inhalt}</div>
+    ${p.ich ? "" : `<div class="knoepfe">${p.durchwahl ? `<a class="haupt" href="tel:${esc(p.durchwahl)}">📞 Anrufen</a>` : ""}<button id="hin">🚶 Zu ${esc(v)} gehen</button></div>`}`;
+  document.querySelectorAll("[data-r]").forEach(b => b.onclick = () => { reiter = b.dataset.r; zeigen(); });
+  const hin = $("hin"); if (hin) hin.onclick = () => { try { WA.player.state.saveVariable("swAktion", { was: "zuPerson", name: p.name, buero: NAME, t: Date.now() }, { public: false, persist: false }); } catch (e) { console.warn(e); } };
+}
+async function laden() {
+  if (!ausweis.holen()) return ausweisFormular();
+  try { P = await api("/profil?" + (ICH ? "ich=1" : "name=" + encodeURIComponent(NAME))); zeigen(); }
+  catch (e) { if (e.message === "ausweis") return ausweisFormular("Dein Ausweis ist nicht mehr gültig – bitte neu anmelden."); $("seite").innerHTML = '<div class="leer">' + esc(e.message) + "</div>"; }
+}
+laden();
+</script>
+</body>
+</html>
