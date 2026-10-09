@@ -28,6 +28,8 @@
   .z b { display: block; font-size: 11px; letter-spacing: .04em; text-transform: uppercase; color: rgba(255, 255, 255, .6); margin-bottom: 2px; }
   .gross { font-size: 26px; font-weight: 800; color: #5eead4; }
   .leer { color: rgba(255, 255, 255, .65); text-align: center; padding: 14px 6px; font-size: 13.5px; }
+  #zeitBox { width: 100%; min-width: 0; } #zeitBox table { table-layout: fixed; } #zeitBox td:first-child, #zeitBox th:first-child { width: 34%; }
+  .zk { font: inherit; font-size: 12px; font-weight: 700; padding: 5px 10px; border-radius: 8px; border: 0; cursor: pointer; background: rgba(255, 255, 255, .1); color: #fff; } .zk.an { background: rgba(20, 184, 166, .35); color: #5eead4; }
   .knoepfe { display: flex; gap: 8px; padding: 6px 16px 16px; }
   .knoepfe a, .knoepfe button { flex: 1; text-align: center; text-decoration: none; font: inherit; font-size: 14px; font-weight: 700; padding: 10px; border-radius: 10px; border: 0; cursor: pointer;
     background: rgba(255, 255, 255, .12); color: #fff; }
@@ -37,7 +39,7 @@
   input { width: 100%; font: inherit; font-size: 14px; padding: 8px 10px; border: 1.5px solid rgba(255, 255, 255, .3); border-radius: 8px; background: rgba(0, 0, 0, .3); color: #fff; }
   .fehler { color: #fca5a5; font-size: 13px; font-weight: 600; min-height: 18px; margin-top: 6px; }
 </style>
-<script src="glas.js?v=1791600000"></script>
+<script src="glas.js?v=1791570000"></script>
 </head>
 <body>
 <header><span style="font-size:18px">👤</span><h1 id="kopf">Profil</h1></header>
@@ -85,15 +87,45 @@ function zeigen() {
   if (reiter === "zust") inhalt = `<div class="z"><b>Mandanten</b><span class="gross">${p.mandanten || 0}</span> ${p.mandanten === 1 ? "Mandant" : "Mandanten"} in Betreuung</div>`
     + zeile("Abteilungen", (p.abteilungen || []).join(", ")) + zeile("Spezialgebiet", p.spezial);
   if (reiter === "kontakt") inhalt = zeile("Durchwahl", p.durchwahl) + zeile("Bürozeiten", p.buerozeiten) || `<div class="leer">Noch keine Kontaktangaben hinterlegt.</div>`;
+  if (reiter === "zeit") inhalt = '<div id="zeitBox"><div class="leer">Lade …</div></div>';
+  const REITER = [["ueber", "Über mich"], ["zust", "Zuständig"], ["kontakt", "Kontakt"], ...((p.zeitQuellen || []).length ? [["zeit", "⏱ Zeit"]] : [])];
   $("seite").innerHTML = `<div class="banner"><div class="firma">SW DIGITAL TAX</div></div>
     <div class="foto" style="${p.foto ? "background-image:url('" + p.foto + "')" : ""}">${p.foto ? "" : esc(initialen)}</div>
     <div class="name">${esc(p.name)}</div><div class="rolle">${esc([p.rolle, (p.abteilungen || []).join(", ")].filter(Boolean).join(" · "))}</div>
     ${abz.length ? `<div class="abz">${abz.map(a => `<span>${esc(a)}</span>`).join("")}</div>` : ""}
-    <div class="reiter">${[["ueber", "Über mich"], ["zust", "Zuständig"], ["kontakt", "Kontakt"]].map(([k, t]) => `<button data-r="${k}" class="${k === reiter ? "an" : ""}">${t}</button>`).join("")}</div>
+    <div class="reiter">${REITER.map(([k, t]) => `<button data-r="${k}" class="${k === reiter ? "an" : ""}">${t}</button>`).join("")}</div>
     <div class="inhalt">${inhalt}</div>
     ${p.ich ? "" : `<div class="knoepfe">${p.durchwahl ? `<a class="haupt" href="tel:${esc(p.durchwahl)}">📞 Anrufen</a>` : ""}<button id="hin">🚶 Zu ${esc(v)} gehen</button></div>`}`;
   document.querySelectorAll("[data-r]").forEach(b => b.onclick = () => { reiter = b.dataset.r; zeigen(); });
+  if (reiter === "zeit") zeitLaden();
   const hin = $("hin"); if (hin) hin.onclick = () => { try { WA.player.state.saveVariable("swAktion", { was: "zuPerson", name: p.name, buero: NAME, t: Date.now() }, { public: false, persist: false }); } catch (e) { console.warn(e); } };
+}
+// Reiter „⏱ Zeit“ (09.10.2026, Sam: Zeiterfassung im virtuellen Büro): DATEV / Virtuelles Büro / System je Tag, Woche oder Monat
+const Z = { art: "woche", basis: new Date() };
+const iso = d => d.toLocaleDateString("sv-SE"), std = v => v == null ? "–" : (Math.round(v * 100) / 100).toFixed(2).replace(".", ",");
+async function zeitLaden() {
+  const box = $("zeitBox"); if (!box) return; const b = new Date(Z.basis); let von, bis;
+  if (Z.art === "monat") { von = new Date(b.getFullYear(), b.getMonth(), 1); bis = new Date(b.getFullYear(), b.getMonth() + 1, 0); }
+  else { von = new Date(b); von.setDate(b.getDate() - ((b.getDay() + 6) % 7)); bis = new Date(von); bis.setDate(von.getDate() + 6); }
+  let d; try { d = await api("/zeiterfassung?" + (ICH ? "ich=1" : "name=" + encodeURIComponent(NAME)) + "&von=" + iso(von) + "&bis=" + iso(bis)); }
+  catch (e) { box.innerHTML = '<div class="leer">' + esc(e.message) + "</div>"; return; }
+  const Q = [["datev", "DATEV", "#1e40af"], ["buero", "Büro", "#0f766e"], ["system", "System", "#7c3aed"]].filter(q => d.quellen.includes(q[0]));
+  const wert = (q, t) => q === "datev" ? d.datev && d.datev.tage[t] : q === "buero" ? d.buero && d.buero[t] && d.buero[t].std : d.system && d.system.tage[t];
+  const tage = []; for (let t = new Date(von); t <= bis; t.setDate(t.getDate() + 1)) tage.push(new Date(t));
+  const summe = {}; Q.forEach(q => { summe[q[0]] = tage.reduce((a, t) => a + (wert(q[0], iso(t)) || 0), 0); });
+  const titel = Z.art === "monat" ? von.toLocaleDateString("de-DE", { month: "long", year: "numeric" }) : von.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" }) + "–" + bis.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" });
+  let h = `<div style="display:flex;gap:6px;align-items:center;margin-bottom:8px"><button class="zk${Z.art === "woche" ? " an" : ""}" data-za="woche">Woche</button><button class="zk${Z.art === "monat" ? " an" : ""}" data-za="monat">Monat</button><span style="flex:1"></span><button class="zk" data-zs="-1">‹</button><b style="font-size:13px">${titel}</b><button class="zk" data-zs="1">›</button></div>`;
+  h += `<div style="display:grid;grid-template-columns:repeat(${Q.length},minmax(0,1fr));gap:6px;margin-bottom:8px">` + Q.map(q => `<div style="background:${q[2]};border-radius:10px;padding:8px 10px"><div style="font-size:11px;opacity:.85">${q[1]}</div><div style="font-size:18px;font-weight:800">${std(summe[q[0]])} Std</div></div>`).join("") + "</div>";
+  h += '<table style="width:100%;border-collapse:collapse;font-size:12.5px"><tr><th style="text-align:left;opacity:.7;font-size:11px;padding:4px">Tag</th>' + Q.map(q => `<th style="text-align:right;font-size:11px;padding:4px;color:${q[2] === "#1e40af" ? "#93c5fd" : q[2] === "#0f766e" ? "#5eead4" : "#c4b5fd"}">${q[1]}</th>`).join("") + "</tr>";
+  tage.forEach(t => { const v = Q.map(q => wert(q[0], iso(t))); if ((t.getDay() === 0 || t.getDay() === 6) && !v.some(Boolean)) return;
+    const dv = d.quellen.includes("datev") ? (wert("datev", iso(t)) || 0) : null, max = Math.max(...v.map(x => x || 0)), rot = dv !== null && Q.length > 1 && max - dv >= 1;
+    h += `<tr style="border-top:1px solid rgba(255,255,255,.08)"><td style="padding:5px 4px">${t.toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit" })}${rot ? ' <span style="color:#fca5a5" title="DATEV deutlich weniger">⚠</span>' : ""}</td>` + v.map(x => `<td style="text-align:right;padding:5px 4px;font-variant-numeric:tabular-nums">${x ? std(x) : "–"}</td>`).join("") + "</tr>"; });
+  h += "</table>";
+  const hin = []; if (d.datev) hin.push(d.datev.quelle === "datev" ? "DATEV tagesaktuell" : "DATEV aus Excel-Upload"); if (d.buero) hin.push("Büro: letzte 30 Tage");
+  h += `<div style="font-size:11px;opacity:.65;margin-top:6px">${esc(hin.join(" · "))}</div>`;
+  box.innerHTML = h;
+  box.querySelectorAll("[data-za]").forEach(x => x.onclick = () => { Z.art = x.dataset.za; zeitLaden(); });
+  box.querySelectorAll("[data-zs]").forEach(x => x.onclick = () => { const n = +x.dataset.zs, nb = new Date(Z.basis); if (Z.art === "monat") nb.setMonth(nb.getMonth() + n); else nb.setDate(nb.getDate() + 7 * n); Z.basis = nb; zeitLaden(); });
 }
 async function laden() {
   if (!ausweis.holen()) return ausweisFormular();
