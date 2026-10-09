@@ -25,6 +25,7 @@ const TUER = new URLSearchParams(location.search).get("tuer") || "";
 const PUNKTE = [
   ...(TUER ? [["tuer", "🚪 Tür umschalten", "jetzt: " + ({ frei: "frei", besetzt: "besetzt", zu: "zu" }[TUER] || TUER) + " → frei / besetzt / zu"]] : []),
   ["meinProfil", "👤 Mein Profil", "so sehen dich die Kollegen"],
+  ["tagescheck", "✅ Tages-Check", "deine Liste für heute"],
   ["feierabend", "🚪 Feierabend", "Arbeitszeit prüfen und gehen"],
   ["arbeitszeit", "⏰ Meine Arbeitszeit", "heute, Pause, Überstunden"],
   ["karte", "🗺 Übersicht", "ganzes Haus zeigen (nochmal = zurück zu dir)"],

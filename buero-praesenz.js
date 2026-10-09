@@ -1063,7 +1063,7 @@
     } catch {
     }
     WA.ui.website.getAll().then((alle) => alle.forEach((w) => {
-      if (!/info\.html|leiste\.html|schloss\.html/.test(String(w.url || ""))) w.close().catch(() => {
+      if (!/info\.html|leiste\.html|schloss\.html|tagescheck\.html\?karte/.test(String(w.url || ""))) w.close().catch(() => {
       });
     })).catch(() => {
     });
@@ -1158,11 +1158,19 @@
     } catch {
     }
     await tuerenStarten();
-    let kzAktiv = false;
+    let kzAktiv = false, tcAktiv = false;
     try {
       const r = await fetch(ENDPOINT.replace(/melden$/, "kernzeit/hinweis"), { method: "POST", headers: { "Content-Type": "application/json", "X-Buero-Key": BUERO_KEY }, body: JSON.stringify({ name: WA.player.name }) });
-      kzAktiv = !!(await r.json()).aktiv;
+      const h = await r.json();
+      kzAktiv = !!h.aktiv;
+      tcAktiv = !!h.tc;
     } catch {
+    }
+    if (tcAktiv && !HANDY) {
+      try {
+        await WA.ui.website.open({ url: SEITEN + "tagescheck.html?karte=1", allowApi: true, visible: true, position: { vertical: "top", horizontal: "left" }, size: { width: "280px", height: "150px" }, margin: { top: "64px", left: "10px" } });
+      } catch {
+      }
     }
     effekte();
     setInterval(effekte, 6e4);
@@ -1260,6 +1268,7 @@
           reise: schnellreise,
           news: () => newsOeffnen(),
           feierabend: () => feierabendOeffnen(),
+          tagescheck: () => glasFenster(SEITEN + "tagescheck.html?t=" + Date.now()),
           arbeitszeit: () => glasFenster(SEITEN + "kernzeit.html?t=" + Date.now()),
           mehr: () => glasFenster(SEITEN + "mehr.html?tuer=" + (tuer ? encodeURIComponent(tuerStatus(tuer)) : "") + "&t=" + Date.now()),
           hoch: () => blicken(-6),

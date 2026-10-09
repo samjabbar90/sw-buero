@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Tages-Check</title>
+<!-- Tages-Check (09.10.2026, Sam: Variante 2): ?karte=1 = schwebende Karte oben links (nächste Aufgabe, ▶ In Bearbeitung, ✓ Erledigt,
+     Erklärung); ohne = ganze Liste als Glas-Fenster. Alles muss erledigt sein, sonst braucht es eine Erklärung. Nur mit Büro-Ausweis. -->
+<style>
+  * { box-sizing:border-box; }
+  html, body { margin:0; font-family:system-ui,-apple-system,"Segoe UI",sans-serif; }
+  body.karte { background:transparent; overflow:hidden; }
+  .k { background:rgba(22,26,34,.95); color:#e2e8f0; border-radius:12px; padding:9px 11px; height:100vh; display:flex; flex-direction:column; border:1px solid rgba(255,255,255,.1); }
+  .kopf { display:flex; justify-content:space-between; align-items:center; font-size:12px; color:#cbd5e1; }
+  .kopf b { color:#fff; } .kopf a { color:#5eead4; cursor:pointer; font-size:11.5px; text-decoration:none; }
+  .balken { height:5px; background:rgba(255,255,255,.14); border-radius:3px; margin:6px 0 7px; } .balken div { height:100%; background:#10b981; border-radius:3px; }
+  .klein { font-size:11px; color:#94a3b8; } .text { font-size:13.5px; font-weight:700; margin:2px 0 7px; line-height:1.25; color:#fff; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+  .zeile { display:flex; gap:6px; align-items:center; margin-top:auto; }
+  .marke { font-size:11px; font-weight:700; border-radius:6px; padding:2px 7px; white-space:nowrap; }
+  .m-frei { background:rgba(255,255,255,.12); } .m-bald { background:#b45309; color:#fff; } .m-rot { background:#b91c1c; color:#fff; } .m-arbeit { background:#1d4ed8; color:#fff; }
+  button { font:inherit; font-size:12px; font-weight:700; border-radius:7px; padding:5px 9px; cursor:pointer; border:0; color:#fff; white-space:nowrap; }
+  .b-arbeit { background:#2563eb; } .b-ok { background:#10b981; } .b-erkl { background:#475569; } .b-leicht { background:rgba(255,255,255,.12); }
+  textarea { width:100%; font:inherit; font-size:12.5px; border-radius:7px; border:1px solid rgba(255,255,255,.25); background:rgba(0,0,0,.35); color:#fff; padding:6px; resize:none; height:46px; }
+  .fehler { color:#fca5a5; font-size:11.5px; margin-top:3px; }
+  /* ganze Liste (Glas-Fenster) */
+  body.liste { background:#f8fafc; color:#0f172a; }
+  header { position:sticky; top:0; z-index:2; background:#0f766e; color:#fff; padding:14px 16px; } header h1 { margin:0; font-size:18px; }
+  main { padding:14px; display:flex; flex-direction:column; gap:8px; }
+  .p { background:#fff; border:1.5px solid #e2e8f0; border-radius:12px; padding:10px 12px; }
+  .p.fertig { opacity:.6; } .p.dran { border-color:#f59e0b; } .p.rot { border-color:#ef4444; }
+  .p .t { font-weight:700; font-size:14px; } .p .i { font-size:12px; color:#64748b; margin-top:2px; }
+  .p .knoepfe { display:flex; gap:6px; margin-top:8px; flex-wrap:wrap; }
+  .p textarea { color:#0f172a; background:#fff; border-color:#cbd5e1; margin-top:6px; }
+  html.glas .p { background:rgba(10,11,14,.55) !important; border-color:rgba(255,255,255,.18) !important; } html.glas .p .i { color:rgba(255,255,255,.7) !important; }
+  html.glas .p.dran { border-color:#f59e0b !important; } html.glas .p.rot { border-color:#ef4444 !important; }
+  html.glas .p textarea { background:rgba(255,255,255,.1) !important; color:#fff !important; }
+  label { display:block; font-size:12px; font-weight:700; margin:8px 0 4px; } input { width:100%; font:inherit; padding:8px 10px; border-radius:8px; border:1.5px solid #cbd5e1; }
+</style>
+<script src="glas.js?v=1791559958"></script>
+</head>
+<body>
+<div id="app"></div>
+<script src="https://play.workadventu.re/iframe_api.js"></script>
+<script>
+const KEY = "a21b2aa2a42fe6189b05773c07bbc9ad78e38b34ba3bb6fe", API = "https://swdigitaltest.de/buero-praesenz";
+const KARTE = new URLSearchParams(location.search).has("karte");
+document.body.className = KARTE ? "karte" : "liste";
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const ausweis = { holen: () => { try { return localStorage.getItem("swBueroAusweis") || ""; } catch { return ""; } }, setzen: t => { try { t ? localStorage.setItem("swBueroAusweis", t) : localStorage.removeItem("swBueroAusweis"); } catch {} } };
+const min = t => { const m = /^(\d{1,2}):(\d{2})$/.exec(t || ""); return m ? +m[1] * 60 + +m[2] : null; };
+const fertig = s => s === "erledigt" || s === "erklaert";
+async function api(pfad, opt = {}) {
+  const r = await fetch(API + pfad, { ...opt, headers: { "X-Buero-Key": KEY, "X-Buero-Ausweis": ausweis.holen(), "Content-Type": "application/json" } });
+  const d = await r.json().catch(() => ({}));
+  if (r.status === 401 && /ausweis/.test(d.error || "")) { ausweis.setzen(""); throw new Error("ausweis"); }
+  if (!r.ok) throw new Error(d.error || "Fehler"); return d;
+}
+// Karte ↔ Liste: nach jeder Änderung die anderen Fenster sofort neu laden (Spieler-Variable, nicht gespeichert)
+function weitersagen() { try { WA.player.state.saveVariable("swTagesCheck", { t: Date.now() }, { public: false, persist: false }); } catch {} }
+function listeOeffnen() { try { WA.player.state.saveVariable("swAktion", { was: "tagescheck", t: Date.now() }, { public: false, persist: false }); } catch {} }
+let D = null, erklaeren = null, fehler = "";
+
+function marke(p) {
+  const j = D.jetztMin, b = min(p.bis);
+  if (D.verpasst.includes(p.id)) return '<span class="marke m-rot">⚠ seit ' + esc(p.bis) + "</span>";
+  if (p.status === "arbeit") return '<span class="marke m-arbeit">in Bearbeitung</span>';
+  if (b !== null && b - j <= 15) return '<span class="marke m-bald">bis ' + esc(p.bis) + " · " + (b - j) + " Min</span>";
+  if (b !== null) return '<span class="marke m-frei">bis ' + esc(p.bis) + "</span>";
+  return "";
+}
+function karteZeichnen() {
+  const app = $("app");
+  if (!ausweis.holen()) { app.innerHTML = '<div class="k"><div class="kopf"><b>✅ Tages-Check</b></div><div class="text" style="margin-top:10px">Zum Abhaken kurz anmelden</div><div class="zeile"><button class="b-ok" id="anm">🔑 Anmelden</button></div></div>'; $("anm").onclick = listeOeffnen; return; }
+  if (!D) { app.innerHTML = '<div class="k"><div class="klein">Lädt …</div></div>'; return; }
+  if (!D.aktiv) { app.innerHTML = ""; return; }
+  const p = D.punkte.find(x => x.id === D.naechster), pz = Math.round(D.erledigt / D.gesamt * 100);
+  let h = `<div class="k"><div class="kopf"><span>✅ <b>Tages-Check</b> · ${D.erledigt}/${D.gesamt}</span><a id="alle">Liste ▾</a></div><div class="balken"><div style="width:${pz}%"></div></div>`;
+  if (!p) h += '<div class="text" style="margin-top:6px">🎉 Alles erledigt für heute</div><div class="klein">Gut gemacht!</div>';
+  else if (erklaeren === p.id) h += `<div class="klein">Warum ist „${esc(p.text)}“ nicht erledigt?</div><textarea id="erkl" maxlength="500" placeholder="kurze Erklärung"></textarea><div class="zeile" style="margin-top:5px"><button class="b-ok" id="senden">Senden</button><button class="b-leicht" id="abbr">Abbrechen</button></div>`;
+  else {
+    h += `<div class="klein">Als Nächstes</div><div class="text">${esc(p.text)}</div><div class="zeile">${marke(p)}<span style="flex:1"></span>`;
+    if (p.status === "offen") h += '<button class="b-arbeit" data-s="arbeit">▶ Start</button>';
+    h += '<button class="b-ok" data-s="erledigt">✓ Erledigt</button>';
+    if (p.status === "arbeit" || D.verpasst.includes(p.id) || D.tagesende) h += '<button class="b-erkl" id="erklKnopf" title="Nicht erledigt – Erklärung">✋</button>';
+    h += "</div>";
+  }
+  if (fehler) h += `<div class="fehler">${esc(fehler)}</div>`;
+  app.innerHTML = h + "</div>";
+  if ($("alle")) $("alle").onclick = listeOeffnen;
+  document.querySelectorAll("[data-s]").forEach(b => b.onclick = () => setzen(p.id, b.dataset.s));
+  if ($("erklKnopf")) $("erklKnopf").onclick = () => { erklaeren = p.id; fehler = ""; karteZeichnen(); setTimeout(() => $("erkl") && $("erkl").focus(), 30); };
+  if ($("senden")) $("senden").onclick = () => setzen(p.id, "erklaert", $("erkl").value);
+  if ($("abbr")) $("abbr").onclick = () => { erklaeren = null; karteZeichnen(); };
+}
+function listeZeichnen() {
+  const app = $("app");
+  if (!ausweis.holen()) return anmelden();
+  if (!D) { app.innerHTML = '<header><h1>✅ Tages-Check</h1></header><main><div class="p">Lädt …</div></main>'; return; }
+  if (!D.aktiv) { app.innerHTML = '<header><h1>✅ Tages-Check</h1></header><main><div class="p">Für heute ist kein Tages-Check für dich angelegt.</div></main>'; return; }
+  const status = { offen: "offen", arbeit: "▶ in Bearbeitung", erledigt: "✓ erledigt", erklaert: "✋ nicht erledigt (erklärt)" };
+  let h = `<header><h1>✅ Tages-Check · ${D.erledigt}/${D.gesamt}</h1></header><main>`;
+  D.punkte.forEach((p, i) => {
+    const gesperrt = p.reihenfolge && i > 0 && !fertig(D.punkte[i - 1].status) && !fertig(p.status);
+    const cls = fertig(p.status) ? "fertig" : D.verpasst.includes(p.id) ? "rot" : p.id === D.naechster ? "dran" : "";
+    h += `<div class="p ${cls}"><div class="t">${fertig(p.status) && p.status === "erledigt" ? "☑" : gesperrt ? "🔒" : "☐"} ${esc(p.text)}</div>
+      <div class="i">${status[p.status]}${p.bis ? " · bis " + esc(p.bis) : ""}${p.zeit && p.status !== "offen" ? " · " + new Date(p.zeit).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" }) : ""}${gesperrt ? " · erst nach „" + esc(D.punkte[i - 1].text) + "“" : ""}${p.erklaerung ? "<br>Erklärung: " + esc(p.erklaerung) : ""}</div>`;
+    if (erklaeren === p.id) h += `<textarea id="erkl" maxlength="500" placeholder="Warum ist der Punkt nicht erledigt?"></textarea><div class="knoepfe"><button class="b-ok" id="senden">Erklärung senden</button><button class="b-erkl" id="abbr">Abbrechen</button></div>`;
+    else if (!gesperrt) h += '<div class="knoepfe">' + (p.status === "offen" ? `<button class="b-arbeit" data-id="${p.id}" data-s="arbeit">▶ In Bearbeitung</button>` : "")
+      + (p.status !== "erledigt" ? `<button class="b-ok" data-id="${p.id}" data-s="erledigt">✓ Erledigt</button>` : "")
+      + (p.status !== "erklaert" && p.status !== "erledigt" ? `<button class="b-erkl" data-erkl="${p.id}">✋ Nicht erledigt – erklären</button>` : "")
+      + (p.status !== "offen" ? `<button class="b-erkl" data-id="${p.id}" data-s="offen">↺ zurücksetzen</button>` : "") + "</div>";
+    h += "</div>";
+  });
+  if (fehler) h += `<div class="fehler" style="color:#b91c1c;font-weight:600">${esc(fehler)}</div>`;
+  app.innerHTML = h + "</main>";
+  document.querySelectorAll("[data-s]").forEach(b => b.onclick = () => setzen(b.dataset.id, b.dataset.s));
+  document.querySelectorAll("[data-erkl]").forEach(b => b.onclick = () => { erklaeren = b.dataset.erkl; fehler = ""; listeZeichnen(); setTimeout(() => $("erkl") && $("erkl").focus(), 30); });
+  if ($("senden")) $("senden").onclick = () => setzen(erklaeren, "erklaert", $("erkl").value);
+  if ($("abbr")) $("abbr").onclick = () => { erklaeren = null; listeZeichnen(); };
+}
+function anmelden(meldung) {
+  let ben = ""; try { ben = localStorage.getItem("swSchlossBenutzer") || ""; } catch {}
+  $("app").innerHTML = `<header><h1>✅ Tages-Check</h1></header><main><div class="p"><div class="t">Kurz anmelden</div><div class="i">Damit nur du deinen Tages-Check abhakst.</div>
+    <label>Benutzername oder E-Mail</label><input id="ben" value="${esc(ben)}"><label>Büro-Passwort oder PIN</label><input id="pin" type="password">
+    <div class="fehler" style="color:#b91c1c" id="fe">${esc(meldung || "")}</div><div class="knoepfe"><button class="b-ok" id="los">Weiter</button></div></div></main>`;
+  $("los").onclick = async () => {
+    try { const r = await fetch(API + "/ausweis", { method: "POST", headers: { "X-Buero-Key": KEY, "Content-Type": "application/json" }, body: JSON.stringify({ benutzer: $("ben").value.trim(), pin: $("pin").value, pause: true }) });
+      const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || "Fehler"); ausweis.setzen(d.token); weitersagen(); laden(); }
+    catch (e) { $("fe").textContent = e.message; }
+  };
+}
+const zeichnen = () => KARTE ? karteZeichnen() : listeZeichnen();
+async function laden() {
+  if (!ausweis.holen()) return zeichnen();
+  try { D = await api("/tagescheck"); fehler = ""; } catch (e) { if (e.message === "ausweis") { D = null; return KARTE ? karteZeichnen() : anmelden("Bitte kurz neu anmelden."); } fehler = e.message; }
+  zeichnen();
+}
+async function setzen(id, status, erklaerung) {
+  fehler = "";
+  try { D = await api("/tagescheck/punkt", { method: "POST", body: JSON.stringify({ id, status, erklaerung }) }); erklaeren = null; weitersagen(); }
+  catch (e) { if (e.message === "ausweis") return KARTE ? karteZeichnen() : anmelden(); fehler = e.message; }
+  zeichnen();
+}
+laden(); setInterval(() => { if (!erklaeren) laden(); }, 30000);
+(async () => { for (let i = 0; i < 50 && typeof WA === "undefined"; i++) await new Promise(r => setTimeout(r, 100));
+  try { await WA.onInit(); WA.player.state.onVariableChange("swTagesCheck").subscribe(() => { if (!erklaeren) setTimeout(laden, 300); }); } catch {} })();
+</script>
+</body>
+</html>
