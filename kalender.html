@@ -70,7 +70,7 @@ const ausweis = { holen: () => { try { return localStorage.getItem("swBueroAuswe
 const iso = d => d.toLocaleDateString("sv-SE"), heuteIso = () => iso(new Date());
 const S = { ansicht: "tag", auswahl: null, monat: [], basis: new Date(), wer: "", personen: [], daten: null, form: null };
 async function api(pfad, opt = {}) {
-  const r = await fetch(API + pfad, { ...opt, headers: { "X-Buero-Key": KEY, "X-Buero-Ausweis": ausweis.holen(), "Content-Type": "application/json" } });
+  const r = await fetch(API + pfad, { ...opt, headers: { "X-Buero-Key": KEY, "X-Buero-Ausweis": ausweis.holen(), "X-Buero-Name": encodeURIComponent(window.__waName || ""), "Content-Type": "application/json" } });
   const d = await r.json().catch(() => ({}));
   if (r.status === 401 && /ausweis/.test(d.error || "")) { ausweis.setzen(""); throw new Error("ausweis"); }
   if (!r.ok) throw new Error(d.error || "Fehler"); return d;
@@ -227,6 +227,15 @@ async function start() {
   if (!ausweis.holen()) return anmelden();
   try { S.personen = await api("/kalender/personen"); }
   catch (e) { if (e.message === "ausweis") return anmelden("Bitte kurz neu anmelden."); $("inhalt").innerHTML = '<div class="leer">' + esc(e.message) + "</div>"; return; }
+  // Gehört der gespeicherte Büro-Ausweis zur Person, die gerade im Büro ist? (10.10., Minz sah am gemeinsamen Rechner Sams Kalender)
+  try {
+    for (let i = 0; i < 30 && typeof WA === "undefined"; i++) await new Promise(r => setTimeout(r, 100));
+    await Promise.race([WA.onInit(), new Promise(r => setTimeout(r, 3000))]);
+    const imBuero = String((WA.player && WA.player.name) || "").trim().toLowerCase(), ausweisName = String(S.personen[0].name || "").trim().toLowerCase();
+    if (imBuero && ausweisName && imBuero !== ausweisName && imBuero.split(/\s+/)[0] !== ausweisName.split(/\s+/)[0]) {
+      ausweis.setzen(""); return anmelden("Der gespeicherte Ausweis gehört " + S.personen[0].name + " – bitte melde dich mit deinem eigenen Konto an.");
+    }
+  } catch { /* ohne Büro-Schnittstelle: weiter wie bisher */ }
   S.wer = S.personen[0].id;
   $("wer").innerHTML = S.personen.map((p, i) => `<option value="${esc(p.id)}">${i === 0 ? "Mein Kalender" : esc(p.name) + (p.stufe === "eintragen" ? " ✎" : p.stufe === "details" ? "" : " (nur Besetzt)")}</option>`).join("");
   $("wer").onchange = () => { S.wer = $("wer").value; S.form = null; laden(); };
@@ -240,5 +249,6 @@ async function start() {
 }
 start();
 </script>
+<script>(async()=>{for(let i=0;i<50&&typeof WA==="undefined";i++)await new Promise(r=>setTimeout(r,100));try{await WA.onInit();window.__waName=WA.player.name||"";}catch(e){}})();</script>
 </body>
 </html>

@@ -52,7 +52,7 @@ const ausweis = { holen: () => { try { return localStorage.getItem("swBueroAuswe
 const min = t => { const m = /^(\d{1,2}):(\d{2})$/.exec(t || ""); return m ? +m[1] * 60 + +m[2] : null; };
 const fertig = s => s === "erledigt" || s === "erklaert";
 async function api(pfad, opt = {}) {
-  const r = await fetch(API + pfad, { ...opt, headers: { "X-Buero-Key": KEY, "X-Buero-Ausweis": ausweis.holen(), "Content-Type": "application/json" } });
+  const r = await fetch(API + pfad, { ...opt, headers: { "X-Buero-Key": KEY, "X-Buero-Ausweis": ausweis.holen(), "X-Buero-Name": encodeURIComponent(window.__waName || ""), "Content-Type": "application/json" } });
   const d = await r.json().catch(() => ({}));
   if (r.status === 401 && /ausweis/.test(d.error || "")) { ausweis.setzen(""); throw new Error("ausweis"); }
   if (!r.ok) throw new Error(d.error || "Fehler"); return d;
@@ -147,5 +147,6 @@ laden(); setInterval(() => { if (!erklaeren) laden(); }, 30000);
 (async () => { for (let i = 0; i < 50 && typeof WA === "undefined"; i++) await new Promise(r => setTimeout(r, 100));
   try { await WA.onInit(); WA.player.state.onVariableChange("swTagesCheck").subscribe(() => { if (!erklaeren) setTimeout(laden, 300); }); } catch {} })();
 </script>
+<script>(async()=>{for(let i=0;i<50&&typeof WA==="undefined";i++)await new Promise(r=>setTimeout(r,100));try{await WA.onInit();window.__waName=WA.player.name||"";}catch(e){}})();</script>
 </body>
 </html>

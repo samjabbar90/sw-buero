@@ -42,7 +42,7 @@ const ausweis = { holen: () => { try { return localStorage.getItem("swBueroAuswe
 const std = x => { if (x == null) return "–"; const n = Math.abs(x); return (x < 0 ? "−" : "") + Math.floor(n) + ":" + String(Math.round((n % 1) * 60)).padStart(2, "0"); };
 const tagDE = d => d.split("-").reverse().join(".");
 async function api(pfad, opt = {}) {
-  const r = await fetch(API + pfad, { ...opt, headers: { "X-Buero-Key": KEY, "X-Buero-Ausweis": ausweis.holen(), "Content-Type": "application/json" } });
+  const r = await fetch(API + pfad, { ...opt, headers: { "X-Buero-Key": KEY, "X-Buero-Ausweis": ausweis.holen(), "X-Buero-Name": encodeURIComponent(window.__waName || ""), "Content-Type": "application/json" } });
   const d = await r.json().catch(() => ({}));
   if (r.status === 401 && /ausweis/.test(d.error || "")) { ausweis.setzen(""); throw new Error("ausweis"); }
   if (!r.ok) throw new Error(d.error || "Fehler"); return d;
@@ -114,5 +114,6 @@ async function start() {
 }
 start();
 </script>
+<script>(async()=>{for(let i=0;i<50&&typeof WA==="undefined";i++)await new Promise(r=>setTimeout(r,100));try{await WA.onInit();window.__waName=WA.player.name||"";}catch(e){}})();</script>
 </body>
 </html>

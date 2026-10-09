@@ -53,7 +53,7 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const ausweis = { holen: () => { try { return localStorage.getItem("swBueroAusweis") || ""; } catch { return ""; } }, setzen: t => { try { t ? localStorage.setItem("swBueroAusweis", t) : localStorage.removeItem("swBueroAusweis"); } catch {} } };
 async function api(pfad) {
-  const r = await fetch(API + pfad, { headers: { "X-Buero-Key": KEY, "X-Buero-Ausweis": ausweis.holen() } });
+  const r = await fetch(API + pfad, { headers: { "X-Buero-Key": KEY, "X-Buero-Ausweis": ausweis.holen(), "X-Buero-Name": encodeURIComponent(window.__waName || "") } });
   const d = await r.json().catch(() => ({}));
   if (r.status === 401 && /ausweis/.test(d.error || "")) { ausweis.setzen(""); throw new Error("ausweis"); }
   if (!r.ok) throw new Error(d.error || "Fehler"); return d;
@@ -153,5 +153,6 @@ async function laden() {
 }
 laden();
 </script>
+<script>(async()=>{for(let i=0;i<50&&typeof WA==="undefined";i++)await new Promise(r=>setTimeout(r,100));try{await WA.onInit();window.__waName=WA.player.name||"";}catch(e){}})();</script>
 </body>
 </html>
