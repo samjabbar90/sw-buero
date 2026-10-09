@@ -314,6 +314,14 @@
     }
   }
   var fxStand = {};
+  var FEIERABEND_RAEUME = ["Besprechung 10", "Besprechung 11", "Besprechung Glas", "Pause", "Lernzimmer", "Helpcenter", "Fitnessraum"];
+  var toene = {};
+  function ton(name) {
+    try {
+      (toene[name] ||= WA.sound.loadSound(SEITEN + "toene/" + name + ".wav")).play({ volume: 0.5 });
+    } catch {
+    }
+  }
   function fx(name, an) {
     if (fxStand[name] === an) return;
     fxStand[name] = an;
@@ -337,9 +345,11 @@
     fx("fx-nacht", nacht);
     fx("fx-lichter", nacht);
     fx("fx-abend", abend);
+    for (const n of FEIERABEND_RAEUME) fx("fx-feierabend-" + n.normalize("NFD").replace(/[^A-Za-z0-9]/g, ""), (abend || nacht) && aktuellerBereich !== n && !(info.belegt || []).includes(n));
     const w = info.wetter;
     if (w) {
       fx("fx-regen", !!w.regen);
+      fx("fx-pfuetzen", !!w.regen);
       fx("fx-trueb", !!(w.regen || w.nebel || w.trueb || w.gewitter));
       fx("fx-schneefall", !!w.schnee);
       fx("fx-schnee", !!w.schneeLiegt);
@@ -348,6 +358,7 @@
       fx("fx-schnee", winter);
       fx("fx-schneefall", winter);
       fx("fx-regen", false);
+      fx("fx-pfuetzen", false);
       fx("fx-trueb", false);
     }
     gewitter = !!(w && w.gewitter);
@@ -669,7 +680,7 @@
     } catch {
     }
     try {
-      const eigen = "B\xFCro " + String(WA.player.name || "").split(/s+/)[0];
+      const eigen = "B\xFCro " + String(WA.player.name || "").split(/\s+/)[0];
       WA.room.area.onEnter(eigen).subscribe(ideenHinweisZeigen);
       WA.room.area.onLeave(eigen).subscribe(ideenHinweisWeg);
     } catch {
@@ -721,6 +732,16 @@
   function kueche() {
     const aus = /* @__PURE__ */ new Map();
     const benutzen = (g) => {
+      if (g === "kaffee" && !aus.has("dampf")) {
+        fx("kueche-kaffee-dampf", true);
+        aus.set("dampf", setTimeout(() => {
+          aus.delete("dampf");
+          fx("kueche-kaffee-dampf", false);
+          benutzen("kaffee");
+        }, 4e3));
+        return;
+      }
+      if (g === "kaffee" && aus.has("dampf")) return;
       fx("kueche-" + g + "-an", true);
       fx("kueche-" + g + "-aus", false);
       clearTimeout(aus.get(g));
@@ -747,8 +768,77 @@
     leertasteBereich("kueche-herd", { x: 75, y: 37, w: 3, h: 1 }, "\u{1F373} Spiegelei braten \xB7 Leertaste", () => los("herd"));
     leertasteBereich("kueche-kaffee", { x: 81, y: 36, w: 2, h: 4 }, "\u2615 Kaffee holen \xB7 Leertaste", () => {
       los("kaffee");
-      kurzMeldung("\u2615 Lass ihn dir schmecken!", 4e3);
+      kurzMeldung("\u2615 Kaffee l\xE4uft durch \u2026", 3800);
+      setTimeout(() => {
+        ton("kaffee");
+        kurzMeldung("\u2615 Kaffee ist fertig \u2013 lass ihn dir schmecken!", 5e3);
+      }, 4e3);
     });
+  }
+  var richtung = "";
+  function klingel() {
+    let zuletzt = 0, aus = null;
+    const laeuten = (wer, ich) => {
+      ton("klingel");
+      fx("fx-klingel", true);
+      clearTimeout(aus);
+      aus = setTimeout(() => fx("fx-klingel", false), 3500);
+      if (!ich) kurzMeldung("\u{1F514} Ding-Dong \u2013 " + wer + " ist am Eingang", 6e3);
+    };
+    try {
+      WA.event.on("sw-klingel").subscribe((ev) => laeuten(String(ev && ev.data && ev.data.wer || "Jemand"), false));
+    } catch {
+    }
+    try {
+      WA.room.area.create({ name: "eingang-klingel", x: 43 * 32, y: 52 * 32, width: 4 * 32, height: 2 * 32 });
+      WA.room.area.onEnter("eingang-klingel").subscribe(() => {
+        if (richtung !== "up" || Date.now() - zuletzt < 2e4) return;
+        zuletzt = Date.now();
+        const wer = String(WA.player.name || "Jemand").split(/\s+/)[0];
+        laeuten(wer, true);
+        try {
+          WA.event.broadcast("sw-klingel", { wer });
+        } catch {
+        }
+      });
+    } catch {
+    }
+  }
+  var konfettiOffen = false;
+  async function konfetti(name) {
+    if (konfettiOffen) return;
+    konfettiOffen = true;
+    try {
+      const w = await WA.ui.website.open({
+        url: SEITEN + "konfetti.html?name=" + encodeURIComponent(name),
+        allowApi: false,
+        visible: true,
+        position: { vertical: "top", horizontal: "middle" },
+        size: { width: Math.round(screen.availWidth || 1600) + "px", height: "100vh" },
+        margin: { top: "0px" }
+      });
+      ton("klingel");
+      setTimeout(() => {
+        try {
+          w.close();
+        } catch {
+        }
+        konfettiOffen = false;
+      }, 6500);
+    } catch {
+      konfettiOffen = false;
+    }
+  }
+  function konfettiHeute() {
+    const kinder = info.geburtstage || [];
+    if (!kinder.length) return;
+    const heute = (/* @__PURE__ */ new Date()).toLocaleDateString("sv-SE", { timeZone: "Europe/Berlin" });
+    try {
+      if (localStorage.getItem("sw-konfetti") === heute) return;
+      localStorage.setItem("sw-konfetti", heute);
+    } catch {
+    }
+    konfetti(kinder.join(" & "));
   }
   var FUSSBALL = {
     tore: [
@@ -841,6 +931,7 @@
     } catch {
     }
     ballonsSetzen();
+    konfettiHeute();
     telefonTuer();
     effekte();
     if (!begruesst) {
@@ -858,6 +949,8 @@
   function beobachten(name, api) {
     api.onEnter(name).subscribe(() => {
       aktuellerBereich = name;
+      const kind = (info.geburtstage || []).find((n) => "b\xFCro " + n.toLowerCase() === name.toLowerCase());
+      if (kind) konfetti(kind);
       tuerWache(name);
       bereit.then(() => melden("betreten"));
       reservierungZeigen(name);
@@ -906,6 +999,7 @@
     kueche();
     fussball();
     fussgaengerAmpel();
+    klingel();
     const breite = 87 * 32, hoehe = 62 * 32;
     void karte;
     let blick = 0, uebersichtAn = false;
@@ -990,6 +1084,7 @@
     }
     WA.player.onPlayerMove((e) => {
       position = { x: e.x, y: e.y };
+      richtung = e.direction || richtung;
       if (Date.now() - zuletztGemeldet > 5e3) melden("heartbeat");
     });
     try {

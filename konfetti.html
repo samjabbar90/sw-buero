@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Konfetti</title>
+<style>
+  /* Geburtstag (09.10.2026, Sam: Effekt 3): Konfetti über dem Büro + Banner, durchsichtig (color-scheme dark) */
+  html, body { margin: 0; height: 100%; overflow: hidden; background: transparent; color-scheme: dark; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+  canvas { position: fixed; inset: 0; width: 100%; height: 100%; }
+  .banner { position: fixed; top: 18px; left: 50%; transform: translateX(-50%); background: #7c3aed; color: #fff; font-weight: 800; font-size: 26px;
+    padding: 12px 30px; border-radius: 999px; box-shadow: 0 8px 30px rgba(0,0,0,.35); white-space: nowrap; animation: rein .6s ease-out; }
+  @keyframes rein { from { transform: translate(-50%, -80px); } to { transform: translate(-50%, 0); } }
+</style>
+</head>
+<body>
+<div class="banner" id="b"></div>
+<canvas id="c"></canvas>
+<script>
+const q = new URLSearchParams(location.search), name = q.get("name") || "";
+document.getElementById("b").textContent = name ? "🎂 Alles Gute, " + name + "!" : "🎉";
+const c = document.getElementById("c"), g = c.getContext("2d"), F = ["#ef4444", "#facc15", "#22c55e", "#3b82f6", "#ec4899", "#a855f7", "#f97316"];
+const groesse = () => { c.width = innerWidth; c.height = innerHeight; }; groesse(); addEventListener("resize", groesse);
+const teile = Array.from({ length: 220 }, () => ({ x: Math.random() * innerWidth, y: -Math.random() * innerHeight, vx: (Math.random() - .5) * 2, vy: 2 + Math.random() * 3,
+  w: 6 + Math.random() * 6, h: 3 + Math.random() * 4, r: Math.random() * 6, vr: (Math.random() - .5) * .3, f: F[Math.floor(Math.random() * F.length)] }));
+(function los() { g.clearRect(0, 0, c.width, c.height);
+  for (const t of teile) { t.x += t.vx + Math.sin(t.y / 40); t.y += t.vy; t.r += t.vr; g.save(); g.translate(t.x, t.y); g.rotate(t.r); g.fillStyle = t.f; g.fillRect(-t.w / 2, -t.h / 2, t.w, t.h); g.restore(); }
+  requestAnimationFrame(los); })();
+</script>
+</body>
+</html>
