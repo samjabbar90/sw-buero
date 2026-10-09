@@ -628,7 +628,7 @@
       });
     }
   }
-  var OFFENE_RAEUME = [16, 21, 26, 31].flatMap((x) => [14, 26].map((y) => ({ x, y, w: 5, h: 7 })));
+  var OFFENE_RAEUME = [16, 21, 26, 31].flatMap((x) => [14, 26].map((y) => ({ x, y, w: 5, h: 5 })));
   var ideenFenster = null;
   var ideenHinweis = null;
   async function ideenOeffnen() {
