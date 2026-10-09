@@ -339,12 +339,18 @@
     }
     const teile = (/* @__PURE__ */ new Date()).toLocaleString("sv-SE", { timeZone: "Europe/Berlin" }).split(/[- :]/).map(Number);
     const monat = teile[1], min = teile[3] * 60 + teile[4];
-    const nacht = min >= 20 * 60 || min < 6 * 60 + 30, abend = !nacht && (min >= 18 * 60 || min < 7 * 60 + 30);
+    const w = info.wetter;
+    const hm2 = (t) => {
+      const m = /^(\d{1,2}):(\d{2})/.exec(String(t || ""));
+      return m ? +m[1] * 60 + +m[2] : null;
+    };
+    const auf = hm2(w && w.auf), unter = hm2(w && w.unter);
+    const nacht = auf !== null && unter !== null ? min >= unter + 30 || min < auf - 30 : min >= 20 * 60 || min < 6 * 60 + 30;
+    const abend = !nacht && (auf !== null && unter !== null ? min >= unter - 45 || min < auf + 30 : min >= 18 * 60 || min < 7 * 60 + 30);
     fx("fx-nacht", nacht);
     fx("fx-lichter", nacht);
     fx("fx-abend", abend);
-    for (const n of FEIERABEND_RAEUME) fx("fx-feierabend-" + n.normalize("NFD").replace(/[^A-Za-z0-9]/g, ""), (abend || nacht) && aktuellerBereich !== n && !(info.belegt || []).includes(n));
-    const w = info.wetter;
+    for (const n of FEIERABEND_RAEUME) fx("fx-feierabend-" + n.normalize("NFD").replace(/[^A-Za-z0-9]/g, ""), (min >= 18 * 60 || nacht) && aktuellerBereich !== n && !(info.belegt || []).includes(n));
     if (w) {
       fx("fx-regen", !!w.regen);
       fx("fx-pfuetzen", !!w.regen);
