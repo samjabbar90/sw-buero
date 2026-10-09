@@ -364,15 +364,15 @@
   var SEITEN = "https://samjabbar90.github.io/sw-buero/";
   async function glasFenster(url) {
     const u = url + (url.includes("?") ? "&" : "?") + "glas=1";
+    let e = {};
     try {
-      return await WA.ui.website.open({
-        url: u,
-        allowApi: true,
-        visible: true,
-        position: { vertical: "middle", horizontal: "right" },
-        size: { width: "390px", height: "78vh" },
-        margin: { right: "14px" }
-      });
+      e = JSON.parse(localStorage.getItem("swFenster") || "{}");
+    } catch {
+    }
+    const platz = ["left", "middle", "right"].includes(e.platz) ? e.platz : "right";
+    const lage = e.voll ? { position: { vertical: "middle", horizontal: "middle" }, size: { width: "96vw", height: "92vh" }, margin: {} } : { position: { vertical: "middle", horizontal: platz }, size: { width: "44vw", height: "90vh" }, margin: platz === "left" ? { left: "14px" } : platz === "right" ? { right: "14px" } : {} };
+    try {
+      return await WA.ui.website.open({ url: u, allowApi: true, visible: true, ...lage });
     } catch {
       try {
         return await WA.nav.openCoWebSite(url, true);
