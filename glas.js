@@ -10,7 +10,7 @@
   // Farbschema „dunkel“ wie WorkAdventure — sonst legt Chrome/Brave hinter das Fenster einen undurchsichtigen Hintergrund (09.10.: „nicht transparent“)
   html.style.colorScheme = "dark"; { const m = document.createElement("meta"); m.name = "color-scheme"; m.content = "dark"; document.head.appendChild(m); }
   const css = document.createElement("link"); css.rel = "stylesheet"; css.href = "glas.css?v=1791506622"; document.head.appendChild(css); // Versionsnummer: sonst nimmt der Browser die alte Datei aus dem Zwischenspeicher
-  const STANDARD = () => ({ b: Math.round(Math.min(780, Math.max(420, screen.availWidth * 0.44))), h: Math.round(Math.max(360, screen.availHeight * 0.8)), r: 14, o: 70, voll: false, schrift: "weiss", d: .55 });
+  const STANDARD = () => ({ b: Math.round(Math.min(780, Math.max(420, screen.availWidth * 0.44))), h: Math.round(Math.min(screen.availHeight * 0.66, screen.availHeight - 260)), r: 14, o: 70, voll: false, schrift: "weiss", d: .55 });
   let ein = STANDARD();
   // Durchsicht (Knopf ◐): Deckkraft des Glases 0.4 / 0.55 / 0.75
   const durchsicht = () => html.style.setProperty("--glas-a", String(ein.d || .55));
@@ -39,8 +39,8 @@
       const bewegen = (m) => {
         const dx = m.screenX - x0, dy = m.screenY - y0;
         const SW = screen.availWidth || 1600, SH = screen.availHeight || 900, zw = (v, a, z) => Math.min(z, Math.max(a, v)); // nie aus dem Bildschirm
-        if (art === "kopf") { ein.r = zw(s.r - dx, 0, SW - ein.b - 20); ein.o = zw(s.o + dy, 0, SH - ein.h - 120); zeigen("Verschieben … loslassen zum Übernehmen"); }
-        else { ein.b = zw(Math.round(s.b - dx), 340, SW - ein.r - 20); if (art === "ecke") ein.h = zw(Math.round(s.h + dy), 300, SH - ein.o - 120); zeigen(ein.b + " × " + ein.h + " px"); }
+        if (art === "kopf") { ein.r = zw(s.r - dx, 0, SW - ein.b - 20); ein.o = zw(s.o + dy, 0, SH - ein.h - 260); zeigen("Verschieben … loslassen zum Übernehmen"); }
+        else { ein.b = zw(Math.round(s.b - dx), 340, SW - ein.r - 20); if (art === "ecke") ein.h = zw(Math.round(s.h + dy), 300, SH - ein.o - 260); zeigen(ein.b + " × " + ein.h + " px"); }
         if (Date.now() - zuletzt > 120) { zuletzt = Date.now(); live(); }
       };
       const los = () => {
