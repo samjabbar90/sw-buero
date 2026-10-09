@@ -1094,7 +1094,18 @@
     }, 6e4);
   }
   WA.onInit().then(async () => {
-    if (!schlossOffen()) await schliessen();
+    const frisch = async () => {
+      try {
+        const r = await fetch(ENDPOINT.replace(/melden$/, "ausweis/frisch"), { method: "POST", headers: { "Content-Type": "application/json", "X-Buero-Key": BUERO_KEY }, body: JSON.stringify({ name: WA.player.name }) });
+        return !!(await r.json()).frisch;
+      } catch {
+        return false;
+      }
+    };
+    if (!schlossOffen()) {
+      if (await frisch()) schlossMerken(true);
+      else await schliessen();
+    }
     schlossWache();
     bereit = melden("betreten", true);
     const tiled = await kartenBereiche();
