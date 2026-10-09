@@ -331,14 +331,11 @@
     }
   }
   function effekte() {
-    const glasBelegt = aktuellerBereich === "Besprechung Glas" || (info.belegt || []).includes("Besprechung Glas");
     for (const o of ((karte && karte.layers || []).find((l) => l.name === "floorLayer") || { objects: [] }).objects) {
       if (!/^Büro /.test(o.name)) continue;
       const an = aktuellerBereich === o.name || (info.belegt || []).includes(o.name);
       fx("fx-dunkel-" + o.name.normalize("NFD").replace(/[^A-Za-z0-9]/g, ""), !an);
     }
-    fx("fx-glas-besetzt", glasBelegt);
-    fx("fx-glas-frei", !glasBelegt);
     const teile = (/* @__PURE__ */ new Date()).toLocaleString("sv-SE", { timeZone: "Europe/Berlin" }).split(/[- :]/).map(Number);
     const monat = teile[1], min = teile[3] * 60 + teile[4];
     const nacht = min >= 20 * 60 || min < 6 * 60 + 30, abend = !nacht && (min >= 18 * 60 || min < 7 * 60 + 30);
