@@ -35,7 +35,7 @@ if (q.has("knopf")) {
   document.getElementById("k").onclick = () => aktion("handyMenue");
 } else {
   const P = [["karte", "🗺", "Übersicht"], ["zumir", "📍", "Zu mir"], ["reise", "🚀", "Schnellreise"], ["news", "📰", "News"], "-",
-    ["ideen", "💡", "Ideen"], ["meinProfil", "👤", "Mein Profil"]]
+    ["ideen", "💡", "Ideen"], ["kalender", "📅", "Kalender"], ["meinProfil", "👤", "Mein Profil"]]
     .concat(q.has("tc") ? [["tagescheck", "✅", "Tages-Check"]] : [], q.has("kz") ? [["arbeitszeit", "⏰", "Meine Arbeitszeit"], ["feierabend", "🚪", "Feierabend"]] : [], q.has("tuer") ? ["-", ["tuer", "🔁", "Tür umschalten"]] : []);
   app.style.height = "100%";
   app.innerHTML = '<div class="menue"><div class="kopf"><div><b id="name">…</b><div class="seit" id="seit"></div></div><button class="zu" id="zu">✕</button></div>'

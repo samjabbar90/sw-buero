@@ -31,7 +31,7 @@ const app = document.getElementById("app");
 if (q.has("alle")) {
   // 10.10. (Sam: „wenn die Zeile zu schmal ist, mach es darunter“): alle Knöpfe mit Symbol + Text als zweite Reihe unter der WorkAdventure-Leiste
   const A = [["karte", "karte", "Übersicht"], ["zumir", "zumir", "Zu mir"], ["hoch", "hoch", "Hoch"], ["runter", "runter", "Runter"], ["reise", "reise", "Reise"],
-    ["ideen", "ideen", "Ideen"], ["meinProfil", "profil", "Profil"]].concat(q.has("tc") ? [["tagescheck", "tagescheck", "Tages-Check"]] : [], q.has("kz") ? [["arbeitszeit", "arbeitszeit", "Arbeitszeit"], ["feierabend", "feierabend", "Feierabend"]] : []);
+    ["ideen", "ideen", "Ideen"], ["kalender", "kalender", "Kalender"], ["meinProfil", "profil", "Profil"]].concat(q.has("tc") ? [["tagescheck", "tagescheck", "Tages-Check"]] : [], q.has("kz") ? [["arbeitszeit", "arbeitszeit", "Arbeitszeit"], ["feierabend", "feierabend", "Feierabend"]] : []);
   app.style.height = "100%";
   app.innerHTML = '<div class="leiste">' + A.map(([w, b, t]) => `<button data-w="${w}"><img src="icons/${b}.svg?v=2" alt="" style="height:18px;vertical-align:-4px;margin-right:6px">${t}</button>`).join("") + "</div>";
   app.querySelectorAll("[data-w]").forEach(b => b.onclick = () => aktion(b.dataset.w));

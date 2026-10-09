@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kalender</title>
+<!-- Kalender im Büro (10.10.2026, Sam: Layout B „Kalender-Fenster“): Tag/Woche, eigener Kalender oder Kollegen (je nach Freigabe),
+     Termin anlegen/ändern/löschen, Raum buchen. Gleiche Daten wie „Mein Kalender“ im Dashboard (inkl. verbundenem Google-Kalender).
+     Nur mit Büro-Ausweis. -->
+<style>
+  * { box-sizing:border-box; }
+  body { margin:0; background:#f8fafc; color:#0f172a; font-family:system-ui,-apple-system,"Segoe UI",sans-serif; }
+  header { position:sticky; top:0; z-index:2; background:#0f766e; color:#fff; padding:12px 14px; }
+  header h1 { margin:0 0 8px; font-size:18px; }
+  .leiste { display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+  main { padding:12px 14px; }
+  button { font:inherit; font-size:13px; font-weight:700; border-radius:8px; padding:6px 10px; cursor:pointer; border:1.5px solid #0d9488; background:#0d9488; color:#fff; }
+  button.leicht { background:#fff; color:#0f766e; } button.an { background:#134e4a; border-color:#134e4a; color:#fff; }
+  select, input, textarea { font:inherit; font-size:13.5px; padding:6px 8px; border:1.5px solid #cbd5e1; border-radius:8px; background:#fff; color:#0f172a; }
+  label { display:block; font-size:12px; font-weight:700; color:#475569; margin:8px 0 3px; }
+  .box { background:#fff; border:1.5px solid #e2e8f0; border-radius:12px; padding:10px 12px; margin-bottom:10px; }
+  .tag { font-weight:800; font-size:13px; margin:10px 0 4px; color:#334155; } .tag.heute { color:#0f766e; }
+  .t { display:grid; grid-template-columns:86px 1fr; gap:8px; padding:7px 9px; border-radius:9px; margin-bottom:5px; background:#eef2ff; border-left:4px solid #6366f1; cursor:pointer; }
+  .t.google { background:#ecfeff; border-left-color:#0891b2; } .t.besetzt { background:#f1f5f9; border-left-color:#94a3b8; cursor:default; }
+  .t .z { font-size:12.5px; font-weight:700; color:#334155; } .t .ti { font-size:13.5px; font-weight:700; } .t .m { font-size:12px; color:#64748b; }
+  .leer { color:#64748b; font-size:13px; padding:4px 2px; }
+  .reihe { display:grid; grid-template-columns:1fr 1fr; gap:8px; } .reihe3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
+  .fehler { color:#b91c1c; font-size:13px; font-weight:600; margin-top:6px; }
+  .woche { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:8px; } .woche .t { grid-template-columns:1fr; gap:2px; }
+  @media (max-width:700px) { .woche { grid-template-columns:1fr; } }
+  html.glas .t { background:rgba(99,102,241,.22) !important; } html.glas .t.google { background:rgba(8,145,178,.22) !important; } html.glas .t.besetzt { background:rgba(255,255,255,.08) !important; }
+  html.glas .t .z, html.glas .tag { color:#e2e8f0 !important; } html.glas .t .m, html.glas .leer { color:rgba(255,255,255,.7) !important; } html.glas .tag.heute { color:#5eead4 !important; }
+</style>
+<script src="glas.js?v=1791559958"></script>
+</head>
+<body>
+<header><h1>📅 Kalender</h1>
+  <div class="leiste">
+    <select id="wer" title="Wessen Kalender"></select>
+    <button class="leicht" id="zur">‹</button><b id="titel" style="min-width:120px;text-align:center"></b><button class="leicht" id="vor">›</button>
+    <button class="leicht" id="heute">Heute</button>
+    <button id="ansTag">Tag</button><button id="ansWoche">Woche</button>
+    <span style="flex:1"></span>
+    <button class="leicht" id="neu">＋ Termin</button><button class="leicht" id="raum">🚪 Raum buchen</button>
+  </div>
+</header>
+<main id="inhalt"><div class="leer">Lädt …</div></main>
+<script src="https://play.workadventu.re/iframe_api.js"></script>
+<script>
+const KEY = "a21b2aa2a42fe6189b05773c07bbc9ad78e38b34ba3bb6fe", API = "https://swdigitaltest.de/buero-praesenz/kal";
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const ausweis = { holen: () => { try { return localStorage.getItem("swBueroAusweis") || ""; } catch { return ""; } }, setzen: t => { try { t ? localStorage.setItem("swBueroAusweis", t) : localStorage.removeItem("swBueroAusweis"); } catch {} } };
+const iso = d => d.toLocaleDateString("sv-SE"), heuteIso = () => iso(new Date());
+const S = { ansicht: "woche", basis: new Date(), wer: "", personen: [], daten: null, form: null };
+async function api(pfad, opt = {}) {
+  const r = await fetch(API + pfad, { ...opt, headers: { "X-Buero-Key": KEY, "X-Buero-Ausweis": ausweis.holen(), "Content-Type": "application/json" } });
+  const d = await r.json().catch(() => ({}));
+  if (r.status === 401 && /ausweis/.test(d.error || "")) { ausweis.setzen(""); throw new Error("ausweis"); }
+  if (!r.ok) throw new Error(d.error || "Fehler"); return d;
+}
+function anmelden(meldung) {
+  let ben = ""; try { ben = localStorage.getItem("swSchlossBenutzer") || ""; } catch {}
+  $("inhalt").innerHTML = `<div class="box"><b>Kurz anmelden</b><div class="leer">Damit du deinen Kalender siehst.</div>
+    <label>Benutzername oder E-Mail</label><input id="ben" value="${esc(ben)}" style="width:100%"><label>Büro-Passwort oder PIN</label><input id="pin" type="password" style="width:100%">
+    <div class="fehler" id="fe">${esc(meldung || "")}</div><button id="los" style="margin-top:8px">Weiter</button></div>`;
+  $("los").onclick = async () => {
+    try { const r = await fetch("https://swdigitaltest.de/buero-praesenz/ausweis", { method: "POST", headers: { "X-Buero-Key": KEY, "Content-Type": "application/json" }, body: JSON.stringify({ benutzer: $("ben").value.trim(), pin: $("pin").value, pause: true }) });
+      const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || "Fehler"); ausweis.setzen(d.token); start(); }
+    catch (e) { $("fe").textContent = e.message; }
+  };
+}
+function zeitraum() {
+  const b = new Date(S.basis);
+  if (S.ansicht === "tag") return [new Date(b), new Date(b)];
+  const von = new Date(b); von.setDate(b.getDate() - ((b.getDay() + 6) % 7)); const bis = new Date(von); bis.setDate(von.getDate() + 4); return [von, bis];
+}
+async function laden() {
+  const [von, bis] = zeitraum();
+  $("titel").textContent = S.ansicht === "tag" ? von.toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit" })
+    : von.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" }) + "–" + bis.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" });
+  $("ansTag").className = S.ansicht === "tag" ? "an" : "leicht"; $("ansWoche").className = S.ansicht === "woche" ? "an" : "leicht";
+  try { S.daten = await api("/kalender/" + encodeURIComponent(S.wer) + "/termine?von=" + iso(von) + "&bis=" + iso(bis)); }
+  catch (e) { if (e.message === "ausweis") return anmelden("Bitte kurz neu anmelden."); $("inhalt").innerHTML = '<div class="leer">' + esc(e.message) + "</div>"; return; }
+  zeichnen();
+}
+function terminHtml(t) {
+  const zeit = t.ganztag ? "ganztägig" : (t.von || "") + "–" + (t.ende || "");
+  const cls = t.besetzt ? "besetzt" : t.quelle === "google" ? "google" : "";
+  return `<div class="t ${cls}" data-id="${esc(t.id)}"><div class="z">${esc(zeit)}</div><div><div class="ti">${esc(t.titel || "Termin")}</div>${t.ort ? `<div class="m">📍 ${esc(t.ort)}</div>` : ""}${t.privat ? '<div class="m">🔒 privat</div>' : ""}</div></div>`;
+}
+function zeichnen() {
+  const d = S.daten, [von, bis] = zeitraum(), tage = [];
+  for (let t = new Date(von); t <= bis; t.setDate(t.getDate() + 1)) tage.push(iso(t));
+  const amTag = tag => d.termine.filter(t => t.datum <= tag && (t.bis || t.datum) >= tag);
+  const spalte = tag => { const l = amTag(tag), dt = new Date(tag + "T12:00:00");
+    return `<div><div class="tag ${tag === heuteIso() ? "heute" : ""}">${dt.toLocaleDateString("de-DE", { weekday: "long", day: "2-digit", month: "2-digit" })}</div>${l.length ? l.map(terminHtml).join("") : '<div class="leer">frei</div>'}</div>`; };
+  let h = S.wer !== S.personen[0]?.id ? `<div class="leer" style="margin-bottom:6px">Kalender von <b>${esc(d.besitzer)}</b> · ${d.darfEintragen ? "du darfst eintragen" : d.stufe === "details" ? "du siehst Details" : "du siehst nur „Besetzt“"}</div>` : "";
+  h += S.ansicht === "tag" ? spalte(tage[0]) : `<div class="woche">${tage.map(spalte).join("")}</div>`;
+  if (S.form) h = formHtml() + h;
+  $("inhalt").innerHTML = h;
+  $("neu").style.display = d.darfEintragen ? "" : "none";
+  document.querySelectorAll(".t[data-id]").forEach(el => el.onclick = () => { const t = d.termine.find(x => x.id === el.dataset.id); if (t && !t.besetzt && d.darfEintragen) { S.form = { art: "termin", t }; zeichnen(); } });
+  formAktivieren();
+}
+function formHtml() {
+  const f = S.form;
+  if (f.art === "raum") return `<div class="box"><b>🚪 Raum buchen</b>
+    <label>Raum</label><select id="fRaum" style="width:100%">${(f.raeume || []).map(r => `<option>${esc(r)}</option>`).join("")}</select>
+    <div class="reihe3"><div><label>Datum</label><input id="fDatum" type="date" value="${iso(S.basis) < heuteIso() ? heuteIso() : iso(S.basis)}" style="width:100%"></div><div><label>von</label><input id="fVon" type="time" value="10:00" style="width:100%"></div><div><label>bis</label><input id="fBis" type="time" value="11:00" style="width:100%"></div></div>
+    <label>Thema</label><input id="fThema" maxlength="80" style="width:100%" placeholder="z. B. Team-Besprechung">
+    <div class="fehler" id="fFe"></div><div style="display:flex;gap:6px;margin-top:8px"><button id="fOk">Buchen</button><button class="leicht" id="fAbbr">Abbrechen</button></div>
+    ${(f.meine || []).length ? '<label style="margin-top:12px">Deine Buchungen</label>' + f.meine.map(r => `<div class="leer">${esc(r.datum.split("-").reverse().join("."))} ${esc(r.von)}–${esc(r.bis)} · ${esc(r.raum)} ${esc(r.thema || "")} <a href="#" data-loesch="${esc(r.id)}">löschen</a></div>`).join("") : ""}</div>`;
+  const t = f.t || {};
+  return `<div class="box"><b>${t.id ? "Termin ändern" : "Neuer Termin"}</b>
+    <label>Titel</label><input id="fTitel" maxlength="160" value="${esc(t.titel || "")}" style="width:100%" placeholder="z. B. Mandant Müller">
+    <div class="reihe3"><div><label>Datum</label><input id="fDatum" type="date" value="${esc(t.datum || iso(S.basis))}" style="width:100%"></div><div><label>von</label><input id="fVon" type="time" value="${esc(t.von || "09:00")}" style="width:100%"></div><div><label>bis</label><input id="fBis" type="time" value="${esc(t.ende || "10:00")}" style="width:100%"></div></div>
+    <div class="reihe"><label style="display:flex;gap:6px;align-items:center"><input id="fGanz" type="checkbox" ${t.ganztag ? "checked" : ""}> ganztägig</label><label style="display:flex;gap:6px;align-items:center"><input id="fPrivat" type="checkbox" ${t.privat ? "checked" : ""}> privat (andere sehen nur „Besetzt“)</label></div>
+    <label>Ort</label><input id="fOrt" maxlength="120" value="${esc(t.ort || "")}" style="width:100%" placeholder="z. B. Besprechung 10 oder Telefon">
+    <div class="fehler" id="fFe"></div><div style="display:flex;gap:6px;margin-top:8px"><button id="fOk">Speichern</button><button class="leicht" id="fAbbr">Abbrechen</button>${t.id ? '<span style="flex:1"></span><button class="leicht" id="fLoesch" style="color:#b91c1c;border-color:#b91c1c">Löschen</button>' : ""}</div></div>`;
+}
+function formAktivieren() {
+  if (!S.form) return;
+  $("fAbbr").onclick = () => { S.form = null; zeichnen(); };
+  if (S.form.art === "raum") {
+    $("fOk").onclick = async () => { try { await api("/buero-reservierungen", { method: "POST", body: JSON.stringify({ raum: $("fRaum").value, datum: $("fDatum").value, von: $("fVon").value, bis: $("fBis").value, thema: $("fThema").value }) }); S.form = null; laden(); } catch (e) { $("fFe").textContent = e.message; } };
+    document.querySelectorAll("[data-loesch]").forEach(a => a.onclick = async ev => { ev.preventDefault(); try { await api("/buero-reservierungen/" + encodeURIComponent(a.dataset.loesch), { method: "DELETE" }); raumForm(); } catch (e) { $("fFe").textContent = e.message; } });
+    return;
+  }
+  const t = S.form.t || {};
+  $("fOk").onclick = async () => {
+    const b = { titel: $("fTitel").value, datum: $("fDatum").value, bis: $("fDatum").value, von: $("fVon").value, ende: $("fBis").value, ganztag: $("fGanz").checked, privat: $("fPrivat").checked, ort: $("fOrt").value };
+    try { if (t.id) await api("/kalender/termine/" + encodeURIComponent(t.id), { method: "PUT", body: JSON.stringify(b) }); else await api("/kalender/" + encodeURIComponent(S.wer) + "/termine", { method: "POST", body: JSON.stringify(b) });
+      S.form = null; laden(); } catch (e) { $("fFe").textContent = e.message; }
+  };
+  if ($("fLoesch")) $("fLoesch").onclick = async () => { if (!confirm("Termin löschen?")) return; try { await api("/kalender/termine/" + encodeURIComponent(t.id), { method: "DELETE" }); S.form = null; laden(); } catch (e) { $("fFe").textContent = e.message; } };
+}
+async function raumForm() {
+  try { const [raeume, alle] = await Promise.all([api("/buero-raeume"), api("/buero-reservierungen")]);
+    const ich = S.personen[0] ? S.personen[0].name : "";
+    S.form = { art: "raum", raeume: raeume.filter(r => !/^Büro /.test(r)), meine: alle.filter(r => r.name === ich) }; zeichnen(); }
+  catch (e) { if (e.message === "ausweis") return anmelden(); alert(e.message); }
+}
+async function start() {
+  if (!ausweis.holen()) return anmelden();
+  try { S.personen = await api("/kalender/personen"); }
+  catch (e) { if (e.message === "ausweis") return anmelden("Bitte kurz neu anmelden."); $("inhalt").innerHTML = '<div class="leer">' + esc(e.message) + "</div>"; return; }
+  S.wer = S.personen[0].id;
+  $("wer").innerHTML = S.personen.map((p, i) => `<option value="${esc(p.id)}">${i === 0 ? "Mein Kalender" : esc(p.name) + (p.stufe === "eintragen" ? " ✎" : p.stufe === "details" ? "" : " (nur Besetzt)")}</option>`).join("");
+  $("wer").onchange = () => { S.wer = $("wer").value; S.form = null; laden(); };
+  const schieb = n => { const b = new Date(S.basis); b.setDate(b.getDate() + n * (S.ansicht === "tag" ? 1 : 7)); S.basis = b; laden(); };
+  $("zur").onclick = () => schieb(-1); $("vor").onclick = () => schieb(1);
+  $("heute").onclick = () => { S.basis = new Date(); laden(); };
+  $("ansTag").onclick = () => { S.ansicht = "tag"; laden(); }; $("ansWoche").onclick = () => { S.ansicht = "woche"; laden(); };
+  $("neu").onclick = () => { S.form = { art: "termin", t: null }; zeichnen(); };
+  $("raum").onclick = raumForm;
+  laden();
+}
+start();
+</script>
+</body>
+</html>

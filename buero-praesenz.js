@@ -1341,6 +1341,7 @@
           ["sw-blick-runter", "Runter", "runter", () => blicken(6)],
           ["sw-schnellreise", "Reise", "reise", schnellreise],
           ["sw-ideen", "Ideen", "ideen", () => ideenOeffnen()],
+          ["sw-kalender", "Kalender", "kalender", () => glasFenster(SEITEN + "kalender.html?t=" + Date.now())],
           ["sw-mein-profil", "Profil", "profil", () => glasFenster(SEITEN + "profil.html?ich=1&tore=" + toreVon(WA.player.name || "") + "&t=" + Date.now())],
           ...tcAktiv ? [["sw-tagescheck", "Tages-Check", "tagescheck", () => glasFenster(SEITEN + "tagescheck.html?t=" + Date.now())]] : [],
           ...kzAktiv ? [["sw-arbeitszeit", "Arbeitszeit", "arbeitszeit", () => glasFenster(SEITEN + "kernzeit.html?t=" + Date.now())], ["sw-feierabend", "Feierabend", "feierabend", feierabendOeffnen]] : []
@@ -1454,6 +1455,7 @@
           reise: schnellreise,
           news: () => newsOeffnen(),
           feierabend: () => feierabendOeffnen(),
+          kalender: () => glasFenster(SEITEN + "kalender.html?t=" + Date.now()),
           tagescheck: () => glasFenster(SEITEN + "tagescheck.html?t=" + Date.now()),
           arbeitszeit: () => glasFenster(SEITEN + "kernzeit.html?t=" + Date.now()),
           mehr: () => glasFenster(SEITEN + "mehr.html?tuer=" + (tuer ? encodeURIComponent(tuerStatus(tuer)) : "") + "&t=" + Date.now()),
