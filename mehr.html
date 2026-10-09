@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mehr</title>
+<script src="https://play.workadventu.re/iframe_api.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #f8fafc; color: #0f172a; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+  header { position: sticky; top: 0; background: #0f766e; color: #fff; padding: 14px 16px; }
+  header h1 { margin: 0; font-size: 18px; }
+  main { padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+  button.k { font: inherit; font-size: 15px; font-weight: 600; text-align: left; padding: 13px 14px; border-radius: 12px; border: 1.5px solid #cbd5e1; background: #fff; color: #0f172a; cursor: pointer; }
+  button.k small { display: block; font-weight: 400; font-size: 12px; color: #64748b; margin-top: 2px; }
+</style>
+<script src="glas.js?v=1791507965"></script>
+</head>
+<body>
+<header><h1>Mehr</h1></header>
+<main id="liste"></main>
+<script>
+// „Mehr“ aus der Handy-Leiste (09.10.2026, Sam: Vorschlag 3): die Funktionen, die am PC oben als Knöpfe stehen.
+const TUER = new URLSearchParams(location.search).get("tuer") || "";
+const PUNKTE = [
+  ...(TUER ? [["tuer", "🚪 Tür umschalten", "jetzt: " + ({ frei: "frei", besetzt: "besetzt", zu: "zu" }[TUER] || TUER) + " → frei / besetzt / zu"]] : []),
+  ["karte", "🗺 Übersicht", "ganzes Haus zeigen (nochmal = zurück zu dir)"],
+  ["hoch", "⬆ Blick hoch", "Kamera 6 Felder nach oben"],
+  ["runter", "⬇ Blick runter", "Kamera 6 Felder nach unten"],
+  ["zumir", "📍 Zu mir", "Kamera wieder auf deine Figur"],
+  ["reise", "🚀 Schnellreise", "Raum oder Kollegen wählen und hin"],
+];
+const liste = document.getElementById("liste");
+for (const [was, titel, info] of PUNKTE) {
+  const b = document.createElement("button"); b.className = "k"; b.innerHTML = titel + "<small>" + info + "</small>";
+  b.onclick = () => { try { WA.player.state.saveVariable("swAktion", { was, t: Date.now() }, { public: false, persist: false }); } catch (e) { console.warn(e); } };
+  liste.appendChild(b);
+}
+</script>
+</body>
+</html>

@@ -4,6 +4,7 @@
   var BUERO_KEY = "a21b2aa2a42fe6189b05773c07bbc9ad78e38b34ba3bb6fe";
   var DASHBOARD = "https://swdigitaltest.de";
   var SITZUNG = Math.random().toString(36).slice(2) + Date.now().toString(36);
+  var HANDY = (screen.width || 1200) < 768 || /Android|iPhone|iPod|Mobile/i.test(navigator.userAgent);
   var aktuellerBereich = null;
   var beendet = false;
   var bereit = Promise.resolve();
@@ -373,6 +374,7 @@
     const SW = screen.availWidth || 1600, SH = screen.availHeight || 900, zw = (v, a, z) => Math.min(z, Math.max(a, v));
     const b = Math.round(zw(Number(e.b) || Math.min(780, SW * 0.44), 340, SW - 40)), hv = Math.round(zw(Number(e.hv) || 78, 30, 88));
     e = { ...e, r: zw(Number(e.r ?? 14) || 0, 0, Math.max(0, SW - b - 20)), o: zw(Number(e.o ?? 70) || 0, 0, 160) };
+    if (HANDY) return { position: { vertical: "bottom", horizontal: "middle" }, size: { width: Math.round((screen.width || 390) - 20) + "px", height: "58vh" }, margin: { bottom: "96px" } };
     if (e.voll) return { position: { vertical: "top", horizontal: "middle" }, size: { width: Math.round(screen.availWidth * 0.94) + "px", height: "90vh" }, margin: { top: "40px" } };
     return { position: { vertical: "top", horizontal: "right" }, size: { width: b + "px", height: hv + "vh" }, margin: { top: Math.round(Number(e.o) || 70) + "px", right: Math.round(Number(e.r ?? 14)) + "px" } };
   }
@@ -432,6 +434,18 @@
     }
   }
   var NEWS_BEREICH = { x: 41 * 32, y: 33 * 32, w: 8 * 32, h: 3 * 32 };
+  var newsFenster = null;
+  var newsHinweis = null;
+  async function newsOeffnen() {
+    try {
+      newsHinweis && newsHinweis.remove();
+    } catch {
+    }
+    try {
+      newsFenster = await glasFenster(SEITEN + "news.html?t=" + Date.now());
+    } catch {
+    }
+  }
   var HELPCENTER = [{ x: 53, y: 22 }];
   var hcFenster = null;
   var hcHinweis = null;
@@ -648,7 +662,7 @@
     ideenFenster = null;
   }
   function ideen() {
-    try {
+    if (!HANDY) try {
       WA.ui.actionBar.addButton({ id: "sw-ideen", label: "\u{1F4A1} Ideen", callback: () => {
         ideenOeffnen();
       } });
@@ -877,9 +891,9 @@
         allowApi: true,
         visible: true,
         // genau so groß wie die Leiste (kein weißer Rand): mit eigener Tür breiter (Tür + Fokus), sonst nur Uhrzeit + Kollegen
-        position: { vertical: "bottom", horizontal: "middle" },
-        size: { width: meineTuer() ? "530px" : "330px", height: "40px" },
-        margin: { bottom: "14px" }
+        position: { vertical: HANDY ? "top" : "bottom", horizontal: "middle" },
+        size: { width: HANDY ? Math.min(330, (screen.width || 390) - 20) + "px" : meineTuer() ? "530px" : "330px", height: "40px" },
+        margin: HANDY ? { top: "64px" } : { bottom: "14px" }
       });
     } catch {
     }
@@ -892,31 +906,81 @@
     kueche();
     fussball();
     fussgaengerAmpel();
-    try {
-      const breite = 87 * 32, hoehe = 62 * 32;
-      void karte;
-      WA.ui.actionBar.addButton({ id: "sw-uebersicht", label: "\u{1F5FA} \xDCbersicht", callback: () => WA.camera.set(breite / 2, hoehe / 2, breite, hoehe, false, true) });
-      let blick = 0;
-      const blicken = async (felder) => {
-        try {
-          blick += felder;
-          const p = await WA.player.getPosition();
-          WA.camera.set(p.x, p.y + blick * 32, void 0, void 0, true, true);
-        } catch {
-        }
-      };
-      WA.ui.actionBar.addButton({ id: "sw-blick-hoch", label: "\u2B06 Blick hoch", callback: () => blicken(-6) });
-      WA.ui.actionBar.addButton({ id: "sw-blick-runter", label: "\u2B07 Blick runter", callback: () => blicken(6) });
-      WA.ui.actionBar.addButton({ id: "sw-zu-mir", label: "\u{1F4CD} Zu mir", callback: () => {
-        blick = 0;
+    const breite = 87 * 32, hoehe = 62 * 32;
+    void karte;
+    let blick = 0, uebersichtAn = false;
+    const uebersicht = () => {
+      uebersichtAn = true;
+      try {
+        WA.camera.set(breite / 2, hoehe / 2, breite, hoehe, false, true);
+      } catch {
+      }
+    };
+    const zuMir = () => {
+      blick = 0;
+      uebersichtAn = false;
+      try {
         WA.camera.followPlayer(true);
-      } });
-      WA.ui.actionBar.addButton({ id: "sw-schnellreise", label: "\u{1F680} Schnellreise", callback: () => WA.ui.modal.openModal({
-        title: "Schnellreise",
-        src: "https://samjabbar90.github.io/sw-buero/schnellreise.html",
-        allowApi: true,
-        position: "right"
-      }) });
+      } catch {
+      }
+    };
+    const blicken = async (felder) => {
+      try {
+        blick += felder;
+        const p = await WA.player.getPosition();
+        WA.camera.set(p.x, p.y + blick * 32, void 0, void 0, true, true);
+      } catch {
+      }
+    };
+    const schnellreise = () => {
+      try {
+        WA.ui.modal.openModal({ title: "Schnellreise", src: SEITEN + "schnellreise.html", allowApi: true, position: HANDY ? "center" : "right" });
+      } catch {
+      }
+    };
+    try {
+      if (!HANDY) {
+        WA.ui.actionBar.addButton({ id: "sw-uebersicht", label: "\u{1F5FA} \xDCbersicht", callback: uebersicht });
+        WA.ui.actionBar.addButton({ id: "sw-blick-hoch", label: "\u2B06 Blick hoch", callback: () => blicken(-6) });
+        WA.ui.actionBar.addButton({ id: "sw-blick-runter", label: "\u2B07 Blick runter", callback: () => blicken(6) });
+        WA.ui.actionBar.addButton({ id: "sw-zu-mir", label: "\u{1F4CD} Zu mir", callback: zuMir });
+        WA.ui.actionBar.addButton({ id: "sw-schnellreise", label: "\u{1F680} Schnellreise", callback: schnellreise });
+      } else {
+        await WA.ui.website.open({
+          url: SEITEN + "leiste.html?v=" + Date.now(),
+          allowApi: true,
+          visible: true,
+          position: { vertical: "bottom", horizontal: "middle" },
+          size: { width: Math.round((screen.width || 390) - 20) + "px", height: "72px" },
+          margin: { bottom: "12px" }
+        });
+      }
+    } catch {
+    }
+    let letzteAktion = 0;
+    try {
+      letzteAktion = Number((WA.player.state.swAktion || {}).t) || 0;
+    } catch {
+    }
+    try {
+      WA.player.state.onVariableChange("swAktion").subscribe((v) => {
+        if (!v || !v.t || v.t === letzteAktion) return;
+        letzteAktion = v.t;
+        const tuer = meineTuer();
+        ({
+          ideen: () => ideenOeffnen(),
+          karte: () => uebersichtAn ? zuMir() : uebersicht(),
+          zumir: zuMir,
+          reise: schnellreise,
+          news: () => newsOeffnen(),
+          mehr: () => glasFenster(SEITEN + "mehr.html?tuer=" + (tuer ? encodeURIComponent(tuerStatus(tuer)) : "") + "&t=" + Date.now()),
+          hoch: () => blicken(-6),
+          runter: () => blicken(6),
+          tuer: () => {
+            if (tuer) WA.state.saveVariable(tuer.variable, { frei: "besetzt", besetzt: "zu", zu: "frei" }[tuerStatus(tuer)] || "frei");
+          }
+        })[v.was]?.();
+      });
     } catch {
     }
     try {
