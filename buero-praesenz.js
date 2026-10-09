@@ -368,6 +368,101 @@
       fx("fx-trueb", false);
     }
     gewitter = !!(w && w.gewitter);
+    hundRuhe = nacht || !!(w && (w.regen || w.schnee || w.gewitter));
+  }
+  var hundRuhe = false;
+  async function hundStarten() {
+    let G = 0;
+    try {
+      const ts = ((await ladeKarte()).tilesets || []).find((t) => t.name === "SW_Hund");
+      if (!ts) return;
+      G = ts.firstgid;
+    } catch {
+      return;
+    }
+    const KORB = { x: 400, y: 80 }, ECKE = { x: 80, y: 80 }, UNTEN = { x: 80, y: 272 }, TEMPO = 32;
+    const d1 = (KORB.x - ECKE.x) / TEMPO, d2 = (UNTEN.y - ECKE.y) / TEMPO;
+    const PHASEN = [["lieg", 40], ["wedelK", 4], ["links", d1], ["runter", d2], ["sitz", 12], ["hoch", d2], ["rechts", d1], ["sitzK", 6]];
+    const ZYKLUS = PHASEN.reduce((s, p) => s + p[1], 0);
+    let alt = [], letzter = "", wedelBis = 0, hier = { x: KORB.x, y: KORB.y };
+    const zeigen = (bild, px, py) => {
+      const qx = Math.round(px / 8) * 8, qy = Math.round(py / 8) * 8, tx0 = Math.floor(qx / 32) - 1, ty0 = Math.floor(qy / 32) - 1;
+      const schl = bild + ":" + tx0 + ":" + ty0;
+      if (schl === letzter) return;
+      letzter = schl;
+      hier = { x: qx, y: qy };
+      const neu = [];
+      for (let y = 0; y < 3; y++) for (let x = 0; x < 3; x++) neu.push({ x: tx0 + x, y: ty0 + y, tile: G + bild * 9 + y * 3 + x, layer: "hund" });
+      const weg = alt.filter((a) => !neu.some((n) => n.x === a.x && n.y === a.y)).map((a) => ({ ...a, tile: null }));
+      try {
+        WA.room.setTiles([...weg, ...neu]);
+        alt = neu;
+      } catch {
+      }
+    };
+    const off = (q) => Math.round(q / 8) * 8 % 32 / 8;
+    const tick = () => {
+      const jetzt = Date.now(), bein = Math.floor(jetzt / 250) % 2, wedel = Math.floor(jetzt / 300) % 2;
+      if (wedelBis > jetzt) return zeigen(32 + (hier.x > ECKE.x + 8 ? 3 : 0) + (wedel ? 1 : 0), hier.x, hier.y);
+      if (hundRuhe) return zeigen(32 + 3 + 2, KORB.x, KORB.y);
+      let t = jetzt / 1e3 % ZYKLUS, p = PHASEN[0];
+      for (const x of PHASEN) {
+        if (t < x[1]) {
+          p = x;
+          break;
+        }
+        t -= x[1];
+      }
+      const anteil = t / p[1];
+      switch (p[0]) {
+        case "lieg":
+          return zeigen(37, KORB.x, KORB.y);
+        case "wedelK":
+          return zeigen(35 + (wedel ? 1 : 0), KORB.x, KORB.y);
+        // links: 35 sitz, 36 wedel, 37 lieg
+        case "sitzK":
+          return zeigen(35, KORB.x, KORB.y);
+        case "links": {
+          const x = KORB.x - (KORB.x - ECKE.x) * anteil;
+          return zeigen(8 + off(x) * 2 + bein, x, ECKE.y);
+        }
+        case "rechts": {
+          const x = ECKE.x + (KORB.x - ECKE.x) * anteil;
+          return zeigen(off(x) * 2 + bein, x, ECKE.y);
+        }
+        case "runter": {
+          const y = ECKE.y + (UNTEN.y - ECKE.y) * anteil;
+          return zeigen(16 + off(y) * 2 + bein, ECKE.x, y);
+        }
+        case "hoch": {
+          const y = UNTEN.y - (UNTEN.y - ECKE.y) * anteil;
+          return zeigen(24 + off(y) * 2 + bein, ECKE.x, y);
+        }
+        default:
+          return zeigen(32 + (t < 5 && wedel ? 1 : 0), UNTEN.x, UNTEN.y);
+      }
+    };
+    tick();
+    setInterval(tick, 150);
+    let meldung = null;
+    WA.player.onPlayerMove((e) => {
+      const nah = Math.hypot(e.x - hier.x, e.y - hier.y) < 56;
+      if (nah && !meldung) {
+        try {
+          meldung = WA.ui.displayActionMessage({ message: "\u{1F415} Leertaste: Hund streicheln", callback: () => {
+            wedelBis = Date.now() + 4e3;
+            meldung = null;
+          } });
+        } catch {
+        }
+      } else if (!nah && meldung) {
+        try {
+          meldung.remove();
+        } catch {
+        }
+        meldung = null;
+      }
+    });
   }
   var gewitter = false;
   setInterval(() => {
@@ -1198,6 +1293,7 @@
     fussball();
     fussgaengerAmpel();
     klingel();
+    hundStarten();
     profilKarten();
     kernzeitStarten();
     const breite = 87 * 32, hoehe = 62 * 32;
