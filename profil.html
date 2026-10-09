@@ -100,32 +100,51 @@ function zeigen() {
   if (reiter === "zeit") zeitLaden();
   const hin = $("hin"); if (hin) hin.onclick = () => { try { WA.player.state.saveVariable("swAktion", { was: "zuPerson", name: p.name, buero: NAME, t: Date.now() }, { public: false, persist: false }); } catch (e) { console.warn(e); } };
 }
-// Reiter „⏱ Zeit“ (09.10.2026, Sam: Zeiterfassung im virtuellen Büro): DATEV / Virtuelles Büro / System je Tag, Woche oder Monat
-const Z = { art: "woche", basis: new Date() };
+// Reiter „⏱ Zeit“ (09.10.2026, Sam): Kachel antippen = nur diese Quelle (nochmal = alle), Tag / Woche / Monat + Datum, Zeile antippen = Tagesansicht
+const Z = { art: "woche", basis: new Date(), quelle: "alle" };
 const iso = d => d.toLocaleDateString("sv-SE"), std = v => v == null ? "–" : (Math.round(v * 100) / 100).toFixed(2).replace(".", ",");
 async function zeitLaden() {
   const box = $("zeitBox"); if (!box) return; const b = new Date(Z.basis); let von, bis;
   if (Z.art === "monat") { von = new Date(b.getFullYear(), b.getMonth(), 1); bis = new Date(b.getFullYear(), b.getMonth() + 1, 0); }
+  else if (Z.art === "tag") { von = new Date(b); bis = new Date(b); }
   else { von = new Date(b); von.setDate(b.getDate() - ((b.getDay() + 6) % 7)); bis = new Date(von); bis.setDate(von.getDate() + 6); }
-  let d; try { d = await api("/zeiterfassung?" + (ICH ? "ich=1" : "name=" + encodeURIComponent(NAME)) + "&von=" + iso(von) + "&bis=" + iso(bis)); }
+  let d; try { d = await api("/zeiterfassung?" + (ICH ? "ich=1" : "name=" + encodeURIComponent(NAME)) + "&von=" + iso(von) + "&bis=" + iso(bis) + (Z.art === "tag" ? "&tag=" + iso(von) : "")); }
   catch (e) { box.innerHTML = '<div class="leer">' + esc(e.message) + "</div>"; return; }
-  const Q = [["datev", "DATEV", "#1e40af"], ["buero", "Büro", "#0f766e"], ["system", "System", "#7c3aed"]].filter(q => d.quellen.includes(q[0]));
+  const ALLE = [["datev", "DATEV", "#1e40af", "#93c5fd"], ["buero", "Büro", "#0f766e", "#5eead4"], ["system", "System", "#7c3aed", "#c4b5fd"]].filter(q => d.quellen.includes(q[0]));
+  if (Z.quelle !== "alle" && !d.quellen.includes(Z.quelle)) Z.quelle = "alle";
+  const Q = Z.quelle === "alle" ? ALLE : ALLE.filter(q => q[0] === Z.quelle), hat = k => Q.some(q => q[0] === k);
   const wert = (q, t) => q === "datev" ? d.datev && d.datev.tage[t] : q === "buero" ? d.buero && d.buero[t] && d.buero[t].std : d.system && d.system.tage[t];
   const tage = []; for (let t = new Date(von); t <= bis; t.setDate(t.getDate() + 1)) tage.push(new Date(t));
-  const summe = {}; Q.forEach(q => { summe[q[0]] = tage.reduce((a, t) => a + (wert(q[0], iso(t)) || 0), 0); });
-  const titel = Z.art === "monat" ? von.toLocaleDateString("de-DE", { month: "long", year: "numeric" }) : von.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" }) + "–" + bis.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" });
-  let h = `<div style="display:flex;gap:6px;align-items:center;margin-bottom:8px"><button class="zk${Z.art === "woche" ? " an" : ""}" data-za="woche">Woche</button><button class="zk${Z.art === "monat" ? " an" : ""}" data-za="monat">Monat</button><span style="flex:1"></span><button class="zk" data-zs="-1">‹</button><b style="font-size:13px">${titel}</b><button class="zk" data-zs="1">›</button></div>`;
-  h += `<div style="display:grid;grid-template-columns:repeat(${Q.length},minmax(0,1fr));gap:6px;margin-bottom:8px">` + Q.map(q => `<div style="background:${q[2]};border-radius:10px;padding:8px 10px"><div style="font-size:11px;opacity:.85">${q[1]}</div><div style="font-size:18px;font-weight:800">${std(summe[q[0]])} Std</div></div>`).join("") + "</div>";
-  h += '<table style="width:100%;border-collapse:collapse;font-size:12.5px"><tr><th style="text-align:left;opacity:.7;font-size:11px;padding:4px">Tag</th>' + Q.map(q => `<th style="text-align:right;font-size:11px;padding:4px;color:${q[2] === "#1e40af" ? "#93c5fd" : q[2] === "#0f766e" ? "#5eead4" : "#c4b5fd"}">${q[1]}</th>`).join("") + "</tr>";
-  tage.forEach(t => { const v = Q.map(q => wert(q[0], iso(t))); if ((t.getDay() === 0 || t.getDay() === 6) && !v.some(Boolean)) return;
-    const dv = d.quellen.includes("datev") ? (wert("datev", iso(t)) || 0) : null, max = Math.max(...v.map(x => x || 0)), rot = dv !== null && Q.length > 1 && max - dv >= 1;
-    h += `<tr style="border-top:1px solid rgba(255,255,255,.08)"><td style="padding:5px 4px">${t.toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit" })}${rot ? ' <span style="color:#fca5a5" title="DATEV deutlich weniger">⚠</span>' : ""}</td>` + v.map(x => `<td style="text-align:right;padding:5px 4px;font-variant-numeric:tabular-nums">${x ? std(x) : "–"}</td>`).join("") + "</tr>"; });
-  h += "</table>";
+  const summe = {}; ALLE.forEach(q => { summe[q[0]] = tage.reduce((a, t) => a + (wert(q[0], iso(t)) || 0), 0); });
+  const titel = Z.art === "monat" ? von.toLocaleDateString("de-DE", { month: "long", year: "numeric" }) : Z.art === "tag" ? von.toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric" })
+    : von.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" }) + "–" + bis.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" });
+  let h = `<div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin-bottom:8px">${["tag", "woche", "monat"].map(a => `<button class="zk${Z.art === a ? " an" : ""}" data-za="${a}">${{ tag: "Tag", woche: "Woche", monat: "Monat" }[a]}</button>`).join("")}
+    <input type="date" id="zDatum" value="${iso(Z.art === "tag" ? von : new Date(Z.basis))}" style="width:auto;font-size:12px;padding:4px 6px"><span style="flex:1"></span><button class="zk" data-zs="-1">‹</button><b style="font-size:12.5px">${titel}</b><button class="zk" data-zs="1">›</button></div>`;
+  h += `<div style="display:grid;grid-template-columns:repeat(${ALLE.length},minmax(0,1fr));gap:6px;margin-bottom:4px">` + ALLE.map(q => { const an = Z.quelle === q[0], aus = Z.quelle !== "alle" && !an;
+    return `<div data-zq="${an ? "alle" : q[0]}" style="cursor:pointer;background:${q[2]};border-radius:10px;padding:8px 10px;opacity:${aus ? .35 : 1};outline:${an ? "2px solid #fbbf24" : "none"}"><div style="font-size:11px;opacity:.85">${q[1]}</div><div style="font-size:18px;font-weight:800">${std(summe[q[0]])} Std</div></div>`; }).join("") + "</div>";
+  h += `<div style="font-size:11px;opacity:.65;margin-bottom:6px">${Z.quelle === "alle" ? "Kachel antippen = nur diese Quelle · Tag antippen = Einzelheiten" : "Nur " + Q[0][1] + " · Kachel nochmal antippen = alle"}</div>`;
+  if (Z.art === "tag") {
+    const t = iso(von);
+    if (hat("datev")) { const bu = (d.datev && d.datev.buchungen) || [];
+      h += `<div style="font-weight:800;color:#93c5fd;margin:6px 0 4px">DATEV · ${bu.length} Buchung${bu.length === 1 ? "" : "en"}</div>` + (bu.length ? bu.map(x => `<div class="z" style="padding:7px 10px"><b style="text-transform:none;letter-spacing:0;font-size:12px;color:#fff">${std(x.std)} Std · ${esc(x.mandant || "ohne Mandant")}</b>${esc(x.auftrag)}${x.kommentar ? `<div style="font-size:12px;opacity:.75;margin-top:2px">${esc(x.kommentar)}</div>` : ""}</div>`).join("") : '<div class="leer" style="padding:6px">Keine DATEV-Buchung an diesem Tag.</div>'); }
+    if (hat("buero")) { const be = d.buero && d.buero[t];
+      h += `<div style="font-weight:800;color:#5eead4;margin:10px 0 4px">Virtuelles Büro</div>` + (be ? `<div style="font-size:12.5px;margin-bottom:4px">${be.von} – ${be.bis} · ${std(be.std)} Std, davon ${std(be.pause)} Std Pause</div><div style="display:flex;flex-wrap:wrap;gap:4px">${(be.raeume || []).map(r => `<span style="font-size:11px;padding:3px 7px;border-radius:7px;background:rgba(255,255,255,.08)">${r.von}–${r.bis} ${esc(r.bereich)} (${r.min} Min)</span>`).join("")}</div>` : '<div class="leer" style="padding:6px">An diesem Tag nicht im Büro.</div>'); }
+    if (hat("system")) { const sv = wert("system", t); h += `<div style="font-weight:800;color:#c4b5fd;margin:10px 0 4px">System-Zeiterfassung</div><div style="font-size:12.5px">${sv ? std(sv) + " Std aktiv am Rechner" : "Keine System-Zeit an diesem Tag."}</div>`; }
+  } else {
+    h += '<table style="width:100%;border-collapse:collapse;font-size:12.5px"><tr><th style="text-align:left;opacity:.7;font-size:11px;padding:4px">Tag</th>' + Q.map(q => `<th style="text-align:right;font-size:11px;padding:4px;color:${q[3]}">${q[1]}</th>`).join("") + "</tr>";
+    tage.forEach(t => { const v = Q.map(q => wert(q[0], iso(t))); if ((t.getDay() === 0 || t.getDay() === 6) && !v.some(Boolean)) return;
+      const dv = Z.quelle === "alle" && d.quellen.includes("datev") ? (wert("datev", iso(t)) || 0) : null, max = Math.max(...ALLE.map(q => wert(q[0], iso(t)) || 0)), rot = dv !== null && ALLE.length > 1 && max - dv >= 1;
+      h += `<tr data-zt="${iso(t)}" style="cursor:pointer;border-top:1px solid rgba(255,255,255,.08)"><td style="padding:5px 4px">${t.toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit" })}${rot ? ' <span style="color:#fca5a5" title="DATEV deutlich weniger">⚠</span>' : ""}</td>` + v.map(x => `<td style="text-align:right;padding:5px 4px;font-variant-numeric:tabular-nums">${x ? std(x) : "–"}</td>`).join("") + "</tr>"; });
+    h += "</table>";
+  }
   const hin = []; if (d.datev) hin.push(d.datev.quelle === "datev" ? "DATEV tagesaktuell" : "DATEV aus Excel-Upload"); if (d.buero) hin.push("Büro: letzte 30 Tage");
   h += `<div style="font-size:11px;opacity:.65;margin-top:6px">${esc(hin.join(" · "))}</div>`;
   box.innerHTML = h;
   box.querySelectorAll("[data-za]").forEach(x => x.onclick = () => { Z.art = x.dataset.za; zeitLaden(); });
-  box.querySelectorAll("[data-zs]").forEach(x => x.onclick = () => { const n = +x.dataset.zs, nb = new Date(Z.basis); if (Z.art === "monat") nb.setMonth(nb.getMonth() + n); else nb.setDate(nb.getDate() + 7 * n); Z.basis = nb; zeitLaden(); });
+  box.querySelectorAll("[data-zq]").forEach(x => x.onclick = () => { Z.quelle = x.dataset.zq; zeitLaden(); });
+  box.querySelectorAll("[data-zt]").forEach(x => x.onclick = () => { Z.art = "tag"; Z.basis = new Date(x.dataset.zt + "T12:00:00"); zeitLaden(); });
+  $("zDatum").onchange = e => { if (e.target.value) { Z.art = "tag"; Z.basis = new Date(e.target.value + "T12:00:00"); zeitLaden(); } };
+  box.querySelectorAll("[data-zs]").forEach(x => x.onclick = () => { const n = +x.dataset.zs, nb = new Date(Z.basis); if (Z.art === "monat") nb.setMonth(nb.getMonth() + n); else if (Z.art === "tag") nb.setDate(nb.getDate() + n); else nb.setDate(nb.getDate() + 7 * n); Z.basis = nb; zeitLaden(); });
 }
 async function laden() {
   if (!ausweis.holen()) return ausweisFormular();
