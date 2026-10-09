@@ -1,6 +1,6 @@
 /* Graphit-Glas (09.10.2026, Sam: Stil 1, dunkler, ohne Türkis) — nur wenn die Seite als schwebendes Fenster über dem Büro
    geöffnet ist (?glas=1 → glas.js setzt html.glas). Milchglas/Unschärfe kann WorkAdventure nicht. */
-html.glas { background: transparent !important; }
+html.glas { background: transparent !important; color-scheme: dark; }
 html.glas body { background: rgba(22, 24, 29, var(--glas-a, .55)) !important; color: #ffffff !important; font-size: 15px; min-height: 100vh;
   border: 1.5px solid rgba(255, 255, 255, .35); border-radius: 18px; overflow-x: hidden; }
 html.glas header { background: rgba(0, 0, 0, .45) !important; color: #fff !important; border-radius: 16px 16px 0 0; padding-right: 206px !important; }
