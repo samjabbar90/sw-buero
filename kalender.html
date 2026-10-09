@@ -28,6 +28,22 @@
   .fehler { color:#b91c1c; font-size:13px; font-weight:600; margin-top:6px; }
   .woche { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:8px; } .woche .t { grid-template-columns:1fr; gap:2px; }
   @media (max-width:700px) { .woche { grid-template-columns:1fr; } }
+  /* Tag-Ansicht (Layout 1) */
+  .drei { display:grid; grid-template-columns:200px minmax(0,1fr) 240px; gap:10px; align-items:start; }
+  @media (max-width:760px) { .drei { grid-template-columns:1fr; } }
+  .mini { display:grid; grid-template-columns:repeat(7,1fr); gap:2px; text-align:center; font-size:12px; }
+  .mini span { padding:4px 0; border-radius:6px; cursor:pointer; position:relative; } .mini span.wt { cursor:default; font-weight:700; color:#64748b; font-size:11px; }
+  .mini span:hover:not(.wt) { background:rgba(13,148,136,.15); } .mini span.gew { background:#0d9488; color:#fff; font-weight:700; } .mini span.heute { outline:1.5px solid #0d9488; }
+  .mini span.punkt::after { content:""; position:absolute; left:50%; bottom:1px; width:4px; height:4px; margin-left:-2px; border-radius:50%; background:#6366f1; }
+  .raster { position:relative; }
+  .raster .std { position:absolute; left:0; right:0; border-top:1px solid #e2e8f0; font-size:10.5px; color:#94a3b8; padding-top:1px; }
+  .raster .jetzt { position:absolute; left:42px; right:0; border-top:2px solid #ef4444; z-index:2; }
+  .blk { position:absolute; border-radius:7px; padding:3px 7px; font-size:12px; overflow:hidden; cursor:pointer; background:#e0e7ff; border-left:4px solid #6366f1; color:#1e1b4b; box-sizing:border-box; }
+  .blk.google { background:#cffafe; border-left-color:#0891b2; color:#164e63; } .blk.besetzt { background:#e2e8f0; border-left-color:#94a3b8; color:#334155; }
+  .blk.gew { outline:2px solid #f59e0b; z-index:3; } .blk .m { font-size:11px; opacity:.8; }
+  html.glas .raster .std { border-color:rgba(255,255,255,.12) !important; color:rgba(255,255,255,.55) !important; }
+  html.glas .blk { background:rgba(99,102,241,.45) !important; color:#fff !important; } html.glas .blk.google { background:rgba(8,145,178,.45) !important; } html.glas .blk.besetzt { background:rgba(255,255,255,.14) !important; }
+  html.glas .mini span.wt { color:rgba(255,255,255,.6) !important; }
   html.glas .t { background:rgba(99,102,241,.22) !important; } html.glas .t.google { background:rgba(8,145,178,.22) !important; } html.glas .t.besetzt { background:rgba(255,255,255,.08) !important; }
   html.glas .t .z, html.glas .tag { color:#e2e8f0 !important; } html.glas .t .m, html.glas .leer { color:rgba(255,255,255,.7) !important; } html.glas .tag.heute { color:#5eead4 !important; }
 </style>
@@ -52,7 +68,7 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const ausweis = { holen: () => { try { return localStorage.getItem("swBueroAusweis") || ""; } catch { return ""; } }, setzen: t => { try { t ? localStorage.setItem("swBueroAusweis", t) : localStorage.removeItem("swBueroAusweis"); } catch {} } };
 const iso = d => d.toLocaleDateString("sv-SE"), heuteIso = () => iso(new Date());
-const S = { ansicht: "woche", basis: new Date(), wer: "", personen: [], daten: null, form: null };
+const S = { ansicht: "tag", auswahl: null, monat: [], basis: new Date(), wer: "", personen: [], daten: null, form: null };
 async function api(pfad, opt = {}) {
   const r = await fetch(API + pfad, { ...opt, headers: { "X-Buero-Key": KEY, "X-Buero-Ausweis": ausweis.holen(), "Content-Type": "application/json" } });
   const d = await r.json().catch(() => ({}));
@@ -80,7 +96,13 @@ async function laden() {
   $("titel").textContent = S.ansicht === "tag" ? von.toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit" })
     : von.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" }) + "–" + bis.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" });
   $("ansTag").className = S.ansicht === "tag" ? "an" : "leicht"; $("ansWoche").className = S.ansicht === "woche" ? "an" : "leicht";
-  try { S.daten = await api("/kalender/" + encodeURIComponent(S.wer) + "/termine?von=" + iso(von) + "&bis=" + iso(bis)); }
+  try {
+    S.daten = await api("/kalender/" + encodeURIComponent(S.wer) + "/termine?von=" + iso(von) + "&bis=" + iso(bis));
+    // Punkte im Mini-Monat: Tage mit Terminen im angezeigten Monat
+    const b = new Date(S.basis), mv = iso(new Date(b.getFullYear(), b.getMonth(), 1)), mb = iso(new Date(b.getFullYear(), b.getMonth() + 1, 0));
+    if (S.ansicht === "tag") { const m = await api("/kalender/" + encodeURIComponent(S.wer) + "/termine?von=" + mv + "&bis=" + mb); const tage = new Set();
+      m.termine.forEach(t => { for (let x = new Date(t.datum + "T12:00:00"); iso(x) <= (t.bis || t.datum); x.setDate(x.getDate() + 1)) tage.add(iso(x)); }); S.monat = [...tage]; }
+  }
   catch (e) { if (e.message === "ausweis") return anmelden("Bitte kurz neu anmelden."); $("inhalt").innerHTML = '<div class="leer">' + esc(e.message) + "</div>"; return; }
   zeichnen();
 }
@@ -89,18 +111,78 @@ function terminHtml(t) {
   const cls = t.besetzt ? "besetzt" : t.quelle === "google" ? "google" : "";
   return `<div class="t ${cls}" data-id="${esc(t.id)}"><div class="z">${esc(zeit)}</div><div><div class="ti">${esc(t.titel || "Termin")}</div>${t.ort ? `<div class="m">📍 ${esc(t.ort)}</div>` : ""}${t.privat ? '<div class="m">🔒 privat</div>' : ""}</div></div>`;
 }
+// ---- Tag-Ansicht (10.10.2026, Sam: Layout 1): Mini-Monat links (Tag wählen, Punkt = Termine), Stundenraster mit Blöcken
+// in echter Länge, Details rechts (Klick auf einen Termin) ----
+const RASTER_AB = 7, RASTER_BIS = 20, PX_STD = 44;
+const minVon = z => { const m = /^(\d{1,2}):(\d{2})/.exec(z || ""); return m ? +m[1] * 60 + +m[2] : null; };
+const dauerText = (a, b) => { const m = minVon(b) - minVon(a); if (!(m > 0)) return ""; return m < 60 ? m + " Min" : (m % 60 ? Math.floor(m / 60) + " Std " + (m % 60) + " Min" : m / 60 + " Std"); };
+function miniMonat() {
+  const b = new Date(S.basis), erster = new Date(b.getFullYear(), b.getMonth(), 1), tage = new Date(b.getFullYear(), b.getMonth() + 1, 0).getDate();
+  const leer = (erster.getDay() + 6) % 7, mitTermin = new Set(S.monat || []);
+  let h = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><button class="leicht" data-mm="-1" style="padding:2px 8px">‹</button><b style="font-size:12.5px">${erster.toLocaleDateString("de-DE", { month: "long", year: "numeric" })}</b><button class="leicht" data-mm="1" style="padding:2px 8px">›</button></div>`;
+  h += '<div class="mini">' + ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"].map(x => `<span class="wt">${x}</span>`).join("") + "<span></span>".repeat(leer);
+  for (let t = 1; t <= tage; t++) { const d = iso(new Date(b.getFullYear(), b.getMonth(), t)), cls = [d === iso(S.basis) ? "gew" : "", d === heuteIso() ? "heute" : "", mitTermin.has(d) ? "punkt" : ""].join(" ");
+    h += `<span class="${cls}" data-tag="${d}">${t}</span>`; }
+  return h + "</div>";
+}
+function rasterHtml(tag) {
+  const d = S.daten, l = d.termine.filter(t => t.datum <= tag && (t.bis || t.datum) >= tag);
+  const ganz = l.filter(t => t.ganztag || t.datum < tag || (t.bis || t.datum) > tag), zeit = l.filter(t => !ganz.includes(t));
+  // Überschneidungen nebeneinander: einfache Spalten-Verteilung
+  const sort = zeit.map(t => ({ t, a: Math.max(minVon(t.von) ?? 0, RASTER_AB * 60), e: Math.max((minVon(t.ende) ?? 0), (minVon(t.von) ?? 0) + 15) })).sort((x, y) => x.a - y.a);
+  // Gruppen sich überschneidender Termine; nur innerhalb einer Gruppe nebeneinander (sonst volle Breite)
+  let gruppe = [], gruppeEnde = -1, spalten = [];
+  const abschliessen = () => { gruppe.forEach(x => { x.n = Math.max(1, spalten.length); }); gruppe = []; spalten = []; };
+  sort.forEach(x => { if (x.a >= gruppeEnde) abschliessen(); let s = spalten.findIndex(ende => ende <= x.a); if (s < 0) { s = spalten.length; spalten.push(0); }
+    spalten[s] = x.e; x.s = s; gruppe.push(x); gruppeEnde = Math.max(gruppeEnde, x.e); });
+  abschliessen();
+  let h = ganz.length ? '<div style="margin-bottom:6px">' + ganz.map(t => `<div class="blk ${t.besetzt ? "besetzt" : t.quelle === "google" ? "google" : ""}${S.auswahl === t.id ? " gew" : ""}" data-id="${esc(t.id)}" style="position:static;margin-bottom:3px">ganztägig · ${esc(t.titel)}</div>`).join("") + "</div>" : "";
+  h += `<div class="raster" style="height:${(RASTER_BIS - RASTER_AB) * PX_STD}px">`;
+  for (let s = RASTER_AB; s < RASTER_BIS; s++) h += `<div class="std" style="top:${(s - RASTER_AB) * PX_STD}px">${String(s).padStart(2, "0")}:00</div>`;
+  if (tag === heuteIso()) { const j = new Date(), m = j.getHours() * 60 + j.getMinutes(); if (m >= RASTER_AB * 60 && m < RASTER_BIS * 60) h += `<div class="jetzt" style="top:${(m - RASTER_AB * 60) / 60 * PX_STD}px"></div>`; }
+  sort.forEach(x => { const top = (x.a - RASTER_AB * 60) / 60 * PX_STD, hoehe = Math.max(18, (x.e - x.a) / 60 * PX_STD - 2), t = x.t;
+    h += `<div class="blk ${t.besetzt ? "besetzt" : t.quelle === "google" ? "google" : ""}${S.auswahl === t.id ? " gew" : ""}" data-id="${esc(t.id)}" style="top:${top}px;height:${hoehe}px;left:calc(46px + (100% - 50px) * ${x.s / x.n});width:calc((100% - 50px) / ${x.n} - 3px)"><b>${esc(t.von)}–${esc(t.ende)}</b> ${esc(t.titel || "Termin")}${t.ort && hoehe > 30 ? `<div class="m">📍 ${esc(t.ort)}</div>` : ""}</div>`; });
+  return h + "</div>";
+}
+function detailHtml() {
+  const d = S.daten, t = d.termine.find(x => x.id === S.auswahl);
+  if (!t) return '<div class="leer">Termin anklicken, um Details zu sehen.</div>';
+  const datum = new Date(t.datum + "T12:00:00").toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric" })
+    + (t.bis && t.bis !== t.datum ? " – " + new Date(t.bis + "T12:00:00").toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" }) : "");
+  const zeit = t.ganztag ? "ganztägig" : t.von + "–" + t.ende + (dauerText(t.von, t.ende) ? " (" + dauerText(t.von, t.ende) + ")" : "");
+  let h = `<b style="font-size:15px">${esc(t.titel || "Termin")}</b><div class="leer" style="margin:3px 0 8px">${esc(datum)} · ${esc(zeit)}</div>`;
+  if (t.besetzt) return h + '<div class="leer">Details sind für dich nicht freigegeben.</div>';
+  if (t.ort) h += `<div style="margin-bottom:4px">📍 ${esc(t.ort)}</div>`;
+  if (t.erstelltVon) h += `<div style="margin-bottom:4px">👤 eingetragen von ${esc(t.erstelltVon)}</div>`;
+  if (t.quelle === "google") h += '<div style="margin-bottom:4px">🔁 aus dem Google-Kalender</div>';
+  if (t.privat) h += '<div style="margin-bottom:4px">🔒 privat (andere sehen nur „Besetzt“)</div>';
+  if (t.notiz) h += `<div style="margin:6px 0;white-space:pre-wrap;font-size:13px">${esc(t.notiz)}</div>`;
+  h += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">' + (d.darfEintragen ? '<button id="dAendern">✎ Ändern</button><button class="leicht" id="dLoesch" style="color:#b91c1c;border-color:#b91c1c">🗑</button>' : "")
+    + (t.ort ? '<button class="leicht" id="dHin">🚶 Hingehen</button>' : "") + "</div>";
+  return h;
+}
 function zeichnen() {
   const d = S.daten, [von, bis] = zeitraum(), tage = [];
   for (let t = new Date(von); t <= bis; t.setDate(t.getDate() + 1)) tage.push(iso(t));
   const amTag = tag => d.termine.filter(t => t.datum <= tag && (t.bis || t.datum) >= tag);
   const spalte = tag => { const l = amTag(tag), dt = new Date(tag + "T12:00:00");
-    return `<div><div class="tag ${tag === heuteIso() ? "heute" : ""}">${dt.toLocaleDateString("de-DE", { weekday: "long", day: "2-digit", month: "2-digit" })}</div>${l.length ? l.map(terminHtml).join("") : '<div class="leer">frei</div>'}</div>`; };
+    return `<div><div class="tag ${tag === heuteIso() ? "heute" : ""}" data-tagkopf="${tag}" style="cursor:pointer" title="Tag öffnen">${dt.toLocaleDateString("de-DE", { weekday: "long", day: "2-digit", month: "2-digit" })}</div>${l.length ? l.map(terminHtml).join("") : '<div class="leer">frei</div>'}</div>`; };
   let h = S.wer !== S.personen[0]?.id ? `<div class="leer" style="margin-bottom:6px">Kalender von <b>${esc(d.besitzer)}</b> · ${d.darfEintragen ? "du darfst eintragen" : d.stufe === "details" ? "du siehst Details" : "du siehst nur „Besetzt“"}</div>` : "";
-  h += S.ansicht === "tag" ? spalte(tage[0]) : `<div class="woche">${tage.map(spalte).join("")}</div>`;
+  h += S.ansicht === "tag" ? `<div class="drei"><div class="box">${miniMonat()}</div><div class="box">${rasterHtml(tage[0])}</div><div class="box" id="detail">${detailHtml()}</div></div>`
+    : `<div class="woche">${tage.map(spalte).join("")}</div>`;
   if (S.form) h = formHtml() + h;
   $("inhalt").innerHTML = h;
   $("neu").style.display = d.darfEintragen ? "" : "none";
-  document.querySelectorAll(".t[data-id]").forEach(el => el.onclick = () => { const t = d.termine.find(x => x.id === el.dataset.id); if (t && !t.besetzt && d.darfEintragen) { S.form = { art: "termin", t }; zeichnen(); } });
+  // Klick auf Termin: Tag-Ansicht → Details rechts; Woche → in den Tag springen und Details zeigen
+  document.querySelectorAll("[data-id]").forEach(el => el.onclick = () => { const t = d.termine.find(x => x.id === el.dataset.id); if (!t) return;
+    S.auswahl = t.id; if (S.ansicht !== "tag") { S.ansicht = "tag"; S.basis = new Date(t.datum + "T12:00:00"); laden(); } else zeichnen(); });
+  document.querySelectorAll("[data-tagkopf]").forEach(el => el.onclick = () => { S.ansicht = "tag"; S.basis = new Date(el.dataset.tagkopf + "T12:00:00"); laden(); });
+  document.querySelectorAll("[data-tag]").forEach(el => el.onclick = () => { S.basis = new Date(el.dataset.tag + "T12:00:00"); S.auswahl = null; laden(); });
+  document.querySelectorAll("[data-mm]").forEach(el => el.onclick = () => { const b = new Date(S.basis); b.setDate(1); b.setMonth(b.getMonth() + +el.dataset.mm); S.basis = b; S.auswahl = null; laden(); });
+  const t = d.termine.find(x => x.id === S.auswahl);
+  if ($("dAendern")) $("dAendern").onclick = () => { S.form = { art: "termin", t }; zeichnen(); };
+  if ($("dLoesch")) $("dLoesch").onclick = async () => { if (!confirm("Termin löschen?")) return; try { await api("/kalender/termine/" + encodeURIComponent(t.id), { method: "DELETE" }); S.auswahl = null; laden(); } catch (e) { alert(e.message); } };
+  if ($("dHin")) $("dHin").onclick = () => { try { WA.player.state.saveVariable("swAktion", { was: "zuRaum", name: t.ort, t: Date.now() }, { public: false, persist: false }); } catch {} };
   formAktivieren();
 }
 function formHtml() {

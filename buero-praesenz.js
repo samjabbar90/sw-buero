@@ -984,6 +984,20 @@
     }
     kurzMeldung("\u{1F6B6} " + name.split(/\s+/)[0] + " ist gerade nicht im B\xFCro", 5e3);
   }
+  async function zuRaum(ort) {
+    try {
+      const k = await ladeKarte(), q = ort.toLowerCase().trim();
+      const alle = ((k.layers || []).find((l) => l.name === "floorLayer") || { objects: [] }).objects.filter((o) => o.name && o.width && o.height);
+      const r = alle.find((o) => o.name.toLowerCase() === q) || alle.find((o) => q.includes(o.name.toLowerCase()) || o.name.toLowerCase().includes(q));
+      if (r) {
+        kurzMeldung("\u{1F6B6} Unterwegs zu " + r.name, 4e3);
+        await WA.player.moveTo(r.x + r.width / 2, r.y + r.height / 2, 10);
+        return;
+      }
+    } catch {
+    }
+    kurzMeldung("\u{1F4CD} \u201E" + ort + "\u201C ist kein Raum im B\xFCro", 5e3);
+  }
   var FUSSBALL = {
     tore: [
       { name: "platz-tor-oben", x: 146, y: 5, w: 13, h: 6 },
@@ -1462,6 +1476,7 @@
           hoch: () => blicken(-6),
           runter: () => blicken(6),
           zuPerson: () => zuPerson(String(v.name || "")),
+          zuRaum: () => zuRaum(String(v.name || "")),
           meinProfil: () => glasFenster(SEITEN + "profil.html?ich=1&tore=" + toreVon(WA.player.name || "") + "&t=" + Date.now()),
           tuer: () => {
             if (tuer) WA.state.saveVariable(tuer.variable, { frei: "besetzt", besetzt: "zu", zu: "frei" }[tuerStatus(tuer)] || "frei");
