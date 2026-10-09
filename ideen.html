@@ -25,8 +25,18 @@
   .aktionen { display:flex; gap:6px; margin-top:8px; flex-wrap:wrap; }
   .fehler { color:#b91c1c; font-size:13px; font-weight:600; min-height:18px; margin-top:6px; }
   .leer { color:#64748b; text-align:center; padding:20px 0; }
+  /* Layout A (09.10.2026, Sam): Reiter Offen / In Arbeit / Erledigt / Archiv, Suche, Filter, Sortieren */
+  .reiter { display:flex; gap:6px; flex-wrap:wrap; } .reiter button { font-size:12.5px; padding:6px 12px; border-radius:999px; background:#e2e8f0; border-color:#e2e8f0; color:#334155; }
+  .reiter button.an { background:#0d9488; border-color:#0d9488; color:#fff; } .reiter b { margin-left:5px; opacity:.8; }
+  .filter { display:flex; gap:6px; flex-wrap:wrap; align-items:center; } .filter select, .filter input { width:auto; font-size:12.5px; padding:6px 8px; }
+  .filter .such { flex:1; min-width:140px; } .chip { font-size:12px; padding:6px 10px; border-radius:8px; background:#fff; color:#0f766e; } .chip.an { background:#0d9488; color:#fff; }
+  .tag { font-size:11px; font-weight:700; border-radius:6px; padding:2px 7px; margin-left:6px; background:#ccfbf1; color:#0f766e; }
+  .faellig { color:#b91c1c; font-weight:700; } .idee .t { cursor:pointer; }
+  html.glas .reiter button { background:rgba(255,255,255,.1) !important; border-color:transparent !important; color:rgba(255,255,255,.75) !important; }
+  html.glas .reiter button.an { background:rgba(20,184,166,.35) !important; color:#5eead4 !important; } html.glas .chip { background:rgba(0,0,0,.3) !important; color:#e2e8f0 !important; }
+  html.glas .chip.an { background:rgba(20,184,166,.35) !important; color:#5eead4 !important; } html.glas .tag { background:rgba(94,234,212,.15); color:#5eead4; } html.glas .faellig { color:#fca5a5; }
 </style>
-<script src="glas.js?v=1791507996"></script>
+<script src="glas.js?v=1791560000"></script>
 </head>
 <body>
 <header><span style="font-size:22px">💡</span><h1 id="kopf">Meine Ideen</h1><span class="schloss">🔒 nur du</span></header>
@@ -60,30 +70,73 @@ function ausweisFormular(meldung) {
     } catch (e) { $("fe").textContent = e.message; $("los").disabled = false; }
   };
 }
-const PRIO = { hoch: "Hoch", mittel: "Mittel", niedrig: "Niedrig" }, STATUS = { offen: "offen", in_bearbeitung: "in Arbeit", erledigt: "erledigt" };
+// Layout A (09.10.2026, Sam: „mach A“): Reiter Offen / In Arbeit / Erledigt / Archiv mit Anzahl, Suche, Filter (Thema, Priorität,
+// fällig diese Woche), Sortieren; „+ Neue Idee“ klappt die Eingabemaske auf. Archiv statt Löschen — endgültig löschen nur im Archiv.
+const PRIO = { hoch: "Hoch", mittel: "Mittel", niedrig: "Niedrig" }, PRIO_RANG = { hoch: 0, mittel: 1, niedrig: 2 };
+const REITER = [["offen", "Offen"], ["in_bearbeitung", "In Arbeit"], ["erledigt", "Erledigt"], ["archiviert", "🗄 Archiv"]];
+const S = { reiter: "offen", suche: "", thema: "", prio: "", faellig: false, sort: "frist", neu: false, auf: {}, daten: null };
+const heute = () => new Date().toLocaleDateString("sv-SE");
+const plusTage = n => { const d = new Date(); d.setDate(d.getDate() + n); return d.toLocaleDateString("sv-SE"); };
+function fristText(f) {
+  if (!f) return "ohne Frist"; const h = heute();
+  if (f < h) return '<span class="faellig">überfällig (' + new Date(f + "T12:00:00").toLocaleDateString("de-DE") + ")</span>";
+  if (f === h) return '<span class="faellig">Frist heute</span>'; if (f === plusTage(1)) return '<span class="faellig">Frist morgen</span>';
+  return "Frist " + new Date(f + "T12:00:00").toLocaleDateString("de-DE");
+}
+async function setzeStatus(id, status) { try { await api("/ideen/" + encodeURIComponent(id), { method: "PUT", body: JSON.stringify({ status }) }); await laden(); } catch (e) { if (e.message === "ausweis") ausweisFormular(); else alert(e.message); } }
+function liste() {
+  const d = S.daten, alle = d.ideen.map(n => ({ ...n, status: n.status || "offen" }));
+  // Reiter mit Anzahl
+  $("reiter").innerHTML = REITER.map(([k, t]) => `<button class="${k === S.reiter ? "an" : ""}" data-r="${k}">${t}<b>${alle.filter(n => n.status === k).length}</b></button>`).join("");
+  document.querySelectorAll("[data-r]").forEach(b => b.onclick = () => { S.reiter = b.dataset.r; liste(); });
+  const q = S.suche.toLowerCase(), bisWoche = plusTage(7);
+  let l = alle.filter(n => n.status === S.reiter && (!q || (n.titel + " " + (n.text || "") + " " + (n.thema || "")).toLowerCase().includes(q))
+    && (!S.thema || (n.thema || "") === S.thema) && (!S.prio || n.prioritaet === S.prio) && (!S.faellig || (n.frist && n.frist <= bisWoche)));
+  l.sort((a, b) => S.sort === "prio" ? (PRIO_RANG[a.prioritaet] ?? 1) - (PRIO_RANG[b.prioritaet] ?? 1) || (a.frist || "9").localeCompare(b.frist || "9")
+    : S.sort === "neu" ? (b.erstellt || "").localeCompare(a.erstellt || "") : (a.frist || "9999").localeCompare(b.frist || "9999"));
+  const knopf = (id, w, t, leicht = true) => `<button class="klein${leicht ? " leicht" : ""}" data-s="${esc(id)}" data-w="${w}">${t}</button>`;
+  $("liste").innerHTML = l.length ? l.map(n => {
+    const akt = n.status === "offen" ? knopf(n._id, "erledigt", "✓ Erledigt", false) + knopf(n._id, "in_bearbeitung", "In Arbeit") + knopf(n._id, "archiviert", "🗄 Archivieren")
+      : n.status === "in_bearbeitung" ? knopf(n._id, "erledigt", "✓ Erledigt", false) + knopf(n._id, "offen", "↺ Offen") + knopf(n._id, "archiviert", "🗄 Archivieren")
+      : n.status === "erledigt" ? knopf(n._id, "offen", "↺ Wieder offen") + knopf(n._id, "archiviert", "🗄 Archivieren")
+      : knopf(n._id, "offen", "↺ Wiederherstellen", false) + `<button class="klein leicht" data-l="${esc(n._id)}">🗑 Endgültig löschen</button>`;
+    return `<div class="idee${n.status === "erledigt" || n.status === "archiviert" ? " erledigt" : ""}"><div class="t" data-auf="${esc(n._id)}">${esc(n.titel)}<span class="prio p-${esc(n.prioritaet)}">${PRIO[n.prioritaet] || ""}</span>${n.thema ? `<span class="tag">${esc(n.thema)}</span>` : ""}</div>
+      <div class="m">${fristText(n.frist)}${n.erstellt ? " · erstellt " + new Date(n.erstellt).toLocaleDateString("de-DE") : ""}${n.text && !S.auf[n._id] ? " · 📝 Notiz (antippen)" : ""}</div>
+      ${n.text && S.auf[n._id] ? `<div class="x">${esc(n.text)}</div>` : ""}<div class="aktionen">${akt}</div></div>`;
+  }).join("") : `<div class="leer">${S.suche || S.thema || S.prio || S.faellig ? "Keine Idee passt zu Suche/Filter." : S.reiter === "archiviert" ? "Das Archiv ist leer." : "Hier ist noch nichts."}</div>`;
+  document.querySelectorAll("[data-auf]").forEach(t => t.onclick = () => { S.auf[t.dataset.auf] = !S.auf[t.dataset.auf]; liste(); });
+  document.querySelectorAll("[data-s]").forEach(b => b.onclick = () => setzeStatus(b.dataset.s, b.dataset.w));
+  document.querySelectorAll("[data-l]").forEach(b => b.onclick = async () => { if (!confirm("Idee endgültig löschen? Das geht nicht rückgängig.")) return; try { await api("/ideen/" + encodeURIComponent(b.dataset.l), { method: "DELETE" }); laden(); } catch (e) { if (e.message === "ausweis") ausweisFormular(); else alert(e.message); } });
+}
 async function laden() {
   if (!ausweis.holen()) return ausweisFormular();
   try {
-    const d = await api("/ideen");
+    S.daten = await api("/ideen"); const d = S.daten;
     $("kopf").textContent = "Meine Ideen · " + String(d.name || "").split(" ")[0];
-    $("inhalt").innerHTML = `<div class="box"><label style="margin-top:0">Neue Idee</label><input id="nt" placeholder="Titel *" maxlength="200">
-      <div class="reihe"><div><label>Thema</label><input id="nth" placeholder="z. B. Fibu" maxlength="60"></div><div><label>Frist</label><input id="nf" type="date"></div>
-      <div><label>Priorität</label><select id="np"><option value="hoch">Hoch</option><option value="mittel" selected>Mittel</option><option value="niedrig">Niedrig</option></select></div></div>
-      <label>Notiz</label><textarea id="nx" maxlength="4000"></textarea><div class="fehler" id="fe"></div><button id="neu" style="width:100%">💡 Idee speichern</button></div>` +
-      (d.ideen.length ? d.ideen.map(n => `<div class="idee${n.status === "erledigt" ? " erledigt" : ""}"><div class="t">${esc(n.titel)}<span class="prio p-${esc(n.prioritaet)}">${PRIO[n.prioritaet] || ""}</span></div>
-        <div class="m">${esc(n.thema || "")}${n.thema && n.frist ? " · " : ""}${n.frist ? "Frist " + new Date(n.frist + "T12:00:00").toLocaleDateString("de-DE") : ""} · ${STATUS[n.status] || n.status}</div>
-        ${n.text ? `<div class="x">${esc(n.text)}</div>` : ""}
-        <div class="aktionen">${n.status !== "erledigt" ? `<button class="klein" data-s="${esc(n._id)}" data-w="erledigt">✓ Erledigt</button>` : `<button class="klein leicht" data-s="${esc(n._id)}" data-w="offen">↺ Wieder offen</button>`}
-        ${n.status === "offen" ? `<button class="klein leicht" data-s="${esc(n._id)}" data-w="in_bearbeitung">In Arbeit</button>` : ""}<button class="klein leicht" data-l="${esc(n._id)}">Löschen</button></div></div>`).join("")
-        : '<div class="leer">Noch keine Ideen – leg oben die erste an.</div>');
+    const themen = [...new Set(d.ideen.map(n => n.thema).filter(Boolean))].sort((a, b) => a.localeCompare(b, "de"));
+    if (S.thema && !themen.includes(S.thema)) S.thema = "";
+    $("inhalt").innerHTML = `<div class="reiter" id="reiter"></div>
+      <div class="filter"><input class="such" id="such" placeholder="🔍 Suchen …" value="${esc(S.suche)}"><button id="neuAuf" class="klein">${S.neu ? "× Schließen" : "+ Neue Idee"}</button></div>
+      <div class="box" id="neuBox" style="display:${S.neu ? "block" : "none"}"><input id="nt" placeholder="Titel *" maxlength="200">
+        <div class="reihe"><div><label>Thema</label><input id="nth" placeholder="z. B. Fibu" maxlength="60" list="themenListe"><datalist id="themenListe">${themen.map(t => `<option value="${esc(t)}">`).join("")}</datalist></div><div><label>Frist</label><input id="nf" type="date"></div>
+        <div><label>Priorität</label><select id="np"><option value="hoch">Hoch</option><option value="mittel" selected>Mittel</option><option value="niedrig">Niedrig</option></select></div></div>
+        <label>Notiz</label><textarea id="nx" maxlength="4000"></textarea><div class="fehler" id="fe"></div><button id="neu" style="width:100%">💡 Idee speichern</button></div>
+      <div class="filter"><select id="fThema"><option value="">Thema: alle</option>${themen.map(t => `<option${t === S.thema ? " selected" : ""}>${esc(t)}</option>`).join("")}</select>
+        <select id="fPrio"><option value="">Priorität: alle</option>${Object.entries(PRIO).map(([k, t]) => `<option value="${k}"${k === S.prio ? " selected" : ""}>${t}</option>`).join("")}</select>
+        <button id="fFaellig" class="chip${S.faellig ? " an" : ""}">⏰ fällig diese Woche</button>
+        <select id="fSort"><option value="frist"${S.sort === "frist" ? " selected" : ""}>Sortieren: Frist</option><option value="prio"${S.sort === "prio" ? " selected" : ""}>Sortieren: Priorität</option><option value="neu"${S.sort === "neu" ? " selected" : ""}>Sortieren: neueste</option></select></div>
+      <div id="liste" style="display:flex;flex-direction:column;gap:10px"></div>`;
+    $("such").oninput = e => { S.suche = e.target.value; liste(); };
+    $("fThema").onchange = e => { S.thema = e.target.value; liste(); }; $("fPrio").onchange = e => { S.prio = e.target.value; liste(); };
+    $("fSort").onchange = e => { S.sort = e.target.value; liste(); }; $("fFaellig").onclick = () => { S.faellig = !S.faellig; $("fFaellig").classList.toggle("an", S.faellig); liste(); };
+    $("neuAuf").onclick = () => { S.neu = !S.neu; $("neuBox").style.display = S.neu ? "block" : "none"; $("neuAuf").textContent = S.neu ? "× Schließen" : "+ Neue Idee"; if (S.neu) $("nt").focus(); };
     $("neu").onclick = async () => {
       if (!$("nt").value.trim()) { $("fe").textContent = "Bitte einen Titel angeben"; return; }
       $("neu").disabled = true;
-      try { await api("/ideen", { method: "POST", body: JSON.stringify({ titel: $("nt").value.trim(), thema: $("nth").value.trim(), frist: $("nf").value, prioritaet: $("np").value, text: $("nx").value }) }); laden(); }
+      try { await api("/ideen", { method: "POST", body: JSON.stringify({ titel: $("nt").value.trim(), thema: $("nth").value.trim(), frist: $("nf").value, prioritaet: $("np").value, text: $("nx").value }) }); S.neu = false; S.reiter = "offen"; laden(); }
       catch (e) { if (e.message === "ausweis") return ausweisFormular("Dein Ausweis ist nicht mehr gültig – bitte neu anmelden."); $("fe").textContent = e.message; $("neu").disabled = false; }
     };
-    document.querySelectorAll("[data-s]").forEach(b => b.onclick = async () => { try { await api("/ideen/" + encodeURIComponent(b.dataset.s), { method: "PUT", body: JSON.stringify({ status: b.dataset.w }) }); laden(); } catch (e) { if (e.message === "ausweis") ausweisFormular(); else alert(e.message); } });
-    document.querySelectorAll("[data-l]").forEach(b => b.onclick = async () => { if (!confirm("Idee wirklich löschen?")) return; try { await api("/ideen/" + encodeURIComponent(b.dataset.l), { method: "DELETE" }); laden(); } catch (e) { if (e.message === "ausweis") ausweisFormular(); else alert(e.message); } });
+    liste();
   } catch (e) { if (e.message === "ausweis") return ausweisFormular("Dein Ausweis ist nicht mehr gültig – bitte neu anmelden."); $("inhalt").innerHTML = '<div class="leer">' + esc(e.message) + "</div>"; }
 }
 laden();
