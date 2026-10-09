@@ -48,9 +48,18 @@ let start = { vorname: null, mitarbeiter: [] };
 window.mandantGewaehlt = () => {}; window.toggleManuell = () => {}; window.toast = (t) => sag(t);
 function sag(text, ich = false) { const d = document.createElement("div"); d.className = ich ? "ich" : "bot"; d.textContent = text; $chat.appendChild(d); unten(); return d; }
 function unten() { setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" }), 30); }
+// „Zurück“ (09.10., Sam): den aufgeklappten Schritt wieder wegnehmen und die vorige Auswahl freigeben — nicht unten neu anhängen.
+// Jede Auswahl merkt sich, ab welcher Stelle im Gespräch sie etwas angehängt hat.
+const schritte = [];
+function zurueck() {
+  const s = schritte.pop(); if (!s) return;
+  while ($chat.children.length > s.marke) $chat.lastChild.remove();
+  s.box.querySelectorAll("button").forEach(x => x.disabled = false); unten();
+}
 function knoepfe(liste, eins = false) {
   const box = document.createElement("div"); box.className = "knoepfe" + (eins ? " eins" : "");
-  for (const [html, fn, voll] of liste) { const b = document.createElement("button"); b.className = "k" + (voll ? " voll" : ""); b.innerHTML = html; b.onclick = () => { box.querySelectorAll("button").forEach(x => x.disabled = true); fn(b); }; box.appendChild(b); }
+  for (const [html, fn, voll, istZurueck] of liste) { const b = document.createElement("button"); b.className = "k" + (voll ? " voll" : ""); b.innerHTML = html;
+    b.onclick = () => { if (istZurueck) return zurueck(); box.querySelectorAll("button").forEach(x => x.disabled = true); schritte.push({ marke: $chat.children.length, box }); fn(b); }; box.appendChild(b); }
   $chat.appendChild(box); unten(); return box;
 }
 function bereichWaehlen() {
@@ -61,7 +70,7 @@ function bereichWaehlen() {
 function artWaehlen(k) {
   const b = bereiche[k];
   sag("Worum geht es genau?");
-  knoepfe(b.subs.map(s => [s.i + " " + esc(s.t) + "<small>" + esc(s.d || "") + "</small>", () => { sag(s.t, true); maske(k, s); }]).concat([["↩︎ Zurück", () => bereichWaehlen()]]), true);
+  knoepfe(b.subs.map(s => [s.i + " " + esc(s.t) + "<small>" + esc(s.d || "") + "</small>", () => { sag(s.t, true); maske(k, s); }]).concat([["↩︎ Zurück", null, false, true]]), true);
 }
 function maske(k, s) {
   sag("Alles klar! Bitte noch kurz ausfüllen:");
@@ -73,7 +82,7 @@ function maske(k, s) {
   f.querySelectorAll("select#f-ma, select#f-direkt-ma").forEach(sel => start.mitarbeiter.forEach(n => { const o = document.createElement("option"); o.value = n; o.textContent = n; sel.appendChild(o); }));
   $chat.appendChild(f);
   const fehler = document.createElement("div"); fehler.className = "fehler"; $chat.appendChild(fehler);
-  knoepfe([["✉️ Ticket absenden", (btn) => absenden(k, s, f, fehler, btn), true], ["↩︎ Andere Ticket-Art", () => { f.remove(); fehler.remove(); artWaehlen(k); }]], true);
+  knoepfe([["✉️ Ticket absenden", (btn) => absenden(k, s, f, fehler, btn), true], ["↩︎ Zurück", null, false, true]], true);
 }
 async function absenden(k, s, f, fehler, btn) {
   const wert = sel => { const e = f.querySelector(sel); return e ? String(e.value || "").trim() : ""; };
