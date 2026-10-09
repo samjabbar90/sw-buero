@@ -64,6 +64,11 @@
     ziehen(rand, "rand"); ziehen(ecke, "ecke");
     const kopf = document.querySelector("header"); if (kopf) { kopf.classList.add("glas-kopf"); kopf.title = "Ziehen zum Verschieben"; ziehen(kopf, "kopf"); }
   };
+  // Tastatur zurück ans Büro (09.10., Sam: „Leertaste geht nicht mehr“): nach jedem Klick, der nicht in ein Eingabefeld geht,
+  // den Fokus aus dem Fenster nehmen — sonst landen Leertaste/Pfeiltasten im Fenster statt im Büro
+  const zurueck = () => { const a = document.activeElement; if (a && a.closest && a.closest("input, textarea, select, [contenteditable]")) return; try { a && a.blur && a.blur(); } catch { /* egal */ } try { window.blur(); } catch { /* egal */ } };
+  document.addEventListener("pointerup", () => setTimeout(zurueck, 0), true);
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") { const a = document.activeElement; if (a && a.blur) a.blur(); try { window.blur(); } catch { /* egal */ } } }, true);
   if (typeof WA === "undefined") { const s = document.createElement("script"); s.src = "https://play.workadventu.re/iframe_api.js"; document.head.appendChild(s); }
   if (document.body) aufbauen(); else document.addEventListener("DOMContentLoaded", aufbauen);
 })();
