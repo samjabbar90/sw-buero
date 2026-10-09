@@ -1331,19 +1331,20 @@
     try {
       if (!HANDY) {
         const KNOEPFE = [
-          ["sw-uebersicht", "\xDCbersicht (nochmal = zur\xFCck zu mir)", "karte", () => uebersichtAn ? zuMir() : uebersicht()],
+          ["sw-uebersicht", "\xDCbersicht", "karte", () => uebersichtAn ? zuMir() : uebersicht()],
           ["sw-zu-mir", "Zu mir", "zumir", zuMir],
-          ["sw-blick-hoch", "Blick hoch", "hoch", () => blicken(-6)],
-          ["sw-blick-runter", "Blick runter", "runter", () => blicken(6)],
-          ["sw-schnellreise", "Schnellreise", "reise", schnellreise],
+          ["sw-blick-hoch", "Hoch", "hoch", () => blicken(-6)],
+          ["sw-blick-runter", "Runter", "runter", () => blicken(6)],
+          ["sw-schnellreise", "Reise", "reise", schnellreise],
           ["sw-ideen", "Ideen", "ideen", () => ideenOeffnen()],
-          ["sw-mein-profil", "Mein Profil", "profil", () => glasFenster(SEITEN + "profil.html?ich=1&tore=" + toreVon(WA.player.name || "") + "&t=" + Date.now())],
+          ["sw-mein-profil", "Profil", "profil", () => glasFenster(SEITEN + "profil.html?ich=1&tore=" + toreVon(WA.player.name || "") + "&t=" + Date.now())],
           ...tcAktiv ? [["sw-tagescheck", "Tages-Check", "tagescheck", () => glasFenster(SEITEN + "tagescheck.html?t=" + Date.now())]] : [],
-          ...kzAktiv ? [["sw-arbeitszeit", "Meine Arbeitszeit", "arbeitszeit", () => glasFenster(SEITEN + "kernzeit.html?t=" + Date.now())], ["sw-feierabend", "Feierabend", "feierabend", feierabendOeffnen]] : []
+          ...kzAktiv ? [["sw-arbeitszeit", "Arbeitszeit", "arbeitszeit", () => glasFenster(SEITEN + "kernzeit.html?t=" + Date.now())], ["sw-feierabend", "Feierabend", "feierabend", feierabendOeffnen]] : []
         ];
+        const breitGenug = (screen.width || 0) >= 1400;
         for (const [id, label, bild, cb] of KNOEPFE) {
           try {
-            WA.ui.actionBar.addButton({ id, toolTip: label, imageSrc: SEITEN + "icons/" + bild + ".svg", location: "top", callback: cb });
+            WA.ui.actionBar.addButton({ id, ...breitGenug ? { label } : {}, toolTip: label, imageSrc: SEITEN + "icons/" + bild + ".svg?v=2", location: "top", callback: cb });
           } catch {
           }
         }
