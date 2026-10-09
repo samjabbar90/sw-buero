@@ -120,7 +120,7 @@
   }
   function tuerKnopf() {
     const t = meineTuer();
-    if (!t) return;
+    if (!t || !HANDY) return;
     try {
       WA.ui.actionBar.removeButton("sw-tuer");
     } catch {
@@ -1311,14 +1311,23 @@
     };
     try {
       if (!HANDY) {
-        await WA.ui.website.open({
-          url: SEITEN + "oben.html?v=2",
-          allowApi: true,
-          visible: true,
-          position: { vertical: "top", horizontal: "middle" },
-          size: { width: "380px", height: "46px" },
-          margin: { top: "8px" }
-        });
+        const KNOEPFE = [
+          ["sw-uebersicht", "\xDCbersicht", "karte", uebersicht],
+          ["sw-zu-mir", "Zu mir", "zumir", zuMir],
+          ["sw-blick-hoch", "Blick hoch", "hoch", () => blicken(-6)],
+          ["sw-blick-runter", "Blick runter", "runter", () => blicken(6)],
+          ["sw-schnellreise", "Schnellreise", "reise", schnellreise],
+          ["sw-ideen", "Ideen", "ideen", () => ideenOeffnen()],
+          ["sw-mein-profil", "Mein Profil", "profil", () => glasFenster(SEITEN + "profil.html?ich=1&tore=" + toreVon(WA.player.name || "") + "&t=" + Date.now())],
+          ...tcAktiv ? [["sw-tagescheck", "Tages-Check", "tagescheck", () => glasFenster(SEITEN + "tagescheck.html?t=" + Date.now())]] : [],
+          ...kzAktiv ? [["sw-arbeitszeit", "Meine Arbeitszeit", "arbeitszeit", () => glasFenster(SEITEN + "kernzeit.html?t=" + Date.now())], ["sw-feierabend", "Feierabend", "feierabend", feierabendOeffnen]] : []
+        ];
+        for (const [id, label, bild, cb] of KNOEPFE) {
+          try {
+            WA.ui.actionBar.addButton({ id, label, toolTip: label, imageSrc: SEITEN + "icons/" + bild + ".svg", location: "appsMenu", callback: cb });
+          } catch {
+          }
+        }
       } else {
         await WA.ui.website.open({
           url: SEITEN + "leiste.html?v=" + Date.now(),
