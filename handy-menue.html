@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Menü</title>
+<!-- Handy (10.10.2026, Sam: Layout D „Seitenmenü ☰“, durchsichtig wie die anderen Fenster): ?knopf=1 = runder ☰-Knopf oben links;
+     sonst das Seitenmenü links mit Name, „online seit“ und allen Punkten. Alles meldet über die Spieler-Variable „swAktion“. -->
+<script src="https://play.workadventu.re/iframe_api.js"></script>
+<style>
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { margin:0; height:100%; background:transparent; overflow:hidden; font-family:system-ui,-apple-system,"Segoe UI",sans-serif; color:#fff; }
+  .knopf { width:100%; height:100%; border-radius:14px; border:1px solid rgba(255,255,255,.22); background:rgba(10,12,18,.55); color:#fff; font-size:22px; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+  .menue { height:100%; background:rgba(10,12,18,.62); border-right:1px solid rgba(255,255,255,.18); border-radius:0 18px 18px 0; padding:16px 12px; display:flex; flex-direction:column; overflow-y:auto; transition:background .2s; }
+  .menue:active, .menue:focus-within, body:hover .menue { background:rgba(16,18,24,.95); } /* wie die Glas-Fenster: beim Benutzen fest */
+  .kopf { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:10px; }
+  .kopf b { font-size:17px; } .seit { font-size:12.5px; color:#5eead4; margin-top:3px; }
+  .zu { background:rgba(255,255,255,.12); border:0; color:#fff; border-radius:10px; width:34px; height:34px; font-size:16px; cursor:pointer; }
+  button.p { display:flex; align-items:center; gap:12px; width:100%; text-align:left; background:transparent; border:0; color:#fff; font:inherit; font-size:15.5px; padding:12px 8px; border-radius:10px; cursor:pointer; }
+  button.p:active { background:rgba(255,255,255,.12); } button.p span { font-size:19px; width:26px; text-align:center; }
+  .trenn { height:1px; background:rgba(255,255,255,.14); margin:6px 4px; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+const q = new URLSearchParams(location.search), KEY = "a21b2aa2a42fe6189b05773c07bbc9ad78e38b34ba3bb6fe";
+const aktion = was => { try { WA.player.state.saveVariable("swAktion", { was, t: Date.now() }, { public: false, persist: false }); } catch (e) { console.warn(e); } };
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const app = document.getElementById("app");
+if (q.has("knopf")) {
+  app.style.height = "100%";
+  app.innerHTML = '<div class="knopf" id="k">☰</div>';
+  document.getElementById("k").onclick = () => aktion("handyMenue");
+} else {
+  const P = [["karte", "🗺", "Übersicht"], ["zumir", "📍", "Zu mir"], ["reise", "🚀", "Schnellreise"], ["news", "📰", "News"], "-",
+    ["ideen", "💡", "Ideen"], ["meinProfil", "👤", "Mein Profil"]]
+    .concat(q.has("tc") ? [["tagescheck", "✅", "Tages-Check"]] : [], q.has("kz") ? [["arbeitszeit", "⏰", "Meine Arbeitszeit"], ["feierabend", "🚪", "Feierabend"]] : [], q.has("tuer") ? ["-", ["tuer", "🔁", "Tür umschalten"]] : []);
+  app.style.height = "100%";
+  app.innerHTML = '<div class="menue"><div class="kopf"><div><b id="name">…</b><div class="seit" id="seit"></div></div><button class="zu" id="zu">✕</button></div>'
+    + P.map(p => p === "-" ? '<div class="trenn"></div>' : `<button class="p" data-w="${p[0]}"><span>${p[1]}</span>${p[2]}</button>`).join("") + "</div>";
+  app.querySelectorAll("[data-w]").forEach(b => b.onclick = () => aktion(b.dataset.w));
+  document.getElementById("zu").onclick = () => aktion("handyMenue");
+  (async () => {
+    for (let i = 0; i < 50 && typeof WA === "undefined"; i++) await new Promise(r => setTimeout(r, 100));
+    try { await WA.onInit(); const n = WA.player.name || ""; document.getElementById("name").textContent = n;
+      const d = await (await fetch("https://swdigitaltest.de/buero-praesenz/online?name=" + encodeURIComponent(n), { headers: { "X-Buero-Key": KEY } })).json();
+      if (d && d.seit) { const j = new Date(), m = j.getHours() * 60 + j.getMinutes() - d.seitMin;
+        document.getElementById("seit").textContent = "🟢 online seit " + d.seit + (m >= 0 ? " · " + Math.floor(m / 60) + ":" + String(m % 60).padStart(2, "0") + " h" : ""); }
+    } catch {}
+  })();
+}
+</script>
+</body>
+</html>

@@ -1156,7 +1156,7 @@
     } catch {
     }
     WA.ui.website.getAll().then((alle) => alle.forEach((w) => {
-      if (!/info\.html|leiste\.html|schloss\.html|tagescheck\.html\?karte|oben\.html\?v/.test(String(w.url || ""))) w.close().catch(() => {
+      if (!/info\.html|leiste\.html|schloss\.html|tagescheck\.html\?karte|oben\.html\?v|handy-menue\.html\?knopf/.test(String(w.url || ""))) w.close().catch(() => {
       });
     })).catch(() => {
     });
@@ -1349,12 +1349,12 @@
         }
       } else {
         await WA.ui.website.open({
-          url: SEITEN + "leiste.html?v=" + Date.now(),
+          url: SEITEN + "handy-menue.html?knopf=1",
           allowApi: true,
           visible: true,
-          position: { vertical: "bottom", horizontal: "middle" },
-          size: { width: Math.round((screen.width || 390) - 20) + "px", height: "72px" },
-          margin: { bottom: "12px" }
+          position: { vertical: "top", horizontal: "left" },
+          size: { width: "48px", height: "48px" },
+          margin: { top: "112px", left: "10px" }
         });
       }
     } catch {
@@ -1390,6 +1390,31 @@
         menueName = "";
       }
     };
+    let handyMenue = null;
+    const handyMenueZu = () => {
+      if (handyMenue) {
+        try {
+          handyMenue.close();
+        } catch {
+        }
+      }
+      handyMenue = null;
+    };
+    const handyMenueUmschalten = async () => {
+      if (handyMenue) return handyMenueZu();
+      try {
+        handyMenue = await WA.ui.website.open({
+          url: SEITEN + "handy-menue.html?v=1" + (tcAktiv ? "&tc=1" : "") + (kzAktiv ? "&kz=1" : "") + (meineTuer() ? "&tuer=1" : ""),
+          allowApi: true,
+          visible: true,
+          position: { vertical: "middle", horizontal: "left" },
+          size: { width: Math.min(290, Math.round((screen.width || 390) * 0.78)) + "px", height: "100vh" },
+          margin: { left: "0px" }
+        });
+      } catch {
+        handyMenue = null;
+      }
+    };
     let letzteAktion = 0;
     try {
       letzteAktion = Number((WA.player.state.swAktion || {}).t) || 0;
@@ -1400,7 +1425,9 @@
         if (!v || !v.t || v.t === letzteAktion) return;
         letzteAktion = v.t;
         if (v.was === "menue") return menueUmschalten(String(v.m || ""));
+        if (v.was === "handyMenue") return handyMenueUmschalten();
         menueZu();
+        handyMenueZu();
         const tuer = meineTuer();
         ({
           ideen: () => ideenOeffnen(),
