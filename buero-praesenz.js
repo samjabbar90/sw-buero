@@ -314,7 +314,7 @@
     }
   }
   var fxStand = {};
-  var FEIERABEND_RAEUME = ["Besprechung 10", "Besprechung 11", "Besprechung Glas", "Pause", "Lernzimmer", "Helpcenter", "Fitnessraum"];
+  var FEIERABEND_RAEUME = ["Besprechung 10", "Besprechung 11", "Besprechung Glas", "Pause", "Lernzimmer", "Helpcenter", "Fitnessraum", "Fibu Backoffice"];
   var toene = {};
   function ton(name) {
     try {
