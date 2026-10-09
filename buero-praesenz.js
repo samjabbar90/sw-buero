@@ -39,9 +39,9 @@
       }),
       keepalive: true
     }).then((r) => r.json()).then((d) => {
-      if (d && d.abgeloest) beenden();
       if (d && typeof d.system === "boolean") mitSystemZeit = d.system;
-      if (d && d.inaktiv && !gesperrt) inaktivSperren();
+      if (d && d.inaktiv) return wegVomRechner();
+      if (d && d.abgeloest) beenden();
     }).catch(() => {
     });
   }
@@ -1208,10 +1208,10 @@
     });
   }
   var mitSystemZeit = false;
-  async function inaktivSperren() {
-    if (gesperrt) return;
-    await schliessen("rechner");
-    bereit = melden("betreten", true);
+  function wegVomRechner() {
+    if (beendet) return;
+    beendet = true;
+    WA.nav.goToPage(SEITEN + "weg.html");
   }
   function schlossWache() {
     setInterval(async () => {
