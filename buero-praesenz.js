@@ -1150,18 +1150,24 @@
     } catch {
     }
     await tuerenStarten();
+    let kzAktiv = false;
+    try {
+      const r = await fetch(ENDPOINT.replace(/melden$/, "kernzeit/hinweis"), { method: "POST", headers: { "Content-Type": "application/json", "X-Buero-Key": BUERO_KEY }, body: JSON.stringify({ name: WA.player.name }) });
+      kzAktiv = !!(await r.json()).aktiv;
+    } catch {
+    }
     effekte();
     setInterval(effekte, 6e4);
     infoLaden();
     setInterval(infoLaden, 15e3);
     try {
       await WA.ui.website.open({
-        url: "https://samjabbar90.github.io/sw-buero/info.html",
+        url: "https://samjabbar90.github.io/sw-buero/info.html" + (kzAktiv ? "?kz=1" : ""),
         allowApi: true,
         visible: true,
         // genau so groß wie die Leiste (kein weißer Rand): mit eigener Tür breiter (Tür + Fokus), sonst nur Uhrzeit + Kollegen
         position: { vertical: HANDY ? "top" : "bottom", horizontal: "middle" },
-        size: { width: HANDY ? Math.min(330, (screen.width || 390) - 20) + "px" : meineTuer() ? "530px" : "330px", height: "40px" },
+        size: { width: HANDY ? Math.min(330, (screen.width || 390) - 20) + "px" : (meineTuer() ? 530 : 330) + (kzAktiv ? 130 : 0) + "px", height: "40px" },
         margin: HANDY ? { top: "64px" } : { bottom: "14px" }
       });
     } catch {
