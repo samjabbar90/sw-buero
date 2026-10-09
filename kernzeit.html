@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Meine Arbeitszeit</title>
+<!-- Kernarbeitszeit im Büro (09.10.2026, Sam): Knopf „🚪 Feierabend“ (?feierabend=1), Grund für Verspätung, Fall 1 „Überstunden nehmen?“ (nur Ja),
+     Fall 2 „Minusstunden – mit HR abgestimmt?“ (Ja/Nein), Fall 3 Termin/Urlaub/Krank = angenommen. Daten nur mit Büro-Ausweis. -->
+<style>
+  * { box-sizing:border-box; }
+  body { margin:0; background:#f8fafc; color:#0f172a; font-family:system-ui,-apple-system,"Segoe UI",sans-serif; }
+  header { position:sticky; top:0; z-index:2; background:#0f766e; color:#fff; padding:14px 16px; display:flex; align-items:center; gap:10px; }
+  header h1 { margin:0; font-size:18px; flex:1; }
+  main { padding:14px; display:flex; flex-direction:column; gap:10px; }
+  .box { background:#fff; border:1.5px solid #e2e8f0; border-radius:12px; padding:12px 14px; }
+  .titel { font-weight:800; font-size:15px; margin-bottom:4px; } .m { font-size:12.5px; color:#64748b; line-height:1.45; }
+  .zahlen { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:6px; margin-top:8px; }
+  .zahl { background:#f1f5f9; border-radius:9px; padding:7px 8px; } .zahl b { display:block; font-size:16px; } .zahl span { font-size:11px; color:#64748b; }
+  label { display:block; font-size:12px; font-weight:700; color:#475569; margin:8px 0 4px; }
+  input, select { width:100%; font:inherit; font-size:14px; padding:8px 10px; border:1.5px solid #cbd5e1; border-radius:8px; background:#fff; color:#0f172a; }
+  button { font:inherit; font-size:14px; font-weight:700; border-radius:9px; padding:9px 12px; cursor:pointer; border:1.5px solid #0d9488; background:#0d9488; color:#fff; }
+  button.leicht { background:#fff; color:#0f766e; } button:disabled { opacity:.55; }
+  .reihe { display:flex; gap:8px; margin-top:10px; } .reihe > * { flex:1; }
+  .gruende { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:8px; } .gruende button { font-size:13px; padding:8px; }
+  .warn { border-color:#f59e0b; } .rot { border-color:#ef4444; } .gruen { border-color:#10b981; background:#ecfdf5; }
+  .fehler { color:#b91c1c; font-size:13px; font-weight:600; margin-top:6px; min-height:0; }
+  .leer { color:#64748b; text-align:center; padding:20px 0; }
+  html.glas .zahl { background:rgba(255,255,255,.08) !important; } html.glas .zahl span, html.glas .m { color:rgba(255,255,255,.7) !important; }
+  html.glas .gruen { background:rgba(16,185,129,.15) !important; }
+</style>
+<script src="glas.js?v=1791559958"></script>
+</head>
+<body>
+<header><h1 id="kopf">⏰ Meine Arbeitszeit</h1></header>
+<main id="inhalt"><div class="leer">Lädt …</div></main>
+<script src="https://play.workadventu.re/iframe_api.js"></script>
+<script>
+const KEY = "a21b2aa2a42fe6189b05773c07bbc9ad78e38b34ba3bb6fe", API = "https://swdigitaltest.de/buero-praesenz";
+const $ = id => document.getElementById(id), FEIERABEND = new URLSearchParams(location.search).has("feierabend");
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const ausweis = { holen: () => { try { return localStorage.getItem("swBueroAusweis") || ""; } catch { return ""; } }, setzen: t => { try { t ? localStorage.setItem("swBueroAusweis", t) : localStorage.removeItem("swBueroAusweis"); } catch {} } };
+const std = x => { if (x == null) return "–"; const n = Math.abs(x); return (x < 0 ? "−" : "") + Math.floor(n) + ":" + String(Math.round((n % 1) * 60)).padStart(2, "0"); };
+const tagDE = d => d.split("-").reverse().join(".");
+async function api(pfad, opt = {}) {
+  const r = await fetch(API + pfad, { ...opt, headers: { "X-Buero-Key": KEY, "X-Buero-Ausweis": ausweis.holen(), "Content-Type": "application/json" } });
+  const d = await r.json().catch(() => ({}));
+  if (r.status === 401 && /ausweis/.test(d.error || "")) { ausweis.setzen(""); throw new Error("ausweis"); }
+  if (!r.ok) throw new Error(d.error || "Fehler"); return d;
+}
+function ausweisFormular(meldung) {
+  $("inhalt").innerHTML = `<div class="box"><div class="titel">Kurz anmelden</div><div class="m">Damit nur du deine Arbeitszeit siehst.</div>
+    <label>Benutzername oder E-Mail</label><input id="ben" autocomplete="username" value="${esc((() => { try { return localStorage.getItem("swSchlossBenutzer") || ""; } catch { return ""; } })())}">
+    <label>Büro-Passwort oder PIN</label><input id="pin" type="password" autocomplete="current-password">
+    <div class="fehler" id="fe">${esc(meldung || "")}</div><button id="los" style="width:100%;margin-top:8px">Weiter</button></div>`;
+  $("los").onclick = async () => {
+    $("los").disabled = true; $("fe").textContent = "";
+    try {
+      const r = await fetch(API + "/ausweis", { method: "POST", headers: { "X-Buero-Key": KEY, "Content-Type": "application/json" }, body: JSON.stringify({ benutzer: $("ben").value.trim(), pin: $("pin").value, pause: true }) });
+      const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || (r.status === 429 ? "Zu viele Versuche – bitte 15 Minuten warten." : "Fehler"));
+      ausweis.setzen(d.token); start();
+    } catch (e) { $("fe").textContent = e.message; $("los").disabled = false; }
+  };
+}
+function zeigen(d) {
+  if (!d.aktiv) { $("inhalt").innerHTML = '<div class="box"><div class="titel">Keine Kernarbeitszeit hinterlegt</div><div class="m">Für dich ist keine Kernarbeitszeit eingerichtet. Schönen Feierabend!</div></div>'; return; }
+  if (d.freierTag) { $("inhalt").innerHTML = '<div class="box gruen"><div class="titel">Heute ist kein Arbeitstag für dich</div><div class="m">Schönen Feierabend!</div></div>'; return; }
+  const k = d.kernzeit, t = d.heute || {};
+  let h = `<div class="box"><div class="titel">Heute · Kernzeit ${esc(k.von)}–${esc(k.bis)}</div><div class="zahlen">
+    <div class="zahl"><span>Kommen</span><b>${esc(t.kommen || "–")}</b></div><div class="zahl"><span>Ist / Soll</span><b>${std(t.istStd)} / ${std(t.soll != null ? t.soll : k.soll)}</b></div>
+    <div class="zahl"><span>Pause</span><b>${t.pauseMin != null ? t.pauseMin : "–"} Min</b></div><div class="zahl"><span>Guthaben</span><b>${std(d.guthabenStd)}</b></div></div>
+    ${t.pauseMin != null && t.pauseMin < k.pauseMin ? `<div class="m" style="margin-top:6px">☕ Pflichtpause: mindestens ${k.pauseMin} Min (Pausenraum im Büro).</div>` : ""}</div>`;
+  if (d.spaetOhneGrund) {
+    h += `<div class="box warn"><div class="titel">Du bist heute um ${esc(t.kommen)} gekommen (${t.spaet.min} Min nach ${esc(k.von)})</div><div class="m">Sam wurde informiert. Was war der Grund?</div>
+      <div class="gruende">${["Arzt / privater Termin", "Bahn / Stau", "Mit Sam abgesprochen", "Technik-Problem"].map(g => `<button class="leicht" data-g="${esc(g)}">${esc(g)}</button>`).join("")}</div>
+      <label>Oder eigener Grund</label><div style="display:flex;gap:6px"><input id="eigen" maxlength="200"><button id="eigenLos">OK</button></div><div class="fehler" id="feG"></div></div>`;
+  }
+  for (const o of d.offen || []) {
+    const f = o.frage, tag = o.datum === new Date().toLocaleDateString("sv-SE") ? "heute" : "am " + tagDE(o.datum);
+    const kopf = `<div class="titel">Arbeitszeit ${tag} nicht erfüllt</div><div class="m">${esc(o.kommen || "?")}–${esc(o.gehen || "?")} · ${std(o.istStd)} von ${std(o.soll)} Std · fehlen ${std(f.fehltStd)}</div>`;
+    h += f.fall === 1
+      ? `<div class="box warn">${kopf}<div style="margin-top:8px;font-size:14px">Du hast <b>${std(f.guthabenStd)} Std</b> Überstunden. Willst du <b>${std(f.fehltStd)} Std</b> davon nehmen?</div>
+         <div class="reihe"><button data-a="ja" data-d="${o.datum}">Ja, Überstunden nehmen</button></div><div class="m" style="margin-top:6px">Es wird automatisch ein Überstunden-Antrag angelegt.</div></div>`
+      : `<div class="box rot">${kopf}<div style="margin-top:8px;font-size:14px">Du hast keine Überstunden – das werden <b>${std(f.fehltStd)} Minusstunden</b>. Hast du das mit HR abgestimmt?</div>
+         <div class="reihe"><button data-a="ja" data-d="${o.datum}">Ja, abgestimmt</button><button class="leicht" data-a="nein" data-d="${o.datum}">Nein</button></div></div>`;
+  }
+  const fr = t.frage;
+  if (FEIERABEND && fr && fr.fall === 3) h += `<div class="box gruen"><div class="titel">✔ In Ordnung</div><div class="m">${esc(fr.grund)} – deine Zeit wird so angenommen. Schönen Feierabend!</div></div>`;
+  else if (FEIERABEND && fr && fr.fall === 0) h += `<div class="box gruen"><div class="titel">Soll erreicht</div><div class="m">Du gehst vor Kernzeitende (${esc(k.bis)}), hast aber deine Stunden. Sam wurde informiert. Schönen Feierabend!</div></div>`;
+  else if (FEIERABEND && t.gehen && !(d.offen || []).length) h += `<div class="box gruen"><div class="titel">✔ Alles erfüllt</div><div class="m">Schönen Feierabend!</div></div>`;
+  h += '<div class="fehler" id="fe"></div>';
+  $("inhalt").innerHTML = h;
+  document.querySelectorAll("[data-g]").forEach(b => b.onclick = () => grund(b.dataset.g));
+  if ($("eigenLos")) $("eigenLos").onclick = () => grund($("eigen").value.trim());
+  document.querySelectorAll("[data-a]").forEach(b => b.onclick = async () => {
+    document.querySelectorAll("[data-a]").forEach(x => x.disabled = true);
+    try { zeigen(await api("/kernzeit/antwort", { method: "POST", body: JSON.stringify({ datum: b.dataset.d, antwort: b.dataset.a }) })); }
+    catch (e) { if (e.message === "ausweis") return ausweisFormular(); $("fe").textContent = e.message; document.querySelectorAll("[data-a]").forEach(x => x.disabled = false); }
+  });
+}
+async function grund(g) {
+  if (!g) { $("feG").textContent = "Bitte einen Grund angeben."; return; }
+  try { zeigen(await api("/kernzeit/grund", { method: "POST", body: JSON.stringify({ grund: g }) })); }
+  catch (e) { if (e.message === "ausweis") return ausweisFormular(); $("feG").textContent = e.message; }
+}
+let feierabendGemacht = false;
+async function start() {
+  if (!ausweis.holen()) return ausweisFormular();
+  try {
+    let d;
+    if (FEIERABEND && !feierabendGemacht) { $("kopf").textContent = "🚪 Feierabend"; d = await api("/kernzeit/feierabend", { method: "POST" }); feierabendGemacht = true; }
+    else d = await api("/kernzeit");
+    zeigen(d);
+  } catch (e) { if (e.message === "ausweis") return ausweisFormular("Bitte kurz neu anmelden."); $("inhalt").innerHTML = '<div class="leer">' + esc(e.message) + "</div>"; }
+}
+start();
+</script>
+</body>
+</html>

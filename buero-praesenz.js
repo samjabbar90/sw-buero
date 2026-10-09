@@ -1001,6 +1001,32 @@
       effekte();
     });
   }
+  function feierabendOeffnen() {
+    glasFenster(SEITEN + "kernzeit.html?feierabend=1&t=" + Date.now());
+  }
+  function kernzeitStarten() {
+    let zuletzt = 0;
+    const pruefen = async () => {
+      if (gesperrt || Date.now() - zuletzt < 30 * 60 * 1e3) return;
+      try {
+        const r = await fetch(ENDPOINT.replace(/melden$/, "kernzeit/hinweis"), { method: "POST", headers: { "Content-Type": "application/json", "X-Buero-Key": BUERO_KEY }, body: JSON.stringify({ name: WA.player.name }) });
+        const d = await r.json();
+        if (d && d.aktiv && !HANDY) {
+          try {
+            WA.ui.actionBar.addButton({ id: "sw-feierabend", label: "\u{1F6AA} Feierabend", callback: feierabendOeffnen });
+          } catch {
+          }
+        }
+        if (d && d.zeigen) {
+          zuletzt = Date.now();
+          glasFenster(SEITEN + "kernzeit.html?t=" + Date.now());
+        }
+      } catch {
+      }
+    };
+    setTimeout(pruefen, 8e3);
+    setInterval(pruefen, 3 * 60 * 1e3);
+  }
   var SCHLOSS_PAUSE_MS = 30 * 60 * 1e3;
   var gesperrt = false;
   var letzteAktivitaet = Date.now();
@@ -1145,6 +1171,7 @@
     fussgaengerAmpel();
     klingel();
     profilKarten();
+    kernzeitStarten();
     const breite = 87 * 32, hoehe = 62 * 32;
     void karte;
     let blick = 0, uebersichtAn = false;
@@ -1212,6 +1239,8 @@
           zumir: zuMir,
           reise: schnellreise,
           news: () => newsOeffnen(),
+          feierabend: () => feierabendOeffnen(),
+          arbeitszeit: () => glasFenster(SEITEN + "kernzeit.html?t=" + Date.now()),
           mehr: () => glasFenster(SEITEN + "mehr.html?tuer=" + (tuer ? encodeURIComponent(tuerStatus(tuer)) : "") + "&t=" + Date.now()),
           hoch: () => blicken(-6),
           runter: () => blicken(6),
