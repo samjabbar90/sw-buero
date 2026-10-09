@@ -362,6 +362,25 @@
     }, 260);
   }, 4e3);
   var SEITEN = "https://samjabbar90.github.io/sw-buero/";
+  async function glasFenster(url) {
+    const u = url + (url.includes("?") ? "&" : "?") + "glas=1";
+    try {
+      return await WA.ui.website.open({
+        url: u,
+        allowApi: true,
+        visible: true,
+        position: { vertical: "middle", horizontal: "right" },
+        size: { width: "390px", height: "78vh" },
+        margin: { right: "14px" }
+      });
+    } catch {
+      try {
+        return await WA.nav.openCoWebSite(url, true);
+      } catch {
+        return null;
+      }
+    }
+  }
   var NEWS_BEREICH = { x: 41 * 32, y: 33 * 32, w: 8 * 32, h: 3 * 32 };
   var HELPCENTER = [{ x: 53, y: 22 }];
   var hcFenster = null;
@@ -379,7 +398,7 @@
             } catch {
             }
             try {
-              hcFenster = await WA.nav.openCoWebSite(SEITEN + "helpdesk.html?name=" + encodeURIComponent(WA.player.name || "") + "&t=" + Date.now());
+              hcFenster = await glasFenster(SEITEN + "helpdesk.html?name=" + encodeURIComponent(WA.player.name || "") + "&t=" + Date.now());
             } catch {
             }
           } });
@@ -426,7 +445,7 @@
             } catch {
             }
             try {
-              fenster = await WA.nav.openCoWebSite(SEITEN + "lernen.html?name=" + encodeURIComponent(WA.player.name || "") + "&t=" + Date.now());
+              fenster = await glasFenster(SEITEN + "lernen.html?name=" + encodeURIComponent(WA.player.name || "") + "&t=" + Date.now());
             } catch {
             }
           } });
@@ -462,7 +481,7 @@
           } catch {
           }
           try {
-            fenster = await WA.nav.openCoWebSite(SEITEN + "health.html?name=" + encodeURIComponent(WA.player.name || "") + "&t=" + Date.now());
+            fenster = await glasFenster(SEITEN + "health.html?name=" + encodeURIComponent(WA.player.name || "") + "&t=" + Date.now());
           } catch {
           }
         } });
@@ -512,7 +531,7 @@
           } catch {
           }
           try {
-            fenster = await WA.nav.openCoWebSite(SEITEN + "rangliste.html?name=" + encodeURIComponent(WA.player.name || "") + "&t=" + Date.now());
+            fenster = await glasFenster(SEITEN + "rangliste.html?name=" + encodeURIComponent(WA.player.name || "") + "&t=" + Date.now());
           } catch {
           }
         } });
@@ -554,7 +573,7 @@
     } catch {
     }
     try {
-      ideenFenster = await WA.nav.openCoWebSite(SEITEN + "ideen.html?t=" + Date.now());
+      ideenFenster = await glasFenster(SEITEN + "ideen.html?t=" + Date.now());
     } catch {
     }
   }
@@ -715,7 +734,7 @@
     let fenster = null;
     leertasteBereich("vereinsheim", FUSSBALL.vereinsheim, "\u{1F3DF} Vereinsheim FC SW Digital \xB7 Leertaste", async () => {
       try {
-        fenster = await WA.nav.openCoWebSite(SEITEN + "vereinsheim.html?t=" + Date.now(), true);
+        fenster = await glasFenster(SEITEN + "vereinsheim.html?t=" + Date.now());
       } catch {
       }
     }, () => {
