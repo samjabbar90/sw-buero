@@ -22,5 +22,11 @@
   <p>Du warst 15 Minuten nicht am Rechner. Damit niemand online angezeigt wird, der nicht da ist, wurdest du automatisch abgemeldet.</p>
   <a href="https://play.workadventu.re/@/swdigitaltax/sw-digital-tax/buero" target="_top">🏢 Wieder ins Büro</a>
 </div>
+<script>
+if (new URLSearchParams(location.search).get("grund") === "gesperrt") {
+  document.querySelector("h1").textContent = "Du wurdest aus dem Büro abgemeldet";
+  document.querySelector("p").textContent = "Das Büro war 10 Minuten gesperrt und wurde nicht entsperrt. Damit niemand online angezeigt wird, der nicht da ist, wurdest du automatisch abgemeldet.";
+}
+</script>
 </body>
 </html>

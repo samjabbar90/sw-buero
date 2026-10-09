@@ -354,21 +354,32 @@
     fx("fx-abend", abend);
     for (const n of FEIERABEND_RAEUME) fx("fx-feierabend-" + n.normalize("NFD").replace(/[^A-Za-z0-9]/g, ""), (min >= 18 * 60 || nacht) && aktuellerBereich !== n && !(info.belegt || []).includes(n));
     if (w) {
-      fx("fx-regen", !!w.regen);
+      regenAn = !!w.regen;
       fx("fx-pfuetzen", !!w.regen);
       fx("fx-trueb", !!(w.regen || w.nebel || w.trueb || w.gewitter));
-      fx("fx-schneefall", !!w.schnee);
+      schneeAn = !!w.schnee;
       fx("fx-schnee", !!w.schneeLiegt);
     } else {
       const winter = monat === 12 || monat <= 2;
       fx("fx-schnee", winter);
-      fx("fx-schneefall", winter);
-      fx("fx-regen", false);
+      schneeAn = winter;
+      regenAn = false;
       fx("fx-pfuetzen", false);
       fx("fx-trueb", false);
     }
     gewitter = !!(w && w.gewitter);
     hundRuhe = nacht || !!(w && (w.regen || w.schnee || w.gewitter));
+  }
+  var regenAn = false;
+  var schneeAn = false;
+  function wetterTakt() {
+    setInterval(() => {
+      const r = Math.floor(Date.now() / 120) % 4, sn = Math.floor(Date.now() / 300) % 4;
+      for (let i = 0; i < 4; i++) {
+        fx("fx-regen-" + (i + 1), regenAn && i === r);
+        fx("fx-schneefall-" + (i + 1), schneeAn && i === sn);
+      }
+    }, 60);
   }
   var hundRuhe = false;
   async function hundStarten() {
@@ -1134,6 +1145,12 @@
       WA.controls.disablePlayerControls();
     } catch {
     }
+    const sperrWache = setTimeout(() => {
+      if (gesperrt && !beendet) {
+        beendet = true;
+        WA.nav.goToPage(SEITEN + "weg.html?grund=gesperrt");
+      }
+    }, 10 * 60 * 1e3);
     try {
       WA.ui.modal.closeModal();
     } catch {
@@ -1148,6 +1165,7 @@
       try {
         abo = WA.player.state.onVariableChange("swSchloss").subscribe((v) => {
           if (!v || v.sitzung !== SITZUNG) return;
+          clearTimeout(sperrWache);
           try {
             abo.unsubscribe();
           } catch {
@@ -1250,6 +1268,7 @@
     }
     effekte();
     setInterval(effekte, 6e4);
+    wetterTakt();
     infoLaden();
     setInterval(infoLaden, 15e3);
     try {
