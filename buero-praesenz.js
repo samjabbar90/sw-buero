@@ -455,7 +455,7 @@
     } catch {
     }
   }
-  var HELPCENTER = [{ x: 53, y: 22 }];
+  var HELPCENTER = [{ x: 40, y: 23 }];
   var hcFenster = null;
   var hcHinweis = null;
   function helpcenterRoboter() {
@@ -637,7 +637,7 @@
       });
     }
   }
-  var OFFENE_RAEUME = [16, 21, 26, 31].flatMap((x) => [14, 26].map((y) => ({ x, y, w: 5, h: 6 })));
+  var OFFENE_RAEUME = [14, 19, 24, 29, 52, 57, 62, 67].flatMap((x) => [17, 27].map((y) => ({ x, y, w: 5, h: 6 })));
   var ideenFenster = null;
   var ideenHinweis = null;
   async function ideenOeffnen() {
