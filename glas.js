@@ -9,7 +9,7 @@
   const html = document.documentElement; html.classList.add("glas");
   // Farbschema „dunkel“ wie WorkAdventure — sonst legt Chrome/Brave hinter das Fenster einen undurchsichtigen Hintergrund (09.10.: „nicht transparent“)
   html.style.colorScheme = "dark"; { const m = document.createElement("meta"); m.name = "color-scheme"; m.content = "dark"; document.head.appendChild(m); }
-  const css = document.createElement("link"); css.rel = "stylesheet"; css.href = "glas.css?v=1791506622"; // Versionsnummer: sonst nimmt der Browser die alte Datei aus dem Zwischenspeicher document.head.appendChild(css);
+  const css = document.createElement("link"); css.rel = "stylesheet"; css.href = "glas.css?v=1791506622"; document.head.appendChild(css); // Versionsnummer: sonst nimmt der Browser die alte Datei aus dem Zwischenspeicher
   const STANDARD = () => ({ b: Math.round(Math.min(780, Math.max(420, screen.availWidth * 0.44))), h: Math.round(Math.max(360, screen.availHeight * 0.8)), r: 14, o: 70, voll: false, schrift: "weiss", d: .55 });
   let ein = STANDARD();
   // Durchsicht (Knopf ◐): Deckkraft des Glases 0.4 / 0.55 / 0.75
