@@ -21,7 +21,7 @@
     setTimeout(() => WA.nav.goToPage(DASHBOARD), 4e3);
   }
   function melden(event, start = false) {
-    if (beendet) return Promise.resolve();
+    if (beendet || gesperrt && event !== "verlassen") return Promise.resolve();
     zuletztGemeldet = Date.now();
     const meine = meineTuer();
     return fetch(ENDPOINT, {
@@ -1001,7 +1001,101 @@
       effekte();
     });
   }
+  var SCHLOSS_PAUSE_MS = 30 * 60 * 1e3;
+  var gesperrt = false;
+  var letzteAktivitaet = Date.now();
+  var schlossOffen = () => {
+    try {
+      return Date.now() - Number(sessionStorage.getItem("swSchlossOffen") || 0) < SCHLOSS_PAUSE_MS;
+    } catch {
+      return false;
+    }
+  };
+  var schlossMerken = (an) => {
+    try {
+      an ? sessionStorage.setItem("swSchlossOffen", String(Date.now())) : sessionStorage.removeItem("swSchlossOffen");
+    } catch {
+    }
+  };
+  function schliessen(grund = "") {
+    gesperrt = true;
+    schlossMerken(false);
+    try {
+      WA.controls.disablePlayerControls();
+    } catch {
+    }
+    try {
+      WA.ui.modal.closeModal();
+    } catch {
+    }
+    WA.ui.website.getAll().then((alle) => alle.forEach((w) => {
+      if (!/info\.html|leiste\.html|schloss\.html/.test(String(w.url || ""))) w.close().catch(() => {
+      });
+    })).catch(() => {
+    });
+    return new Promise((fertig) => {
+      let fenster = null, abo = null;
+      try {
+        abo = WA.player.state.onVariableChange("swSchloss").subscribe((v) => {
+          if (!v || v.sitzung !== SITZUNG) return;
+          try {
+            abo.unsubscribe();
+          } catch {
+          }
+          try {
+            fenster && fenster.close();
+          } catch {
+          }
+          try {
+            WA.controls.restorePlayerControls();
+          } catch {
+          }
+          gesperrt = false;
+          letzteAktivitaet = Date.now();
+          schlossMerken(true);
+          fertig();
+        });
+      } catch {
+        gesperrt = false;
+        fertig();
+        return;
+      }
+      WA.ui.website.open({
+        url: SEITEN + "schloss.html?sitzung=" + SITZUNG + (grund ? "&grund=" + grund : "") + "&t=" + Date.now(),
+        allowApi: true,
+        visible: true,
+        position: { vertical: "middle", horizontal: "middle" },
+        size: { width: "100vw", height: "100vh" }
+      }).then((w) => {
+        fenster = w;
+      }).catch(() => {
+        gesperrt = false;
+        try {
+          WA.controls.restorePlayerControls();
+        } catch {
+        }
+        fertig();
+      });
+    });
+  }
+  function schlossWache() {
+    setInterval(async () => {
+      if (gesperrt) return;
+      if (gespraech.size) {
+        letzteAktivitaet = Date.now();
+      }
+      if (Date.now() - letzteAktivitaet < SCHLOSS_PAUSE_MS) {
+        schlossMerken(true);
+        return;
+      }
+      await melden("verlassen");
+      await schliessen("pause");
+      bereit = melden("betreten", true);
+    }, 6e4);
+  }
   WA.onInit().then(async () => {
+    if (!schlossOffen()) await schliessen();
+    schlossWache();
     bereit = melden("betreten", true);
     const tiled = await kartenBereiche();
     for (const name of tiled) beobachten(name, WA.room.area);
@@ -1126,6 +1220,7 @@
     }
     WA.player.onPlayerMove((e) => {
       position = { x: e.x, y: e.y };
+      letzteAktivitaet = Date.now();
       richtung = e.direction || richtung;
       if (Date.now() - zuletztGemeldet > 5e3) melden("heartbeat");
     });
