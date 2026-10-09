@@ -3,7 +3,7 @@
 html.glas { background: transparent !important; }
 html.glas body { background: rgba(22, 24, 29, var(--glas-a, .55)) !important; color: #ffffff !important; font-size: 15px; min-height: 100vh;
   border: 1.5px solid rgba(255, 255, 255, .35); border-radius: 18px; overflow-x: hidden; }
-html.glas header { background: rgba(0, 0, 0, .45) !important; color: #fff !important; border-radius: 16px 16px 0 0; padding-right: 168px !important; }
+html.glas header { background: rgba(0, 0, 0, .45) !important; color: #fff !important; border-radius: 16px 16px 0 0; padding-right: 206px !important; }
 html.glas header.glas-kopf { cursor: move; user-select: none; }
 html.glas .karte, html.glas .box, html.glas .idee, html.glas .lektion, html.glas .z, html.glas .bot, html.glas #form-content, html.glas .tipp {
   background: rgba(10, 11, 14, .62) !important; border-color: rgba(255, 255, 255, .2) !important; color: #ffffff !important; box-shadow: none !important; } /* Textfelder dunkler → lesbar, Rest durchsichtig */

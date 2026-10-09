@@ -36,8 +36,9 @@
       html.classList.add("glas-zieht");
       const bewegen = (m) => {
         const dx = m.screenX - x0, dy = m.screenY - y0;
-        if (art === "kopf") { ein.r = Math.max(0, s.r - dx); ein.o = Math.max(0, s.o + dy); zeigen("Verschieben … loslassen zum Übernehmen"); }
-        else { ein.b = Math.max(340, Math.round(s.b - dx)); if (art === "ecke") ein.h = Math.max(300, Math.round(s.h + dy)); zeigen(ein.b + " × " + ein.h + " px"); }
+        const SW = screen.availWidth || 1600, SH = screen.availHeight || 900, zw = (v, a, z) => Math.min(z, Math.max(a, v)); // nie aus dem Bildschirm
+        if (art === "kopf") { ein.r = zw(s.r - dx, 0, SW - ein.b - 20); ein.o = zw(s.o + dy, 0, SH - ein.h - 120); zeigen("Verschieben … loslassen zum Übernehmen"); }
+        else { ein.b = zw(Math.round(s.b - dx), 340, SW - ein.r - 20); if (art === "ecke") ein.h = zw(Math.round(s.h + dy), 300, SH - ein.o - 120); zeigen(ein.b + " × " + ein.h + " px"); }
         if (Date.now() - zuletzt > 120) { zuletzt = Date.now(); live(); }
       };
       const los = () => {
@@ -55,6 +56,7 @@
     l.append(
       knopf("◐", "Durchsicht: viel / mittel / wenig", () => { ein.d = { 0.4: .55, 0.55: .75, 0.75: .4 }[ein.d] || .55; durchsicht(); speichern(false); }),
       knopf("A", "Schriftfarbe: Weiß / Gelb / Mint", () => { ein.schrift = { weiss: "gelb", gelb: "mint", mint: "weiss" }[ein.schrift] || "weiss"; schrift(); speichern(false); }),
+      knopf("↺", "Größe und Platz zurücksetzen", () => { const sch = ein.schrift, d = ein.d; ein = STANDARD(); ein.schrift = sch; ein.d = d; speichern(true); }),
       knopf("⛶", "Vollbild an/aus", () => { ein.voll = !ein.voll; speichern(true); }),
       knopf("×", "Schließen", async () => { await bereit; if (ich) ich.close(); }),
     );

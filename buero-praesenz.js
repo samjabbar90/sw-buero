@@ -370,7 +370,9 @@
       e = WA.player.state.swFenster || {};
     } catch {
     }
-    const b = Math.round(Number(e.b) || Math.min(780, Math.max(420, screen.availWidth * 0.44))), h = Math.round(Number(e.h) || Math.max(360, screen.availHeight * 0.8));
+    const SW = screen.availWidth || 1600, SH = screen.availHeight || 900, zw = (v, a, z) => Math.min(z, Math.max(a, v));
+    const b = Math.round(zw(Number(e.b) || Math.min(780, SW * 0.44), 340, SW - 40)), h = Math.round(zw(Number(e.h) || SH * 0.75, 300, SH - 140));
+    e = { ...e, r: zw(Number(e.r ?? 14) || 0, 0, Math.max(0, SW - b - 20)), o: zw(Number(e.o ?? 70) || 0, 0, Math.max(0, SH - h - 120)) };
     if (e.voll) return { position: { vertical: "top", horizontal: "middle" }, size: { width: Math.round(screen.availWidth * 0.94) + "px", height: "90vh" }, margin: { top: "40px" } };
     return { position: { vertical: "top", horizontal: "right" }, size: { width: b + "px", height: h + "px" }, margin: { top: Math.round(Number(e.o) || 70) + "px", right: Math.round(Number(e.r ?? 14)) + "px" } };
   }
