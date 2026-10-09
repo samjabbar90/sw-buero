@@ -10,7 +10,7 @@
   // Farbschema „dunkel“ wie WorkAdventure — sonst legt Chrome/Brave hinter das Fenster einen undurchsichtigen Hintergrund (09.10.: „nicht transparent“)
   html.style.colorScheme = "dark"; { const m = document.createElement("meta"); m.name = "color-scheme"; m.content = "dark"; document.head.appendChild(m); }
   const css = document.createElement("link"); css.rel = "stylesheet"; css.href = "glas.css?v=1791506622"; document.head.appendChild(css); // Versionsnummer: sonst nimmt der Browser die alte Datei aus dem Zwischenspeicher
-  const STANDARD = () => ({ b: Math.round(Math.min(780, Math.max(420, screen.availWidth * 0.44))), h: Math.round(Math.min(screen.availHeight * 0.62, screen.availHeight - 330)), r: 14, o: 70, voll: false, schrift: "weiss", d: .55 });
+  const STANDARD = () => ({ b: Math.round(Math.min(780, Math.max(420, screen.availWidth * 0.44))), hv: 78, r: 14, o: 70, voll: false, schrift: "weiss", d: .55 });
   let ein = STANDARD();
   // Durchsicht (Knopf ◐): Deckkraft des Glases 0.4 / 0.55 / 0.75
   const durchsicht = () => html.style.setProperty("--glas-a", String(ein.d || .55));
@@ -26,7 +26,7 @@
   })();
   const speichern = (neuOeffnen) => { if (!api) return; try { api.player.state.saveVariable("swFenster", Object.assign({}, ein, { neu: neuOeffnen ? Date.now() : (ein.neu || 0) }), { public: false, persist: true }); } catch (e) { console.warn("swFenster", e); } };
   // live mitwachsen versuchen (einzelne Felder, wie in der WA-Doku); wenn WA das nicht übernimmt, gilt es beim Loslassen
-  const live = () => { if (!ich) return; try { ich.size.width = ein.b + "px"; ich.size.height = ein.h + "px"; if (ich.margin) { ich.margin.right = ein.r + "px"; ich.margin.top = ein.o + "px"; } } catch { /* nicht unterstützt */ } };
+  const live = () => { if (!ich) return; try { ich.size.width = ein.b + "px"; ich.size.height = ein.hv + "vh"; if (ich.margin) { ich.margin.right = ein.r + "px"; ich.margin.top = ein.o + "px"; } } catch { /* nicht unterstützt */ } };
   // Anzeige während des Ziehens
   let anzeige = null;
   const zeigen = (t) => { if (!anzeige) { anzeige = document.createElement("div"); anzeige.id = "glas-mass"; anzeige.appendChild(document.createElement("span")); document.body.appendChild(anzeige); } anzeige.firstChild.textContent = t; anzeige.style.display = "flex"; };
@@ -35,18 +35,22 @@
       if (e.button !== 0 || ein.voll) return; if (art === "kopf" && e.target.closest("button, a, input, select, textarea, #glas-leiste")) return;
       e.preventDefault(); el.setPointerCapture(e.pointerId);
       const x0 = e.screenX, y0 = e.screenY, s = { ...ein }; let zuletzt = 0;
+      // Höhe des Büro-Fensters aus der eigenen Höhe (die in vh geöffnet wurde) zurückrechnen
+      const vp = window.innerHeight * 100 / (Number(s.hv) || 78), hpx0 = window.innerHeight;
       html.classList.add("glas-zieht");
       const bewegen = (m) => {
         const dx = m.screenX - x0, dy = m.screenY - y0;
         const SW = screen.availWidth || 1600, SH = screen.availHeight || 900, zw = (v, a, z) => Math.min(z, Math.max(a, v)); // nie aus dem Bildschirm
-        if (art === "kopf") { ein.r = zw(s.r - dx, 0, SW - ein.b - 20); ein.o = zw(s.o + dy, 0, SH - ein.h - 330); zeigen("Verschieben … loslassen zum Übernehmen"); }
-        else { ein.b = zw(Math.round(s.b - dx), 340, SW - ein.r - 20); if (art === "ecke") ein.h = zw(Math.round(s.h + dy), 300, SH - ein.o - 330); zeigen(ein.b + " × " + ein.h + " px"); }
+        const hvMax = Math.max(30, Math.floor(100 - (ein.o + 40) * 100 / vp)); // unten nicht aus dem Büro-Fenster
+        if (art === "kopf") { ein.r = zw(s.r - dx, 0, SW - ein.b - 20); ein.o = zw(s.o + dy, 0, Math.max(0, vp - hpx0 - 40)); zeigen("Verschieben … loslassen zum Übernehmen"); }
+        else { ein.b = zw(Math.round(s.b - dx), 340, SW - ein.r - 20); if (art === "ecke") ein.hv = zw(Math.round((hpx0 + dy) * 100 / vp), 30, hvMax);
+          zeigen(ein.b + " × " + Math.round(ein.hv * vp / 100) + " px"); }
         if (Date.now() - zuletzt > 120) { zuletzt = Date.now(); live(); }
       };
       const los = () => {
         el.removeEventListener("pointermove", bewegen); el.removeEventListener("pointerup", los); el.removeEventListener("pointercancel", los);
         html.classList.remove("glas-zieht"); if (anzeige) anzeige.style.display = "none";
-        const passt = art !== "kopf" && Math.abs(window.innerWidth - ein.b) < 12 && Math.abs(window.innerHeight - ein.h) < 12;
+        const passt = art !== "kopf" && Math.abs(window.innerWidth - ein.b) < 12 && Math.abs(window.innerHeight - ein.hv * vp / 100) < 12;
         speichern(!passt); // nur neu öffnen, wenn das Fenster nicht schon live die richtige Größe hat
       };
       el.addEventListener("pointermove", bewegen); el.addEventListener("pointerup", los); el.addEventListener("pointercancel", los);
