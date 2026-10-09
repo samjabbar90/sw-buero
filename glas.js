@@ -3,14 +3,16 @@
 // Ziehen: linker Rand = breiter/schmaler · Ecke unten links = breiter + höher · Kopfzeile = verschieben.
 // Während des Ziehens zeigt das Fenster die neue Größe an und versucht live mitzuwachsen; beim Loslassen wird die Lage in der
 // Spieler-Variable „swFenster“ gespeichert — das Büro-Skript öffnet das Fenster dann in genau dieser Lage neu (klappt sicher).
-// Leiste oben rechts: A = Schriftfarbe (Weiß / Gelb / Mint) · ⛶ = Vollbild an/aus · × = schließen.
+// Leiste oben rechts: ◐ = Durchsicht (viel/mittel/wenig) · A = Schriftfarbe (Weiß / Gelb / Mint) · ⛶ = Vollbild an/aus · × = schließen.
 (function () {
   if (!new URLSearchParams(location.search).has("glas")) return;
   const html = document.documentElement; html.classList.add("glas");
   const css = document.createElement("link"); css.rel = "stylesheet"; css.href = "glas.css"; document.head.appendChild(css);
-  const STANDARD = () => ({ b: Math.round(Math.min(780, Math.max(420, screen.availWidth * 0.44))), h: Math.round(Math.max(360, screen.availHeight * 0.8)), r: 14, o: 70, voll: false, schrift: "weiss" });
+  const STANDARD = () => ({ b: Math.round(Math.min(780, Math.max(420, screen.availWidth * 0.44))), h: Math.round(Math.max(360, screen.availHeight * 0.8)), r: 14, o: 70, voll: false, schrift: "weiss", d: .55 });
   let ein = STANDARD();
-  const schrift = () => { html.classList.remove("glas-mint", "glas-gelb"); if (ein.schrift && ein.schrift !== "weiss") html.classList.add("glas-" + ein.schrift); };
+  // Durchsicht (Knopf ◐): Deckkraft des Glases 0.4 / 0.55 / 0.75
+  const durchsicht = () => html.style.setProperty("--glas-a", String(ein.d || .55));
+  const schrift = () => { durchsicht(); html.classList.remove("glas-mint", "glas-gelb"); if (ein.schrift && ein.schrift !== "weiss") html.classList.add("glas-" + ein.schrift); };
   let api = null, ich = null;
   const bereit = (async () => {
     for (let i = 0; i < 50 && typeof WA === "undefined"; i++) await new Promise(r => setTimeout(r, 100));
@@ -51,6 +53,7 @@
   const aufbauen = () => {
     const l = document.createElement("div"); l.id = "glas-leiste";
     l.append(
+      knopf("◐", "Durchsicht: viel / mittel / wenig", () => { ein.d = { 0.4: .55, 0.55: .75, 0.75: .4 }[ein.d] || .55; durchsicht(); speichern(false); }),
       knopf("A", "Schriftfarbe: Weiß / Gelb / Mint", () => { ein.schrift = { weiss: "gelb", gelb: "mint", mint: "weiss" }[ein.schrift] || "weiss"; schrift(); speichern(false); }),
       knopf("⛶", "Vollbild an/aus", () => { ein.voll = !ein.voll; speichern(true); }),
       knopf("×", "Schließen", async () => { await bereit; if (ich) ich.close(); }),

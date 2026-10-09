@@ -1,12 +1,12 @@
 /* Graphit-Glas (09.10.2026, Sam: Stil 1, dunkler, ohne Türkis) — nur wenn die Seite als schwebendes Fenster über dem Büro
    geöffnet ist (?glas=1 → glas.js setzt html.glas). Milchglas/Unschärfe kann WorkAdventure nicht. */
 html.glas { background: transparent !important; }
-html.glas body { background: rgba(22, 24, 29, .84) !important; color: #ffffff !important; font-size: 15px; min-height: 100vh;
+html.glas body { background: rgba(22, 24, 29, var(--glas-a, .55)) !important; color: #ffffff !important; font-size: 15px; min-height: 100vh;
   border: 1.5px solid rgba(255, 255, 255, .35); border-radius: 18px; overflow-x: hidden; }
-html.glas header { background: rgba(0, 0, 0, .35) !important; color: #fff !important; border-radius: 16px 16px 0 0; padding-right: 130px !important; }
+html.glas header { background: rgba(0, 0, 0, .45) !important; color: #fff !important; border-radius: 16px 16px 0 0; padding-right: 168px !important; }
 html.glas header.glas-kopf { cursor: move; user-select: none; }
 html.glas .karte, html.glas .box, html.glas .idee, html.glas .lektion, html.glas .z, html.glas .bot, html.glas #form-content, html.glas .tipp {
-  background: rgba(255, 255, 255, .09) !important; border-color: rgba(255, 255, 255, .18) !important; color: #ffffff !important; box-shadow: none !important; }
+  background: rgba(10, 11, 14, .62) !important; border-color: rgba(255, 255, 255, .2) !important; color: #ffffff !important; box-shadow: none !important; } /* Textfelder dunkler → lesbar, Rest durchsichtig */
 html.glas .karte.pin { background: rgba(251, 191, 36, .14) !important; border-color: rgba(251, 191, 36, .55) !important; }
 html.glas .lektion.fertig, html.glas .z.ich, html.glas .ich { background: rgba(255, 255, 255, .2) !important; border-color: rgba(255, 255, 255, .5) !important; color: #fff !important; }
 html.glas .klein, html.glas .h, html.glas .m, html.glas .wer, html.glas .hinweis, html.glas .unter, html.glas .u, html.glas .leer,
@@ -16,7 +16,7 @@ html.glas input, html.glas select, html.glas textarea, html.glas .fc { backgroun
 html.glas input::placeholder, html.glas textarea::placeholder { color: rgba(255, 255, 255, .5); }
 html.glas select option { color: #111827; }
 /* Knöpfe: umrandet weiß; Hauptknöpfe weiß gefüllt mit dunkler Schrift */
-html.glas button.k, html.glas button.leicht, html.glas button.haken:not(.an) { background: rgba(255, 255, 255, .06) !important; color: #ffffff !important; border-color: rgba(255, 255, 255, .55) !important; }
+html.glas button.k, html.glas button.leicht, html.glas button.haken:not(.an) { background: rgba(10, 11, 14, .6) !important; color: #ffffff !important; border-color: rgba(255, 255, 255, .55) !important; }
 html.glas button.k:hover { background: rgba(255, 255, 255, .16) !important; }
 html.glas button.k.voll, html.glas button.haken.an, html.glas a.knopf, html.glas main button:not(.k):not(.leicht):not(.haken):not(.glas-k) { background: #ffffff !important; color: #1c1e24 !important; border-color: #ffffff !important; }
 html.glas button.k small { color: rgba(255, 255, 255, .7) !important; }
@@ -50,3 +50,4 @@ html.glas-zieht body { outline: 3px dashed #fbbf24; outline-offset: -6px; }
 html.glas-zieht * { user-select: none !important; }
 #glas-mass { position: fixed; inset: 0; z-index: 97; display: none; align-items: center; justify-content: center; pointer-events: none; background: rgba(0, 0, 0, .35); }
 #glas-mass span { background: #fbbf24; color: #1f1b14; padding: 10px 18px; border-radius: 12px; font: 800 22px system-ui, sans-serif; }
+html.glas body { text-shadow: 0 1px 2px rgba(0, 0, 0, .6); }
