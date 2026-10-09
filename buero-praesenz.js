@@ -1331,19 +1331,14 @@
     try {
       if (!HANDY) {
         const KNOEPFE = [
-          ["sw-uebersicht", "\xDCbersicht", "karte", uebersicht],
+          ["sw-uebersicht", "\xDCbersicht (nochmal = zur\xFCck zu mir)", "karte", () => uebersichtAn ? zuMir() : uebersicht()],
           ["sw-zu-mir", "Zu mir", "zumir", zuMir],
-          ["sw-blick-hoch", "Blick hoch", "hoch", () => blicken(-6)],
-          ["sw-blick-runter", "Blick runter", "runter", () => blicken(6)],
           ["sw-schnellreise", "Schnellreise", "reise", schnellreise],
-          ["sw-ideen", "Ideen", "ideen", () => ideenOeffnen()],
-          ["sw-mein-profil", "Mein Profil", "profil", () => glasFenster(SEITEN + "profil.html?ich=1&tore=" + toreVon(WA.player.name || "") + "&t=" + Date.now())],
-          ...tcAktiv ? [["sw-tagescheck", "Tages-Check", "tagescheck", () => glasFenster(SEITEN + "tagescheck.html?t=" + Date.now())]] : [],
-          ...kzAktiv ? [["sw-arbeitszeit", "Meine Arbeitszeit", "arbeitszeit", () => glasFenster(SEITEN + "kernzeit.html?t=" + Date.now())], ["sw-feierabend", "Feierabend", "feierabend", feierabendOeffnen]] : []
+          ["sw-meins", "Meins: Ideen, Profil, Blick \u2026", "meins", () => menueUmschalten("meins")]
         ];
         for (const [id, label, bild, cb] of KNOEPFE) {
           try {
-            WA.ui.actionBar.addButton({ id, label, toolTip: label, imageSrc: SEITEN + "icons/" + bild + ".svg", location: "appsMenu", callback: cb });
+            WA.ui.actionBar.addButton({ id, toolTip: label, imageSrc: SEITEN + "icons/" + bild + ".svg", location: "top", callback: cb });
           } catch {
           }
         }
@@ -1374,16 +1369,17 @@
       const war = menueName;
       menueZu();
       if (war === m) return;
-      const n = m === "karte" ? 4 : 2 + (tcAktiv ? 1 : 0) + (kzAktiv ? 2 : 0);
+      const n = m === "karte" ? 4 : 4 + (tcAktiv ? 1 : 0) + (kzAktiv ? 2 : 0);
       menueName = m;
       try {
         menue = await WA.ui.website.open({
           url: SEITEN + "oben.html?menue=" + m + (tcAktiv ? "&tc=1" : "") + (kzAktiv ? "&kz=1" : ""),
           allowApi: true,
           visible: true,
-          position: { vertical: "top", horizontal: "middle" },
-          size: { width: "380px", height: n * 37 + 12 + "px" },
-          margin: { top: "58px" }
+          // unter dem ☰-Knopf (rechts, vor „Teilen“, „Werkzeuge“ und dem eigenen Profil)
+          position: { vertical: "top", horizontal: "right" },
+          size: { width: "220px", height: n * 37 + 12 + "px" },
+          margin: { top: "64px", right: "330px" }
         });
       } catch {
         menueName = "";
