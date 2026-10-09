@@ -892,6 +892,12 @@
     kurzMeldung("\u{1F6B6} " + name.split(/\s+/)[0] + " ist gerade nicht im B\xFCro", 5e3);
   }
   var BUERO_TEPPICHE = [
+    ["tHellblau", "Teppichfliesen Hellblau"],
+    ["tTaube", "Teppichfliesen Taubenblau"],
+    ["tBlauGrau", "Teppichfliesen Hellblau + Grau"],
+    ["tMint", "Teppichfliesen Mint"],
+    ["tBeige", "Teppichfliesen Beige"],
+    ["tPetrol", "Teppichfliesen helles Petrol"],
     ["fliesen", "Anthrazit-Teppichfliesen"],
     ["petrol", "Petrol mit hellem L\xE4ufer"],
     ["sisal", "Sisal Beige + runder Teppich"],
