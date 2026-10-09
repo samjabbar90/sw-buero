@@ -12,7 +12,7 @@
   * { box-sizing:border-box; }
   html, body { margin:0; height:100%; background:transparent; overflow:hidden; font-family:system-ui,-apple-system,"Segoe UI",sans-serif; }
   .leiste { height:100%; display:flex; align-items:center; justify-content:center; gap:4px; background:rgba(30,41,59,.95); border-radius:12px; padding:4px; }
-  button { font:inherit; font-size:14px; color:#e2e8f0; background:transparent; border:0; border-radius:8px; padding:7px 12px; cursor:pointer; white-space:nowrap; }
+  button { font:inherit; font-size:13.5px; color:#fff; background:transparent; border:0; border-radius:8px; padding:7px 12px; cursor:pointer; white-space:nowrap; }
   button:hover, button.an { background:rgba(255,255,255,.1); }
   .menue { position:absolute; top:0; width:100%; background:rgba(30,41,59,.98); border-radius:12px; padding:5px; display:flex; flex-direction:column; }
   .menue button { text-align:left; width:100%; padding:8px 12px; }
@@ -28,7 +28,14 @@ const MENUES = {
   meins: [["ideen", "💡 Ideen"], ["meinProfil", "👤 Mein Profil"]].concat(q.has("tc") ? [["tagescheck", "✅ Tages-Check"]] : [], q.has("kz") ? [["arbeitszeit", "⏰ Meine Arbeitszeit"], ["feierabend", "🚪 Feierabend"]] : [], [["hoch", "⬆ Blick hoch"], ["runter", "⬇ Blick runter"]]),
 };
 const app = document.getElementById("app");
-if (MENUE && MENUES[MENUE]) {
+if (q.has("alle")) {
+  // 10.10. (Sam: „wenn die Zeile zu schmal ist, mach es darunter“): alle Knöpfe mit Symbol + Text als zweite Reihe unter der WorkAdventure-Leiste
+  const A = [["karte", "karte", "Übersicht"], ["zumir", "zumir", "Zu mir"], ["hoch", "hoch", "Hoch"], ["runter", "runter", "Runter"], ["reise", "reise", "Reise"],
+    ["ideen", "ideen", "Ideen"], ["meinProfil", "profil", "Profil"]].concat(q.has("tc") ? [["tagescheck", "tagescheck", "Tages-Check"]] : [], q.has("kz") ? [["arbeitszeit", "arbeitszeit", "Arbeitszeit"], ["feierabend", "feierabend", "Feierabend"]] : []);
+  app.style.height = "100%";
+  app.innerHTML = '<div class="leiste">' + A.map(([w, b, t]) => `<button data-w="${w}"><img src="icons/${b}.svg?v=2" alt="" style="height:18px;vertical-align:-4px;margin-right:6px">${t}</button>`).join("") + "</div>";
+  app.querySelectorAll("[data-w]").forEach(b => b.onclick = () => aktion(b.dataset.w));
+} else if (MENUE && MENUES[MENUE]) {
   // Menü unter dem Knopf: Karte links, Meins rechts
   app.innerHTML = `<div class="menue" style="${MENUE === "karte" ? "left:0" : "right:0"}">` + MENUES[MENUE].map(([w, t]) => `<button data-w="${w}">${t}</button>`).join("") + "</div>";
   app.querySelectorAll("[data-w]").forEach(b => b.onclick = () => aktion(b.dataset.w));

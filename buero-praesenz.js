@@ -1160,7 +1160,7 @@
     } catch {
     }
     WA.ui.website.getAll().then((alle) => alle.forEach((w) => {
-      if (!/info\.html|leiste\.html|schloss\.html|tagescheck\.html\?karte|oben\.html\?v|handy-menue\.html\?knopf/.test(String(w.url || ""))) w.close().catch(() => {
+      if (!/info\.html|leiste\.html|schloss\.html|tagescheck\.html\?karte|oben\.html\?v|oben\.html\?alle|handy-menue\.html\?knopf/.test(String(w.url || ""))) w.close().catch(() => {
       });
     })).catch(() => {
     });
@@ -1345,10 +1345,22 @@
           ...tcAktiv ? [["sw-tagescheck", "Tages-Check", "tagescheck", () => glasFenster(SEITEN + "tagescheck.html?t=" + Date.now())]] : [],
           ...kzAktiv ? [["sw-arbeitszeit", "Arbeitszeit", "arbeitszeit", () => glasFenster(SEITEN + "kernzeit.html?t=" + Date.now())], ["sw-feierabend", "Feierabend", "feierabend", feierabendOeffnen]] : []
         ];
-        const breitGenug = true;
-        for (const [id, label, bild, cb] of KNOEPFE) {
+        const noetig = 300 + 520 + KNOEPFE.reduce((s2, k) => s2 + 52 + k[1].length * 7.5, 0);
+        const breitGenug = (screen.availWidth || screen.width || 0) >= noetig;
+        if (!breitGenug) {
+          const breite2 = Math.round(KNOEPFE.reduce((s2, k) => s2 + 46 + k[1].length * 7.5, 0) + 16);
+          await WA.ui.website.open({
+            url: SEITEN + "oben.html?alle=1" + (tcAktiv ? "&tc=1" : "") + (kzAktiv ? "&kz=1" : ""),
+            allowApi: true,
+            visible: true,
+            position: { vertical: "top", horizontal: "middle" },
+            size: { width: breite2 + "px", height: "44px" },
+            margin: { top: "8px" }
+          });
+        }
+        if (breitGenug) for (const [id, label, bild, cb] of KNOEPFE) {
           try {
-            WA.ui.actionBar.addButton({ id, ...breitGenug ? { label } : {}, toolTip: label, imageSrc: SEITEN + "icons/" + bild + ".svg?v=2", location: "top", callback: cb });
+            WA.ui.actionBar.addButton({ id, label, toolTip: label, imageSrc: SEITEN + "icons/" + bild + ".svg?v=2", location: "top", callback: cb });
           } catch {
           }
         }
