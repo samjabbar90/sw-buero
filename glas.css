@@ -1,32 +1,52 @@
-/* Dunkles Glas (09.10.2026, Sam: Variante 2) — gilt nur, wenn die Seite als schwebendes Fenster über dem Büro geöffnet ist
-   (?glas=1 → glas.js setzt html.glas). Das Büro schimmert durch; Milchglas/Unschärfe kann WorkAdventure nicht. */
+/* Graphit-Glas (09.10.2026, Sam: Stil 1, dunkler, ohne Türkis) — nur wenn die Seite als schwebendes Fenster über dem Büro
+   geöffnet ist (?glas=1 → glas.js setzt html.glas). Milchglas/Unschärfe kann WorkAdventure nicht. */
 html.glas { background: transparent !important; }
-html.glas body { background: rgba(15, 23, 42, .66) !important; color: #ffffff !important; font-size: 15px; min-height: 100vh;
-  border: 2px solid rgba(20, 184, 166, .6); border-radius: 18px; overflow-x: hidden; }
-html.glas header { background: rgba(15, 118, 110, .55) !important; color: #fff !important; border-radius: 16px 16px 0 0; padding-right: 196px !important; }
+html.glas body { background: rgba(22, 24, 29, .84) !important; color: #ffffff !important; font-size: 15px; min-height: 100vh;
+  border: 1.5px solid rgba(255, 255, 255, .35); border-radius: 18px; overflow-x: hidden; }
+html.glas header { background: rgba(0, 0, 0, .35) !important; color: #fff !important; border-radius: 16px 16px 0 0; padding-right: 130px !important; }
+html.glas header.glas-kopf { cursor: move; user-select: none; }
 html.glas .karte, html.glas .box, html.glas .idee, html.glas .lektion, html.glas .z, html.glas .bot, html.glas #form-content, html.glas .tipp {
-  background: rgba(255, 255, 255, .08) !important; border-color: rgba(255, 255, 255, .16) !important; color: #f1f5f9 !important; box-shadow: none !important; }
-html.glas .karte.pin { background: rgba(251, 191, 36, .16) !important; border-color: rgba(251, 191, 36, .6) !important; }
-html.glas .lektion.fertig, html.glas .z.ich { background: rgba(20, 184, 166, .18) !important; border-color: rgba(94, 234, 212, .6) !important; }
+  background: rgba(255, 255, 255, .09) !important; border-color: rgba(255, 255, 255, .18) !important; color: #ffffff !important; box-shadow: none !important; }
+html.glas .karte.pin { background: rgba(251, 191, 36, .14) !important; border-color: rgba(251, 191, 36, .55) !important; }
+html.glas .lektion.fertig, html.glas .z.ich, html.glas .ich { background: rgba(255, 255, 255, .2) !important; border-color: rgba(255, 255, 255, .5) !important; color: #fff !important; }
 html.glas .klein, html.glas .h, html.glas .m, html.glas .wer, html.glas .hinweis, html.glas .unter, html.glas .u, html.glas .leer,
-html.glas small, html.glas .pinkopf, html.glas label, html.glas .fg label { color: rgba(255, 255, 255, .86) !important; }
-html.glas .gross, html.glas .p, html.glas .abschnitt, html.glas h2, html.glas a { color: #5eead4 !important; }
-html.glas input, html.glas select, html.glas textarea, html.glas .fc { background: rgba(255, 255, 255, .1) !important; color: #fff !important; border-color: rgba(255, 255, 255, .28) !important; }
-html.glas input::placeholder, html.glas textarea::placeholder { color: rgba(226, 232, 240, .55); }
-html.glas select option { color: #0f172a; }
-html.glas button.k, html.glas button.leicht, html.glas button.haken:not(.an) { background: rgba(255, 255, 255, .08) !important; color: #99f6e4 !important; border-color: #14b8a6 !important; }
-html.glas button.k small { color: rgba(226, 232, 240, .7) !important; }
+html.glas small, html.glas .pinkopf, html.glas label, html.glas .fg label { color: rgba(255, 255, 255, .8) !important; }
+html.glas .gross, html.glas .p, html.glas .abschnitt, html.glas h2, html.glas a { color: #ffffff !important; }
+html.glas input, html.glas select, html.glas textarea, html.glas .fc { background: rgba(255, 255, 255, .1) !important; color: #fff !important; border-color: rgba(255, 255, 255, .3) !important; }
+html.glas input::placeholder, html.glas textarea::placeholder { color: rgba(255, 255, 255, .5); }
+html.glas select option { color: #111827; }
+/* Knöpfe: umrandet weiß; Hauptknöpfe weiß gefüllt mit dunkler Schrift */
+html.glas button.k, html.glas button.leicht, html.glas button.haken:not(.an) { background: rgba(255, 255, 255, .06) !important; color: #ffffff !important; border-color: rgba(255, 255, 255, .55) !important; }
+html.glas button.k:hover { background: rgba(255, 255, 255, .16) !important; }
+html.glas button.k.voll, html.glas button.haken.an, html.glas a.knopf, html.glas main button:not(.k):not(.leicht):not(.haken):not(.glas-k) { background: #ffffff !important; color: #1c1e24 !important; border-color: #ffffff !important; }
+html.glas button.k small { color: rgba(255, 255, 255, .7) !important; }
 html.glas .balken, html.glas .b { background: rgba(255, 255, 255, .16) !important; }
+html.glas .balken > div, html.glas .b > div { background: #e5e7eb !important; }
 html.glas .aufgabe { border-top-color: rgba(255, 255, 255, .1) !important; }
-html.glas .haken { border-color: rgba(255, 255, 255, .4); }
+html.glas .aufgabe.fertig .haken { background: #ffffff !important; border-color: #ffffff !important; color: #1c1e24 !important; }
+html.glas .haken { border-color: rgba(255, 255, 255, .45); }
 html.glas .text, html.glas .t, html.glas .x, html.glas .n, html.glas .titel { color: #ffffff !important; }
-/* Schriftfarbe umschaltbar (Knopf „A“): Mint oder Gelb statt Weiß */
-html.glas.glas-mint body, html.glas.glas-mint .karte, html.glas.glas-mint .box, html.glas.glas-mint .idee, html.glas.glas-mint .lektion, html.glas.glas-mint .z,
-html.glas.glas-mint .bot, html.glas.glas-mint .tipp, html.glas.glas-mint .text, html.glas.glas-mint .t, html.glas.glas-mint .x, html.glas.glas-mint .n, html.glas.glas-mint .titel { color: #a7f3d0 !important; }
+/* Schriftfarbe umschaltbar (Knopf „A“) */
 html.glas.glas-gelb body, html.glas.glas-gelb .karte, html.glas.glas-gelb .box, html.glas.glas-gelb .idee, html.glas.glas-gelb .lektion, html.glas.glas-gelb .z,
 html.glas.glas-gelb .bot, html.glas.glas-gelb .tipp, html.glas.glas-gelb .text, html.glas.glas-gelb .t, html.glas.glas-gelb .x, html.glas.glas-gelb .n, html.glas.glas-gelb .titel { color: #fde68a !important; }
-/* Leiste oben rechts: Schriftfarbe · links/rechts · Vollbild · schließen */
+html.glas.glas-mint body, html.glas.glas-mint .karte, html.glas.glas-mint .box, html.glas.glas-mint .idee, html.glas.glas-mint .lektion, html.glas.glas-mint .z,
+html.glas.glas-mint .bot, html.glas.glas-mint .tipp, html.glas.glas-mint .text, html.glas.glas-mint .t, html.glas.glas-mint .x, html.glas.glas-mint .n, html.glas.glas-mint .titel { color: #bbf7d0 !important; }
+/* Leiste oben rechts */
 #glas-leiste { position: fixed; top: 9px; right: 10px; z-index: 99; display: flex; gap: 5px; }
-.glas-k { width: 31px; height: 31px; border-radius: 9px; border: 1px solid rgba(255, 255, 255, .25); cursor: pointer; padding: 0;
-  background: rgba(255, 255, 255, .14); color: #fff; font: 700 15px/29px system-ui, sans-serif; text-align: center; }
-.glas-k:hover { background: rgba(20, 184, 166, .55); }
+.glas-k { width: 31px; height: 31px; border-radius: 9px; border: 1px solid rgba(255, 255, 255, .28); cursor: pointer; padding: 0;
+  background: rgba(255, 255, 255, .12); color: #fff; font: 700 15px/29px system-ui, sans-serif; text-align: center; }
+.glas-k:hover { background: rgba(255, 255, 255, .28); }
+/* Ziehstellen: linker Rand (Punkte) + Ecke unten links (Striche) */
+#glas-rand { position: fixed; left: 0; top: 60px; bottom: 26px; width: 12px; z-index: 98; cursor: ew-resize;
+  background: radial-gradient(circle, rgba(255,255,255,.7) 1.6px, transparent 2px) 2px calc(50% - 14px) / 5px 10px no-repeat,
+              radial-gradient(circle, rgba(255,255,255,.7) 1.6px, transparent 2px) 2px 50% / 5px 10px no-repeat,
+              radial-gradient(circle, rgba(255,255,255,.7) 1.6px, transparent 2px) 2px calc(50% + 14px) / 5px 10px no-repeat; }
+#glas-ecke { position: fixed; left: 0; bottom: 0; width: 24px; height: 24px; z-index: 99; cursor: nesw-resize; border-radius: 0 0 0 16px;
+  background: linear-gradient(45deg, transparent 30%, rgba(255,255,255,.7) 30%, rgba(255,255,255,.7) 38%, transparent 38%, transparent 52%,
+              rgba(255,255,255,.7) 52%, rgba(255,255,255,.7) 60%, transparent 60%); }
+#glas-rand:hover, #glas-ecke:hover { background-color: rgba(255, 255, 255, .12); }
+/* während des Ziehens: Maßanzeige + gestrichelter Rahmen innen */
+html.glas-zieht body { outline: 3px dashed #fbbf24; outline-offset: -6px; }
+html.glas-zieht * { user-select: none !important; }
+#glas-mass { position: fixed; inset: 0; z-index: 97; display: none; align-items: center; justify-content: center; pointer-events: none; background: rgba(0, 0, 0, .35); }
+#glas-mass span { background: #fbbf24; color: #1f1b14; padding: 10px 18px; border-radius: 12px; font: 800 22px system-ui, sans-serif; }

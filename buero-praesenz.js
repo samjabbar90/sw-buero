@@ -362,23 +362,71 @@
     }, 260);
   }, 4e3);
   var SEITEN = "https://samjabbar90.github.io/sw-buero/";
-  async function glasFenster(url) {
-    const u = url + (url.includes("?") ? "&" : "?") + "glas=1";
+  var glasOffen = null;
+  var glasNeu = 0;
+  function glasLage() {
     let e = {};
     try {
-      e = JSON.parse(localStorage.getItem("swFenster") || "{}");
+      e = WA.player.state.swFenster || {};
     } catch {
     }
-    const platz = ["left", "middle", "right"].includes(e.platz) ? e.platz : "right";
-    const lage = e.voll ? { position: { vertical: "middle", horizontal: "middle" }, size: { width: "96vw", height: "92vh" }, margin: {} } : { position: { vertical: "middle", horizontal: platz }, size: { width: "44vw", height: "90vh" }, margin: platz === "left" ? { left: "14px" } : platz === "right" ? { right: "14px" } : {} };
+    const b = Math.round(Number(e.b) || Math.min(780, Math.max(420, screen.availWidth * 0.44))), h = Math.round(Number(e.h) || Math.max(360, screen.availHeight * 0.8));
+    if (e.voll) return { position: { vertical: "top", horizontal: "middle" }, size: { width: Math.round(screen.availWidth * 0.94) + "px", height: "90vh" }, margin: { top: "40px" } };
+    return { position: { vertical: "top", horizontal: "right" }, size: { width: b + "px", height: h + "px" }, margin: { top: Math.round(Number(e.o) || 70) + "px", right: Math.round(Number(e.r ?? 14)) + "px" } };
+  }
+  async function glasOeffnen(u) {
+    return await WA.ui.website.open({ url: u, allowApi: true, visible: true, ...glasLage() });
+  }
+  async function glasFenster(url) {
+    const u = url + (url.includes("?") ? "&" : "?") + "glas=1";
     try {
-      return await WA.ui.website.open({ url: u, allowApi: true, visible: true, ...lage });
+      glasOffen && glasOffen.handle && glasOffen.handle.close();
     } catch {
+    }
+    try {
+      glasOffen = { url: u, handle: await glasOeffnen(u) };
+    } catch (e) {
+      console.warn("Glasfenster", e);
       try {
         return await WA.nav.openCoWebSite(url, true);
       } catch {
         return null;
       }
+    }
+    const meins = glasOffen;
+    return { close: () => {
+      if (glasOffen === meins) {
+        try {
+          meins.handle.close();
+        } catch {
+        }
+        glasOffen = null;
+      }
+    } };
+  }
+  function glasBeobachten() {
+    try {
+      glasNeu = Number((WA.player.state.swFenster || {}).neu) || 0;
+    } catch {
+    }
+    try {
+      WA.player.state.onVariableChange("swFenster").subscribe(async (v) => {
+        const n = Number(v && v.neu) || 0;
+        if (!n || n === glasNeu) return;
+        glasNeu = n;
+        if (!glasOffen) return;
+        const u = glasOffen.url;
+        try {
+          glasOffen.handle.close();
+        } catch {
+        }
+        try {
+          glasOffen.handle = await glasOeffnen(u);
+        } catch (e) {
+          console.warn("Glasfenster neu", e);
+        }
+      });
+    } catch {
     }
   }
   var NEWS_BEREICH = { x: 41 * 32, y: 33 * 32, w: 8 * 32, h: 3 * 32 };
@@ -833,6 +881,7 @@
       });
     } catch {
     }
+    glasBeobachten();
     ideen();
     helpcenterRoboter();
     lernzimmer();
