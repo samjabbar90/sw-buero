@@ -464,7 +464,7 @@
       const nah = Math.hypot(e.x - hier.x, e.y - hier.y) < 56;
       if (nah && !meldung) {
         try {
-          meldung = leertasteAus({ message: "\u{1F415} Leertaste: Hund streicheln", callback: () => {
+          meldung = WA.ui.displayActionMessage({ message: "\u{1F415} Leertaste: Hund streicheln", callback: () => {
             wedelBis = Date.now() + 4e3;
             meldung = null;
           } });
@@ -583,7 +583,7 @@
         fx(`fx-hc${n}-aktiv`, true);
         fx(`fx-hc${n}-ruhe`, false);
         try {
-          hcHinweis = leertasteAus({ message: "\u{1F4AC} Helpcenter \xB7 Leertaste", callback: async () => {
+          hcHinweis = WA.ui.displayActionMessage({ message: "\u{1F4AC} Helpcenter \xB7 Leertaste", callback: async () => {
             try {
               hcHinweis && hcHinweis.remove();
             } catch {
@@ -630,7 +630,7 @@
     try {
       WA.room.area.onEnter("Lernzimmer").subscribe(() => {
         try {
-          hinweis2 = leertasteAus({ message: "\u{1F393} Schulungen \xB7 Leertaste", callback: async () => {
+          hinweis2 = WA.ui.displayActionMessage({ message: "\u{1F393} Schulungen \xB7 Leertaste", callback: async () => {
             try {
               hinweis2 && hinweis2.remove();
             } catch {
@@ -666,7 +666,7 @@
       fx("fx-fit-aktiv", true);
       fx("fx-fit-ruhe", false);
       try {
-        hinweis2 = leertasteAus({ message: "\u2764\uFE0F Health & Wellbeing \xB7 Leertaste", callback: async () => {
+        hinweis2 = WA.ui.displayActionMessage({ message: "\u2764\uFE0F Health & Wellbeing \xB7 Leertaste", callback: async () => {
           try {
             hinweis2 && hinweis2.remove();
           } catch {
@@ -716,7 +716,7 @@
     let fenster = null, hinweis2 = null;
     const rein = () => {
       try {
-        hinweis2 = leertasteAus({ message: "\u{1F3C6} Rangliste \xB7 Leertaste", callback: async () => {
+        hinweis2 = WA.ui.displayActionMessage({ message: "\u{1F3C6} Rangliste \xB7 Leertaste", callback: async () => {
           try {
             hinweis2 && hinweis2.remove();
           } catch {
@@ -808,7 +808,7 @@
     let hinweis2 = null;
     const zeigen = () => {
       try {
-        hinweis2 = leertasteAus({ message: typeof text === "function" ? text() : text, callback: () => {
+        hinweis2 = WA.ui.displayActionMessage({ message: typeof text === "function" ? text() : text, callback: () => {
           aktion();
           setTimeout(() => {
             if (drin) zeigen();
