@@ -52,4 +52,5 @@ html.glas-zieht * { user-select: none !important; }
 #glas-mass span { background: #fbbf24; color: #1f1b14; padding: 10px 18px; border-radius: 12px; font: 800 22px system-ui, sans-serif; }
 html.glas body { text-shadow: 0 1px 2px rgba(0, 0, 0, .6); }
 /* Handy (09.10., Vorschlag 3): Fenster sitzt als Karte über der Daumen-Leiste — keine Ziehstellen, Leiste oben etwas größer zum Tippen */
-@media (max-width: 767px) { #glas-rand, #glas-ecke { display: none; } html.glas header.glas-kopf { cursor: auto; } .glas-k { width: 36px; height: 36px; line-height: 34px; } }
+@media (max-width: 767px) { #glas-rand, #glas-ecke { display: none; } html.glas header.glas-kopf { cursor: auto; padding-right: 136px !important; }
+  .glas-k { width: 36px; height: 36px; line-height: 34px; } #glas-leiste .glas-k:nth-child(3), #glas-leiste .glas-k:nth-child(4) { display: none; } /* ↺ und ⛶ braucht man am Handy nicht */ }
