@@ -40,6 +40,8 @@
       keepalive: true
     }).then((r) => r.json()).then((d) => {
       if (d && d.abgeloest) beenden();
+      if (d && typeof d.system === "boolean") mitSystemZeit = d.system;
+      if (d && d.inaktiv && !gesperrt) inaktivSperren();
     }).catch(() => {
     });
   }
@@ -1110,13 +1112,19 @@
       });
     });
   }
+  var mitSystemZeit = false;
+  async function inaktivSperren() {
+    if (gesperrt) return;
+    await schliessen("rechner");
+    bereit = melden("betreten", true);
+  }
   function schlossWache() {
     setInterval(async () => {
       if (gesperrt) return;
       if (gespraech.size) {
         letzteAktivitaet = Date.now();
       }
-      if (Date.now() - letzteAktivitaet < SCHLOSS_PAUSE_MS) {
+      if (mitSystemZeit || Date.now() - letzteAktivitaet < SCHLOSS_PAUSE_MS) {
         schlossMerken(true);
         return;
       }

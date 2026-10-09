@@ -70,9 +70,10 @@
 <script src="https://play.workadventu.re/iframe_api.js"></script>
 <script>
 const KEY = "a21b2aa2a42fe6189b05773c07bbc9ad78e38b34ba3bb6fe", API = "https://swdigitaltest.de/buero-praesenz";
-const $ = id => document.getElementById(id), q = new URLSearchParams(location.search), SITZUNG = q.get("sitzung") || "", PAUSE = q.get("grund") === "pause";
+const $ = id => document.getElementById(id), q = new URLSearchParams(location.search), SITZUNG = q.get("sitzung") || "", PAUSE = q.get("grund") === "pause" || q.get("grund") === "rechner";
 const merk = { holen: k => { try { return localStorage.getItem(k) || ""; } catch { return ""; } }, setzen: (k, v) => { try { localStorage.setItem(k, v); } catch {} } };
-if (PAUSE) $("unter").textContent = "Du warst 30 Minuten inaktiv – das Büro wurde zur Sicherheit gesperrt.";
+if (q.get("grund") === "pause") $("unter").textContent = "Du warst 30 Minuten inaktiv – das Büro wurde zur Sicherheit gesperrt.";
+if (q.get("grund") === "rechner") $("unter").textContent = "Du warst 15 Minuten nicht am Rechner – du wirst nicht mehr als anwesend angezeigt. Zum Weitermachen entsperren.";
 let ausweis = "";
 function zeige(n, fehler = "", ok = "") {
   document.querySelectorAll(".v").forEach(v => v.classList.toggle("an", v.id === "v-" + n));
