@@ -303,11 +303,12 @@
   function telefonTuer() {
     const t = meineTuer();
     if (!t) return;
-    const ich = vorname(WA.player.name), telefoniere = (info.telefoniert || []).some((n) => String(n).toLowerCase() === ich);
+    const ich = vorname(WA.player.name), gleich = (n) => String(n).toLowerCase() === ich;
+    const telefonat = (info.telefoniert || []).some(gleich), termin = (info.imTermin || []).some(gleich), telefoniere = telefonat || termin;
     if (telefoniere && tuerVorTelefon === null) {
       tuerVorTelefon = tuerStatus(t);
       if (tuerVorTelefon === "frei") WA.state.saveVariable(t.variable, "besetzt");
-      kurzMeldung("\u{1F4DE} Du telefonierst \u2013 deine T\xFCr steht auf \u201Ebesetzt\u201C", 5e3);
+      kurzMeldung(telefonat ? "\u{1F4DE} Du telefonierst \u2013 deine T\xFCr steht auf \u201Ebesetzt\u201C" : "\u{1F4C5} Du hast gerade einen Termin \u2013 deine T\xFCr steht auf \u201Ebesetzt\u201C", 5e3);
     } else if (!telefoniere && tuerVorTelefon !== null) {
       if (tuerVorTelefon === "frei" && tuerStatus(t) === "besetzt") WA.state.saveVariable(t.variable, "frei");
       tuerVorTelefon = null;
