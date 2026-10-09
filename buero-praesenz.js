@@ -1345,7 +1345,7 @@
           ...tcAktiv ? [["sw-tagescheck", "Tages-Check", "tagescheck", () => glasFenster(SEITEN + "tagescheck.html?t=" + Date.now())]] : [],
           ...kzAktiv ? [["sw-arbeitszeit", "Arbeitszeit", "arbeitszeit", () => glasFenster(SEITEN + "kernzeit.html?t=" + Date.now())], ["sw-feierabend", "Feierabend", "feierabend", feierabendOeffnen]] : []
         ];
-        const breitGenug = (screen.width || 0) >= 1400;
+        const breitGenug = true;
         for (const [id, label, bild, cb] of KNOEPFE) {
           try {
             WA.ui.actionBar.addButton({ id, ...breitGenug ? { label } : {}, toolTip: label, imageSrc: SEITEN + "icons/" + bild + ".svg?v=2", location: "top", callback: cb });
