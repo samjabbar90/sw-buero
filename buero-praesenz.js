@@ -866,19 +866,6 @@
       } });
     } catch {
     }
-    setTimeout(async () => {
-      try {
-        const a = localStorage.getItem("swBueroAusweis"), heute = (/* @__PURE__ */ new Date()).toLocaleDateString("sv-SE", { timeZone: "Europe/Berlin" });
-        if (!a || localStorage.getItem("sw-profil-erinnert") === heute) return;
-        const r = await fetch("https://swdigitaltest.de/buero-praesenz/profil?ich=1", { headers: { "X-Buero-Key": BUERO_KEY, "X-Buero-Ausweis": a } });
-        const d = r.ok ? await r.json() : null;
-        if (d && !String(d.ueber || "").trim()) {
-          localStorage.setItem("sw-profil-erinnert", heute);
-          kurzMeldung("\u{1F464} Dein B\xFCro-Profil ist noch leer \u2013 Dashboard \u203A Mein Profil \u203A B\xFCro-Profil (5 Min.)", 9e3);
-        }
-      } catch {
-      }
-    }, 2e4);
   }
   async function zuPerson(name) {
     try {

@@ -81,7 +81,7 @@ function zeigen() {
   const abz = [p.seit && "seit " + p.seit + " im Team", p.schulungen && "🎓 " + p.schulungen + " Schulung" + (p.schulungen === 1 ? "" : "en"), p.ideen && "💡 " + p.ideen + " Idee" + (p.ideen === 1 ? "" : "n"), TORE && "⚽ " + TORE + " Tor" + (TORE === 1 ? "" : "e")].filter(Boolean);
   let inhalt = "";
   if (reiter === "ueber") inhalt = zeile("Über mich", p.ueber) + zeile("Hobbys", p.hobbys) + zeile("Sprachen", p.sprachen) + zeile("Mein Kaffee", p.kaffee) + zeile("Geburtstag", p.geburtstag)
-    || `<div class="leer">${p.ich ? "Dein Büro-Profil ist noch leer.<br>Fülle es im Dashboard unter <b>Mein Profil › Büro-Profil</b> aus." : esc(v) + " hat das Büro-Profil noch nicht ausgefüllt."}</div>`;
+    || `<div class="leer">${p.ich ? "Dein Büro-Profil ist noch leer.<br>Es wird von der Leitung gepflegt." : "Das Büro-Profil von " + esc(v) + " ist noch leer."}</div>`;
   if (reiter === "zust") inhalt = `<div class="z"><b>Mandanten</b><span class="gross">${p.mandanten || 0}</span> ${p.mandanten === 1 ? "Mandant" : "Mandanten"} in Betreuung</div>`
     + zeile("Abteilungen", (p.abteilungen || []).join(", ")) + zeile("Spezialgebiet", p.spezial);
   if (reiter === "kontakt") inhalt = zeile("Durchwahl", p.durchwahl) + zeile("Bürozeiten", p.buerozeiten) || `<div class="leer">Noch keine Kontaktangaben hinterlegt.</div>`;
