@@ -837,6 +837,29 @@
     }
     konfetti(kinder.join(" & "));
   }
+  var BUERO_TEPPICHE = [
+    ["fliesen", "Anthrazit-Teppichfliesen"],
+    ["petrol", "Petrol mit hellem L\xE4ufer"],
+    ["sisal", "Sisal Beige + runder Teppich"],
+    ["salbei", "Salbeigr\xFCne Teppichfliesen"],
+    ["hellgrau", "Hellgrau-Melange"],
+    ["bordeaux", "Bordeaux klassisch"],
+    ["rauten", "Navy mit Messing-Rauten"],
+    ["cognac", "Cognac-Sand Fischgr\xE4t"]
+  ];
+  function teppichVorschau() {
+    if (HANDY || String(WA.player.name || "").split(/\s+/)[0].toLowerCase() !== "sam") return;
+    let i = -1;
+    try {
+      WA.ui.actionBar.addButton({ id: "sw-teppich", label: "\u{1F9F6} Teppich", callback: () => {
+        if (i >= 0) fx("buero-teppich-" + BUERO_TEPPICHE[i][0], false);
+        i = i + 1 >= BUERO_TEPPICHE.length ? -1 : i + 1;
+        if (i >= 0) fx("buero-teppich-" + BUERO_TEPPICHE[i][0], true);
+        kurzMeldung(i >= 0 ? `\u{1F9F6} Teppich ${i + 1}/${BUERO_TEPPICHE.length}: ${BUERO_TEPPICHE[i][1]} \u2013 nochmal klicken f\xFCr den n\xE4chsten` : "\u{1F9F6} Wieder der heutige blaue Boden", 6e3);
+      } });
+    } catch {
+    }
+  }
   var FUSSBALL = {
     tore: [
       { name: "platz-tor-oben", x: 146, y: 5, w: 13, h: 6 },
@@ -997,6 +1020,7 @@
     fussball();
     fussgaengerAmpel();
     klingel();
+    teppichVorschau();
     const breite = 87 * 32, hoehe = 62 * 32;
     void karte;
     let blick = 0, uebersichtAn = false;
