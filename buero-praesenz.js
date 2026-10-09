@@ -1333,8 +1333,13 @@
         const KNOEPFE = [
           ["sw-uebersicht", "\xDCbersicht (nochmal = zur\xFCck zu mir)", "karte", () => uebersichtAn ? zuMir() : uebersicht()],
           ["sw-zu-mir", "Zu mir", "zumir", zuMir],
+          ["sw-blick-hoch", "Blick hoch", "hoch", () => blicken(-6)],
+          ["sw-blick-runter", "Blick runter", "runter", () => blicken(6)],
           ["sw-schnellreise", "Schnellreise", "reise", schnellreise],
-          ["sw-meins", "Meins: Ideen, Profil, Blick \u2026", "meins", () => menueUmschalten("meins")]
+          ["sw-ideen", "Ideen", "ideen", () => ideenOeffnen()],
+          ["sw-mein-profil", "Mein Profil", "profil", () => glasFenster(SEITEN + "profil.html?ich=1&tore=" + toreVon(WA.player.name || "") + "&t=" + Date.now())],
+          ...tcAktiv ? [["sw-tagescheck", "Tages-Check", "tagescheck", () => glasFenster(SEITEN + "tagescheck.html?t=" + Date.now())]] : [],
+          ...kzAktiv ? [["sw-arbeitszeit", "Meine Arbeitszeit", "arbeitszeit", () => glasFenster(SEITEN + "kernzeit.html?t=" + Date.now())], ["sw-feierabend", "Feierabend", "feierabend", feierabendOeffnen]] : []
         ];
         for (const [id, label, bild, cb] of KNOEPFE) {
           try {
