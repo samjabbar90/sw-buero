@@ -838,6 +838,21 @@
     } catch {
     }
   }
+  function zitatTafel() {
+    let fenster = null;
+    leertasteBereich("zitat-tafel", { x: 45, y: 50, w: 4, h: 4 }, "\u{1F4DC} Leertaste: Zitat des Tages sehen", async () => {
+      try {
+        fenster = await glasFenster(SEITEN + "zitat.html?t=" + Date.now());
+      } catch {
+      }
+    }, () => {
+      try {
+        fenster && fenster.close();
+      } catch {
+      }
+      fenster = null;
+    });
+  }
   var KUECHE_GERAETE = ["kuehlschrank", "herd", "kaffee"];
   function kueche() {
     const aus = /* @__PURE__ */ new Map();
@@ -1308,6 +1323,7 @@
     fitnessEmpfang();
     ranglistenTafel();
     kueche();
+    zitatTafel();
     fussball();
     fussgaengerAmpel();
     klingel();

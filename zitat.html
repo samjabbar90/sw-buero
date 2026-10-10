@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Zitat des Tages</title>
+<!-- Zitat-Tafel am Eingang (10.10.2026, Sam: Idee B, Ort 1): Leertaste an der Tafel öffnet dieses Fenster. Gleiches Zitat wie im
+     Dashboard (zitate.js vom Dashboard-Server, gleiche Tagesregel), blättern zu früheren Tagen, Reaktionen mit Büro-Ausweis. -->
+<style>
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:system-ui,-apple-system,"Segoe UI",sans-serif; padding:14px; }
+  .rahmen { background:#8b5a2b; border-radius:12px; padding:10px; box-shadow:inset 0 2px 0 #a86c35, inset 0 -2px 0 #5a3a1c; }
+  .tafel { background:#24402f; border-radius:7px; padding:18px 20px 16px; color:#f1f5f9; min-height:220px; position:relative; }
+  .kopf { display:flex; justify-content:space-between; align-items:center; font-size:12.5px; color:#cbd5e1; gap:8px; }
+  .kopf button { font:inherit; background:none; border:0; color:#cbd5e1; cursor:pointer; padding:4px 6px; border-radius:6px; }
+  .kopf button:hover:not(:disabled) { background:rgba(255,255,255,.08); } .kopf button:disabled { opacity:.3; cursor:default; }
+  .q { font-family:Georgia,"Times New Roman",serif; font-size:21px; line-height:1.5; margin:18px 0 8px; }
+  .a { font-size:13.5px; color:#fde68a; }
+  .r { display:flex; gap:7px; flex-wrap:wrap; margin-top:18px; }
+  .r button { font:inherit; font-size:13px; color:#f1f5f9; background:transparent; border:1.5px solid rgba(255,255,255,.35); border-radius:999px; padding:4px 12px; cursor:pointer; }
+  .r button.an { background:rgba(253,230,138,.18); border-color:#fde68a; color:#fde68a; }
+  .r button:disabled { cursor:default; opacity:.6; }
+  .wer { font-size:12px; color:#cbd5e1; margin-top:9px; min-height:16px; }
+  .ablage { height:7px; background:#6b4423; margin:7px 12px 0; border-radius:2px; position:relative; }
+  .ablage span { position:absolute; right:26px; top:-4px; width:18px; height:5px; background:#fbbf24; border-radius:2px; }
+</style>
+<script src="glas.js?v=1791559958"></script>
+<script src="https://swdigitaltest.de/zitate.js?v=1"></script>
+</head>
+<body>
+<div class="rahmen"><div class="tafel">
+  <div class="kopf"><button id="zur" title="Tag davor">‹ gestern</button><span id="datum"></span><button id="vor" title="Tag danach">morgen ›</button></div>
+  <div class="q" id="q">Lade …</div>
+  <div class="a" id="a"></div>
+  <div class="r" id="r"></div>
+  <div class="wer" id="wer"></div>
+</div><div class="ablage"><span></span></div></div>
+<script>
+const KEY = "a21b2aa2a42fe6189b05773c07bbc9ad78e38b34ba3bb6fe", API = "https://swdigitaltest.de/buero-praesenz/zitat";
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const ausweis = () => { try { return localStorage.getItem("swBueroAusweis") || ""; } catch { return ""; } };
+const ARTEN = [["gefaellt", "👍 Gefällt mir"], ["lachen", "😄 Musste lachen"], ["nachdenklich", "🤔 Nachdenklich"]];
+const START = new Date(2026, 7, 2); // seit 02.08.2026 gibt es das Tageszitat (wie im Dashboard)
+// gleiche Regel wie zitatFuer() im Dashboard — gleicher Tag = gleiches Zitat
+function zitatFuer(d) {
+  const Z = window.ZITATE || []; if (!Z.length) return null;
+  const jahr = d.getFullYear(), doy = Math.round((Date.UTC(jahr, d.getMonth(), d.getDate()) - Date.UTC(jahr, 0, 1)) / 86400000) + 1;
+  return Z[((doy - 1 + (jahr - 2026) * 173) % Z.length + Z.length) % Z.length];
+}
+const heute = () => { const d = new Date(); d.setHours(12, 0, 0, 0); return d; };
+let tag = heute();
+const iso = d => d.toLocaleDateString("sv-SE");
+async function api(opt) {
+  const r = await fetch(API + (opt ? "" : "?datum=" + iso(tag)), { method: opt ? "POST" : "GET", headers: { "X-Buero-Key": KEY, "X-Buero-Ausweis": ausweis(), "X-Buero-Name": encodeURIComponent(window.__waName || ""), "Content-Type": "application/json" }, body: opt ? JSON.stringify(opt) : undefined });
+  const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || "Fehler"); return d;
+}
+function reaktionen(st) {
+  const ohne = !st;
+  $("r").innerHTML = ARTEN.map(([k, t]) => { const x = st ? st[k] : { anzahl: 0, meins: false };
+    return `<button data-art="${k}" class="${x.meins ? "an" : ""}"${ohne ? " disabled" : ""}>${t}${x.anzahl ? " · " + x.anzahl : ""}</button>`; }).join("");
+  const n = st ? st.gefaellt.namen : []; const lacher = st ? st.lachen.namen : [], denker = st ? st.nachdenklich.namen : [];
+  const teile = [];
+  if (n.length) teile.push("Gefällt: " + n.slice(0, 4).join(", ") + (n.length > 4 ? " und " + (n.length - 4) + " weitere" : ""));
+  if (lacher.length) teile.push("gelacht: " + lacher.slice(0, 3).join(", ") + (lacher.length > 3 ? " …" : ""));
+  if (denker.length) teile.push("nachdenklich: " + denker.slice(0, 3).join(", ") + (denker.length > 3 ? " …" : ""));
+  $("wer").textContent = ohne ? "Zum Reagieren bitte kurz das Büro entsperren." : teile.join(" · ");
+  document.querySelectorAll("[data-art]").forEach(b => b.onclick = async () => {
+    b.disabled = true; try { reaktionen((await api({ datum: iso(tag), art: b.dataset.art })).reaktionen); } catch (e) { $("wer").textContent = e.message; b.disabled = false; }
+  });
+}
+async function zeigen() {
+  const z = zitatFuer(tag);
+  $("datum").textContent = tag.toLocaleDateString("de-DE", { weekday: "long", day: "2-digit", month: "long" });
+  $("q").textContent = z ? "„" + z.z + "“" : "Die Zitate konnten gerade nicht geladen werden.";
+  $("a").textContent = z ? "— " + z.a : "";
+  $("zur").disabled = tag <= START; $("vor").disabled = iso(tag) >= iso(heute());
+  $("vor").textContent = iso(new Date(tag.getTime() + 86400000)) === iso(heute()) ? "heute ›" : "morgen ›";
+  $("zur").textContent = iso(tag) === iso(heute()) ? "‹ gestern" : "‹ Tag davor";
+  if (!ausweis()) return reaktionen(null);
+  reaktionen(null); $("wer").textContent = "";
+  try { reaktionen((await api()).reaktionen); } catch (e) { reaktionen(null); if (!/ausweis/.test(e.message)) $("wer").textContent = e.message; }
+}
+$("zur").onclick = () => { tag = new Date(tag.getTime() - 86400000); zeigen(); };
+$("vor").onclick = () => { tag = new Date(tag.getTime() + 86400000); zeigen(); };
+zeigen();
+</script>
+<script>(async()=>{for(let i=0;i<50&&typeof WA==="undefined";i++)await new Promise(r=>setTimeout(r,100));try{await WA.onInit();window.__waName=WA.player.name||"";}catch(e){}})();</script>
+<script src="https://play.workadventu.re/iframe_api.js"></script>
+</body>
+</html>
