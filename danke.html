@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Danke-Wand</title>
+<!-- Danke-Wand im Pausenraum (11.10.2026, Sam): Leertaste an der Kork-Pinnwand neben dem Schaufenster öffnet dieses Fenster.
+     Zettel der letzten 4 Wochen, Filter „An mich“ / „Von mir“, Danke schreiben (Person oder ganzes Team), Herz = zustimmen.
+     Server: /buero-praesenz/danke (routes/buero.js), nur mit Büro-Ausweis. -->
+<style>
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:system-ui,-apple-system,"Segoe UI",sans-serif; padding:12px; color:#1f2937; }
+  .wand { background:#c8955a; border:8px solid #6b4423; border-radius:10px; padding:12px; min-height:300px; }
+  .top { display:flex; gap:6px; align-items:center; margin-bottom:12px; flex-wrap:wrap; }
+  .top button { font:inherit; font-size:12.5px; border:0; border-radius:999px; padding:4px 11px; background:rgba(255,255,255,.85); color:#3f2a14; cursor:pointer; }
+  .top button.an { background:#3f2a14; color:#fff; } .top .neu { margin-left:auto; background:#0d9488; color:#fff; font-weight:700; }
+  .z { display:grid; grid-template-columns:repeat(auto-fill,minmax(170px,1fr)); gap:12px; }
+  .n { border-radius:4px; padding:12px 11px 9px; font-size:13px; line-height:1.45; position:relative; min-height:100px; box-shadow:0 2px 0 rgba(0,0,0,.12); }
+  .n:before { content:""; position:absolute; top:-4px; left:50%; width:10px; height:10px; border-radius:50%; background:#dc2626; transform:translateX(-50%); box-shadow:0 1px 0 rgba(0,0,0,.3); }
+  .n .k { font-size:11.5px; color:#374151; font-weight:700; margin-bottom:4px; } .n .t { white-space:pre-wrap; word-break:break-word; }
+  .n .f { font-size:11px; color:#4b5563; margin-top:7px; display:flex; justify-content:space-between; align-items:center; gap:6px; }
+  .n .f button { font:inherit; font-size:12px; border:0; background:rgba(255,255,255,.55); border-radius:999px; padding:1px 8px; cursor:pointer; color:#991b1b; }
+  .n .f button.an { background:#dc2626; color:#fff; } .n .weg { background:none !important; color:#6b7280 !important; padding:0 !important; }
+  .gelb{background:#fde68a} .gruen{background:#bbf7d0} .blau{background:#bfdbfe} .rosa{background:#fbcfe8} .orange{background:#fed7aa} .lila{background:#ddd6fe}
+  .form { background:#fffbeb; border-radius:6px; padding:12px; margin-bottom:12px; font-size:13px; }
+  .form label { display:block; font-size:12px; font-weight:700; color:#6b4423; margin:8px 0 4px; }
+  .form select, .form textarea { font:inherit; font-size:13.5px; width:100%; padding:7px 9px; border:1.5px solid #d6c7a1; border-radius:7px; background:#fff; color:#1f2937; }
+  .form textarea { min-height:70px; resize:vertical; }
+  .farben { display:flex; gap:6px; } .farben span { width:24px; height:24px; border-radius:6px; cursor:pointer; border:2px solid transparent; } .farben span.an { border-color:#3f2a14; }
+  .form .k2 { display:flex; gap:6px; margin-top:10px; } .form button { font:inherit; font-weight:700; font-size:13px; border-radius:8px; padding:8px 14px; cursor:pointer; border:0; background:#0d9488; color:#fff; }
+  .form button.leicht { background:#fff; color:#6b4423; border:1.5px solid #d6c7a1; }
+  .leer { color:#fff8e7; font-size:13.5px; text-align:center; padding:30px 10px; } .fehler { color:#b91c1c; font-weight:600; font-size:13px; margin-top:6px; }
+</style>
+<script src="glas.js?v=1791559958"></script>
+</head>
+<body>
+<div class="wand">
+  <div class="top" id="top"></div>
+  <div id="form"></div>
+  <div class="z" id="liste"><div class="leer">Lade …</div></div>
+</div>
+<script src="https://play.workadventu.re/iframe_api.js"></script>
+<script>
+const KEY = "a21b2aa2a42fe6189b05773c07bbc9ad78e38b34ba3bb6fe", API = "https://swdigitaltest.de/buero-praesenz/danke";
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const ausweis = () => { try { return localStorage.getItem("swBueroAusweis") || ""; } catch { return ""; } };
+const FARBEN = ["gelb", "gruen", "blau", "rosa", "orange", "lila"];
+let filter = "alle", formOffen = false, farbe = "gelb", PERSONEN = [];
+async function api(pfad, opt = {}) {
+  const r = await fetch(API + pfad, { ...opt, headers: { "X-Buero-Key": KEY, "X-Buero-Ausweis": ausweis(), "X-Buero-Name": encodeURIComponent(window.__waName || ""), "Content-Type": "application/json" } });
+  const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || "Fehler " + r.status); return d;
+}
+function wann(iso) {
+  const d = new Date(iso), h = new Date(); h.setHours(0, 0, 0, 0); const t = Math.round((h - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 86400000);
+  return t === 0 ? "heute" : t === 1 ? "gestern" : d.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" });
+}
+function oben() {
+  $("top").innerHTML = [["alle", "Alle"], ["an", "An mich"], ["von", "Von mir"]].map(([k, t]) => `<button data-f="${k}" class="${filter === k ? "an" : ""}">${t}</button>`).join("") + '<button class="neu" id="neu">＋ Danke schreiben</button>';
+  document.querySelectorAll("[data-f]").forEach(b => b.onclick = () => { filter = b.dataset.f; oben(); laden(); });
+  $("neu").onclick = () => { formOffen = !formOffen; formZeichnen(); };
+}
+function formZeichnen() {
+  if (!formOffen) { $("form").innerHTML = ""; return; }
+  $("form").innerHTML = `<div class="form"><b>Danke schreiben</b>
+    <label>An wen?</label><select id="an"><option value="">– bitte wählen –</option><option value="team">💛 das ganze Team</option>${PERSONEN.map(p => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join("")}</select>
+    <label>Wofür möchtest du Danke sagen?</label><textarea id="text" maxlength="400" placeholder="z. B. Danke für die Hilfe beim Abschluss Müller!"></textarea>
+    <label>Farbe</label><div class="farben">${FARBEN.map(f => `<span class="${f}${f === farbe ? " an" : ""}" data-farbe="${f}"></span>`).join("")}</div>
+    <div class="fehler" id="fe"></div><div class="k2"><button id="pin">📌 Anpinnen</button><button class="leicht" id="ab">Abbrechen</button></div></div>`;
+  document.querySelectorAll("[data-farbe]").forEach(s => s.onclick = () => { farbe = s.dataset.farbe; document.querySelectorAll("[data-farbe]").forEach(x => x.classList.toggle("an", x === s)); });
+  $("ab").onclick = () => { formOffen = false; formZeichnen(); };
+  $("pin").onclick = async () => {
+    const an = $("an").value, text = $("text").value.trim();
+    if (!an) return $("fe").textContent = "Bitte wählen, an wen."; if (!text) return $("fe").textContent = "Bitte schreib, wofür.";
+    $("pin").disabled = true;
+    try { await api("", { method: "POST", body: JSON.stringify({ anId: an, text, farbe }) }); formOffen = false; formZeichnen(); filter = "alle"; oben(); laden(); }
+    catch (e) { $("fe").textContent = e.message; $("pin").disabled = false; }
+  };
+  $("an").focus();
+}
+async function laden() {
+  let d; try { d = await api("?filter=" + filter); } catch (e) { $("liste").innerHTML = `<div class="leer">${esc(/ausweis/.test(e.message) ? "Bitte das Büro kurz neu entsperren." : e.message)}</div>`; return; }
+  if (!d.zettel.length) { $("liste").innerHTML = `<div class="leer">${filter === "an" ? "Noch kein Danke an dich – das kommt bestimmt! 💛" : filter === "von" ? "Du hast noch kein Danke geschrieben." : "Die Wand ist noch leer – schreib das erste Danke!"}</div>`; return; }
+  $("liste").innerHTML = d.zettel.map((z, i) => `<div class="n ${esc(z.farbe)}" style="transform:rotate(${[-1.5, 1, -0.5, 1.5, -1, 0.5][i % 6]}deg)">
+    <div class="k">An ${esc(z.anId === "team" ? "das ganze Team" : z.anName.split(" ")[0])} · von ${esc(z.vonName.split(" ")[0])}</div><div class="t">${esc(z.text)}</div>
+    <div class="f"><span>${wann(z.datum)}${z.meins ? ` · <button class="weg" data-weg="${esc(z.id)}" title="Zettel abnehmen">abnehmen</button>` : ""}</span>
+    <button data-herz="${esc(z.id)}" class="${z.meinHerz ? "an" : ""}" title="${esc(z.herzNamen.join(", "))}">❤ ${z.herzen || ""}</button></div></div>`).join("");
+  document.querySelectorAll("[data-herz]").forEach(b => b.onclick = async () => { try { await api("/" + b.dataset.herz + "/herz", { method: "POST" }); laden(); } catch (e) {} });
+  document.querySelectorAll("[data-weg]").forEach(b => b.onclick = async () => { if (!confirm("Zettel abnehmen?")) return; try { await api("/" + b.dataset.weg, { method: "DELETE" }); laden(); } catch (e) { alert(e.message); } });
+}
+async function start() {
+  if (!ausweis()) { $("liste").innerHTML = '<div class="leer">Bitte zuerst das Büro entsperren, dann noch einmal die Leertaste drücken.</div>'; return; }
+  oben(); try { PERSONEN = await api("/personen"); } catch (e) {} laden();
+}
+(async () => { for (let i = 0; i < 30 && typeof WA === "undefined"; i++) await new Promise(r => setTimeout(r, 100)); try { await Promise.race([WA.onInit(), new Promise(r => setTimeout(r, 2500))]); window.__waName = WA.player.name || ""; } catch {} start(); })();
+</script>
+</body>
+</html>

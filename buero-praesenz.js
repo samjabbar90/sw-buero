@@ -853,9 +853,24 @@
       fenster = null;
     });
   }
+  function dankeWand() {
+    let fenster = null;
+    leertasteBereich("danke-wand", { x: 64, y: 36, w: 2, h: 1 }, "\u{1F49B} Leertaste: Danke-Wand", async () => {
+      try {
+        fenster = await glasFenster(SEITEN + "danke.html?t=" + Date.now());
+      } catch {
+      }
+    }, () => {
+      try {
+        fenster && fenster.close();
+      } catch {
+      }
+      fenster = null;
+    });
+  }
   function schaufenster() {
     let fenster = null;
-    leertasteBereich("schaufenster", { x: 64, y: 37, w: 3, h: 1 }, "\u{1F6CD}\uFE0F Leertaste: Mitarbeiter-Rabatte", async () => {
+    leertasteBereich("schaufenster", { x: 65, y: 37, w: 2, h: 1 }, "\u{1F6CD}\uFE0F Leertaste: Mitarbeiter-Rabatte", async () => {
       try {
         fenster = await glasFenster(SEITEN + "rabatte.html?t=" + Date.now());
       } catch {
@@ -1358,6 +1373,7 @@
     kueche();
     zitatTafel();
     schaufenster();
+    dankeWand();
     gespraechsRaeume();
     fussball();
     fussgaengerAmpel();

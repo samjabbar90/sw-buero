@@ -88,8 +88,8 @@ function zeigen() {
     + zeile("Abteilungen", (p.abteilungen || []).join(", ")) + zeile("Spezialgebiet", p.spezial);
   if (reiter === "kontakt") inhalt = zeile("Durchwahl", p.durchwahl) + zeile("Bürozeiten", p.buerozeiten) || `<div class="leer">Noch keine Kontaktangaben hinterlegt.</div>`;
   if (reiter === "zeit") inhalt = '<div id="zeitBox"><div class="leer">Lade …</div></div>';
-  if (reiter === "fb" || reiter === "gesp") inhalt = '<div id="gespBox"><div class="leer">Lade …</div></div>';
-  const REITER = [["ueber", "Über mich"], ["zust", "Zuständig"], ["kontakt", "Kontakt"], ...((p.zeitQuellen || []).length ? [["zeit", "⏱ Zeit"]] : []), ...(p.ich ? [["fb", "💬 Feedback"], ["gesp", "🗂 Gespräche"]] : [])];
+  if (reiter === "fb" || reiter === "gesp" || reiter === "danke") inhalt = '<div id="gespBox"><div class="leer">Lade …</div></div>';
+  const REITER = [["ueber", "Über mich"], ["zust", "Zuständig"], ["kontakt", "Kontakt"], ...((p.zeitQuellen || []).length ? [["zeit", "⏱ Zeit"]] : []), ...(p.ich ? [["fb", "💬 Feedback"], ["gesp", "🗂 Gespräche"], ["danke", "💛 Danke"]] : [])];
   $("seite").innerHTML = `<div class="banner"><div class="firma">SW DIGITAL TAX</div></div>
     <div class="foto" style="${p.foto ? "background-image:url('" + p.foto + "')" : ""}">${p.foto ? "" : esc(initialen)}</div>
     <div class="name">${esc(p.name)}</div><div class="rolle">${esc([p.rolle, (p.abteilungen || []).join(", ")].filter(Boolean).join(" · "))}</div>
@@ -99,7 +99,7 @@ function zeigen() {
     ${p.ich ? "" : `<div class="knoepfe">${p.durchwahl ? `<a class="haupt" href="tel:${esc(p.durchwahl)}">📞 Anrufen</a>` : ""}<button id="hin">🚶 Zu ${esc(v)} gehen</button></div>`}`;
   document.querySelectorAll("[data-r]").forEach(b => b.onclick = () => { reiter = b.dataset.r; zeigen(); });
   if (reiter === "zeit") zeitLaden();
-  if (reiter === "fb") feedbackLaden(); if (reiter === "gesp") gespraecheLaden();
+  if (reiter === "fb") feedbackLaden(); if (reiter === "gesp") gespraecheLaden(); if (reiter === "danke") dankeLaden();
   const hin = $("hin"); if (hin) hin.onclick = () => { try { WA.player.state.saveVariable("swAktion", { was: "zuPerson", name: p.name, buero: NAME, t: Date.now() }, { public: false, persist: false }); } catch (e) { console.warn(e); } };
 }
 // Reiter „💬 Feedback“ + „🗂 Gespräche“ (10.10.2026, Sam: Idee A) — nur im eigenen Profil, nur lesen. Feedback = Gespräche mit der
@@ -121,6 +121,14 @@ async function feedbackLaden() {
       <div style="font-size:11.5px;opacity:.7">von ${esc(f.erstelltVon || "")}</div>${noten}${texte}
       ${f.naechstes ? `<div style="font-size:11.5px;opacity:.7;margin-top:5px">Nächstes Gespräch: ${dDE(f.naechstes)}</div>` : ""}</div>`;
   }).join("");
+}
+// Reiter „💛 Danke“ (11.10.2026): was Kollegen einem an der Danke-Wand geschrieben haben (an mich + ans ganze Team)
+async function dankeLaden() {
+  const box = $("gespBox"); if (!box) return;
+  let d; try { d = await api("/danke?filter=an"); } catch (e) { box.innerHTML = '<div class="leer">' + esc(e.message) + "</div>"; return; }
+  const l = d.zettel.filter(z => z.anId !== "team").concat(d.zettel.filter(z => z.anId === "team"));
+  if (!l.length) { box.innerHTML = '<div class="leer">Noch kein Danke – die Danke-Wand hängt im Pausenraum neben dem Schaufenster.</div>'; return; }
+  box.innerHTML = l.map(z => '<div class="z">' + fett("von " + esc(z.vonName) + (z.anId === "team" ? " · ans ganze Team" : "")) + '<div style="font-size:13px;margin-top:3px;white-space:pre-wrap">' + esc(z.text) + '</div><div style="font-size:11.5px;opacity:.7;margin-top:4px">' + dDE(z.datum) + (z.herzen ? " · ❤ " + z.herzen : "") + "</div></div>").join("");
 }
 async function gespraecheLaden() {
   const box = $("gespBox"); if (!box) return;
