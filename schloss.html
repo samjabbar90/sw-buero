@@ -43,7 +43,13 @@
     <label for="ben">Benutzername oder E-Mail</label><input id="ben" autocomplete="username" autocapitalize="none" required>
     <label for="pw">Büro-Passwort</label><input id="pw" type="password" autocomplete="current-password" required>
     <div class="klein">Nur für freigeschaltete Personen. Oder die Büro-PIN aus dem Dashboard.</div>
-    <button type="submit">🔓 Entsperren</button><a class="zur" data-zu="start">← zurück</a>
+    <button type="submit">🔓 Entsperren</button><a class="zur" data-zu="vergessen">Passwort vergessen?</a><a class="zur" data-zu="start">← zurück</a>
+  </form>
+
+  <form class="v" id="v-vergessen">
+    <p class="u" style="margin:8px 0 0">Wir schicken dir einen Link, mit dem du ein neues Büro-Passwort festlegst.</p>
+    <label for="vmail">Deine dienstliche E-Mail</label><input id="vmail" type="email" autocomplete="email" autocapitalize="none" required>
+    <button type="submit">Link schicken</button><a class="zur" data-zu="anmelden">← zurück</a>
   </form>
 
   <form class="v" id="v-mail">
@@ -119,6 +125,12 @@ $("v-mail").onsubmit = async ev => {
   catch (e) { $("fe").textContent = e.message; }
   k.disabled = false;
 };
+$("v-vergessen").onsubmit = async ev => {
+  ev.preventDefault(); const k = ev.target.querySelector("button"); k.disabled = true;
+  try { await post("/ausweis/passwort-vergessen", { benutzer: $("vmail").value.trim() }); zeige("anmelden", "", "Falls für diese Adresse ein Büro-Passwort vorgesehen ist, kommt gleich eine E-Mail mit dem Link. Danach hier mit dem neuen Passwort entsperren."); }
+  catch (e) { $("fe").textContent = e.message; }
+  k.disabled = false;
+};
 $("v-anlegen").onsubmit = async ev => {
   ev.preventDefault(); const k = ev.target.querySelector("button"); k.disabled = true; $("fe").textContent = "";
   try { await post("/ausweis/passwort", { pw1: $("p1").value, pw2: $("p2").value }, true); $("p1").value = $("p2").value = ""; await oeffnen(""); }
@@ -126,7 +138,7 @@ $("v-anlegen").onsubmit = async ev => {
 };
 // Start: wer zuletzt mit Büro-Passwort kam, landet direkt dort; sonst Auswahl mit vorausgefüllter E-Mail
 const bekannt = merk.holen("swSchlossBenutzer");
-$("mail").value = merk.holen("swSchlossMail");
+$("mail").value = $("vmail").value = merk.holen("swSchlossMail");
 if (bekannt) { $("ben").value = bekannt; zeige("anmelden"); } else zeige("start");
 </script>
 </body>
