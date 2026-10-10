@@ -853,6 +853,21 @@
       fenster = null;
     });
   }
+  function schaufenster() {
+    let fenster = null;
+    leertasteBereich("schaufenster", { x: 64, y: 37, w: 3, h: 1 }, "\u{1F6CD}\uFE0F Leertaste: Mitarbeiter-Rabatte", async () => {
+      try {
+        fenster = await glasFenster(SEITEN + "rabatte.html?t=" + Date.now());
+      } catch {
+      }
+    }, () => {
+      try {
+        fenster && fenster.close();
+      } catch {
+      }
+      fenster = null;
+    });
+  }
   var KUECHE_GERAETE = ["kuehlschrank", "herd", "kaffee"];
   function kueche() {
     const aus = /* @__PURE__ */ new Map();
@@ -1324,6 +1339,7 @@
     ranglistenTafel();
     kueche();
     zitatTafel();
+    schaufenster();
     fussball();
     fussgaengerAmpel();
     klingel();

@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mitarbeiter-Rabatte</title>
+<!-- Schaufenster im Pausenraum (10.10.2026, Sam: Idee A, neben dem Kühlschrank): Leertaste öffnet dieses Fenster. Das Rabatt-Portal
+     selbst läuft nicht im Büro (fremde Seite mit Anmeldung) → Knopf öffnet es in einem neuen Tab. -->
+<style>
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:system-ui,-apple-system,"Segoe UI",sans-serif; padding:14px; color:#0f172a; }
+  .markise { height:16px; border-radius:10px 10px 0 0; background:repeating-linear-gradient(90deg,#0d9488 0 26px,#f8fafc 26px 52px); }
+  .karte { background:#fff; border:1.5px solid #e2e8f0; border-top:0; border-radius:0 0 12px 12px; padding:18px 20px; }
+  h1 { margin:0; font-size:20px; } p { margin:6px 0 14px; font-size:14px; color:#475569; line-height:1.5; }
+  .kat { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .kat div { border:1.5px solid #e2e8f0; border-radius:10px; padding:9px 11px; } .kat b { display:block; font-size:14px; } .kat span { font-size:12px; color:#64748b; }
+  button { width:100%; margin-top:16px; font:inherit; font-size:15px; font-weight:700; padding:12px; border:0; border-radius:10px; background:#0d9488; color:#fff; cursor:pointer; }
+  .klein { font-size:12px; color:#94a3b8; text-align:center; margin-top:8px; }
+  html.glas .karte { background:rgba(255,255,255,.06) !important; border-color:rgba(255,255,255,.15) !important; } html.glas h1, html.glas .kat b { color:#f1f5f9 !important; }
+  html.glas p, html.glas .kat span { color:rgba(255,255,255,.7) !important; } html.glas .kat div { border-color:rgba(255,255,255,.15) !important; }
+</style>
+<script src="glas.js?v=1791559958"></script>
+</head>
+<body>
+<div class="markise"></div>
+<div class="karte">
+  <h1>🛍️ Mitarbeiter-Rabatte</h1>
+  <p>Über 800 Marken günstiger – exklusiv für dich als Teil von SW Digital Tax. Anmelden mit deiner Firmen-E-Mail.</p>
+  <div class="kat">
+    <div><b>👕 Mode</b><span>Kleidung, Schuhe</span></div>
+    <div><b>💻 Technik</b><span>Handy, Laptop, TV</span></div>
+    <div><b>✈️ Reisen</b><span>Hotels, Urlaub</span></div>
+    <div><b>🏋️ Sport &amp; Freizeit</b><span>Fitness, Tickets</span></div>
+  </div>
+  <button id="los">Zum Rabatt-Portal ↗</button>
+  <div class="klein">öffnet sich in einem neuen Tab</div>
+</div>
+<script src="https://play.workadventu.re/iframe_api.js"></script>
+<script>
+const PORTAL = "https://sw-digitaltax.mitarbeiterangebote.de";
+document.getElementById("los").onclick = async () => {
+  try { if (typeof WA !== "undefined") { await Promise.race([WA.onInit(), new Promise(r => setTimeout(r, 1500))]); WA.nav.openTab(PORTAL); return; } } catch { /* ohne Büro-Schnittstelle */ }
+  window.open(PORTAL, "_blank", "noopener");
+};
+</script>
+</body>
+</html>
