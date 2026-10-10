@@ -868,6 +868,24 @@
       fenster = null;
     });
   }
+  var GESPRAECHS_RAEUME = [{ raum: "Besprechung 10", x: 14, y: 39, w: 10, h: 5 }, { raum: "Besprechung 11", x: 25, y: 39, w: 7, h: 5 }, { raum: "Besprechung Glas", x: 40, y: 6, w: 8, h: 8 }];
+  function gespraechsRaeume() {
+    for (const r of GESPRAECHS_RAEUME) {
+      let fenster = null;
+      leertasteBereich("gesp-" + r.raum.replace(/\s+/g, "-"), r, "\u{1F4AC} Leertaste: Gespr\xE4ch / Notizen", async () => {
+        try {
+          fenster = await glasFenster(SEITEN + "gespraech.html?raum=" + encodeURIComponent(r.raum) + "&t=" + Date.now());
+        } catch {
+        }
+      }, () => {
+        try {
+          fenster && fenster.close();
+        } catch {
+        }
+        fenster = null;
+      });
+    }
+  }
   var KUECHE_GERAETE = ["kuehlschrank", "herd", "kaffee"];
   function kueche() {
     const aus = /* @__PURE__ */ new Map();
@@ -1340,6 +1358,7 @@
     kueche();
     zitatTafel();
     schaufenster();
+    gespraechsRaeume();
     fussball();
     fussgaengerAmpel();
     klingel();

@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Gespräch</title>
+<!-- Gespräche im Besprechungsraum (10.10.2026, Sam): Leertaste im Raum öffnet dieses Fenster. Läuft im Raum schon ein Gespräch,
+     schreibt man dort mit; sonst Art wählen (Feedback, Meeting-Notizen, Mandantengespräch …) oder „Gespräch nachtragen“.
+     Alle im Raum sehen dasselbe (alle 2,5 s abgeglichen, je Feld gewinnt die letzte Eingabe). Server: routes/gespraeche.js. -->
+<style>
+  * { box-sizing:border-box; }
+  body { margin:0; background:#f8fafc; color:#0f172a; font-family:system-ui,-apple-system,"Segoe UI",sans-serif; }
+  header { position:sticky; top:0; z-index:2; background:#0f766e; color:#fff; padding:12px 14px; }
+  header h1 { margin:0; font-size:17px; } header .u { font-size:12.5px; opacity:.85; margin-top:2px; }
+  main { padding:12px 14px 30px; }
+  .box { background:#fff; border:1.5px solid #e2e8f0; border-radius:12px; padding:12px; margin-bottom:10px; }
+  .arten { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:7px; }
+  .arten button { text-align:left; background:#fff; color:#0f172a; border:1.5px solid #e2e8f0; border-radius:10px; padding:9px 10px; cursor:pointer; font:inherit; }
+  .arten button:hover { border-color:#0d9488; } .arten b { display:block; font-size:13.5px; } .arten span { font-size:11.5px; color:#64748b; }
+  .arten .lt { font-size:10.5px; color:#a16207; }
+  h3 { font-size:13px; margin:12px 0 6px; color:#334155; }
+  label { display:block; font-size:12px; font-weight:700; color:#475569; margin:10px 0 4px; }
+  input, select, textarea { font:inherit; font-size:13.5px; padding:7px 9px; border:1.5px solid #cbd5e1; border-radius:8px; background:#fff; color:#0f172a; width:100%; }
+  textarea { min-height:70px; resize:vertical; }
+  button.k { font:inherit; font-size:13px; font-weight:700; border-radius:8px; padding:8px 12px; cursor:pointer; border:1.5px solid #0d9488; background:#0d9488; color:#fff; }
+  button.k.leicht { background:#fff; color:#0f766e; } button.k.rot { background:#fff; color:#b91c1c; border-color:#b91c1c; }
+  .chips { display:flex; gap:5px; flex-wrap:wrap; align-items:center; } .chip { background:#ccfbf1; color:#115e59; border-radius:999px; padding:2px 9px; font-size:12px; }
+  .noten { display:grid; grid-template-columns:1fr auto; gap:5px 10px; align-items:center; font-size:12.5px; }
+  .noten .n { display:flex; gap:3px; } .noten .n button { width:28px; height:26px; border-radius:6px; border:1.5px solid #cbd5e1; background:#fff; cursor:pointer; font:inherit; font-weight:700; }
+  .noten .n button.an { background:#0d9488; border-color:#0d9488; color:#fff; }
+  .auf { display:grid; grid-template-columns:minmax(0,1fr) 140px 130px 28px; gap:5px; margin-bottom:5px; } @media (max-width:560px) { .auf { grid-template-columns:1fr 1fr; } }
+  .fehler { color:#b91c1c; font-size:13px; font-weight:600; margin-top:6px; } .leer { color:#64748b; font-size:13px; }
+  .hin { font-size:11.5px; color:#64748b; margin-top:4px; } .ok { color:#047857; font-weight:700; }
+  html.glas .box, html.glas .arten button { background:rgba(255,255,255,.07) !important; border-color:rgba(255,255,255,.15) !important; color:#f1f5f9 !important; }
+  html.glas label, html.glas h3 { color:rgba(255,255,255,.75) !important; } html.glas .arten span, html.glas .leer, html.glas .hin { color:rgba(255,255,255,.65) !important; }
+</style>
+<script src="glas.js?v=1791559958"></script>
+</head>
+<body>
+<header><h1 id="titel">💬 Gespräch</h1><div class="u" id="unter"></div></header>
+<main id="inhalt"><div class="leer">Lädt …</div></main>
+<script src="https://play.workadventu.re/iframe_api.js"></script>
+<script>
+// Dieselbe Datei liegt auch im Dashboard (app/frontend/public/gespraech.html): dort mit Dashboard-Anmeldung statt Büro-Ausweis
+const IM_DASHBOARD = location.hostname === "swdigitaltest.de";
+const KEY = "a21b2aa2a42fe6189b05773c07bbc9ad78e38b34ba3bb6fe", API = IM_DASHBOARD ? "/api" : "https://swdigitaltest.de/buero-praesenz/gesp";
+const $ = id => document.getElementById(id), q = new URLSearchParams(location.search), RAUM = q.get("raum") || "";
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const ausweis = () => { try { return localStorage.getItem("swBueroAusweis") || ""; } catch { return ""; } };
+const heute = () => new Date().toLocaleDateString("sv-SE"), dDE = s => s ? String(s).split("-").reverse().join(".") : "";
+async function api(pfad, opt = {}) {
+  const r = await fetch(API + pfad, IM_DASHBOARD ? { ...opt, credentials: "include", headers: { "Content-Type": "application/json" } }
+    : { ...opt, headers: { "X-Buero-Key": KEY, "X-Buero-Ausweis": ausweis(), "X-Buero-Name": encodeURIComponent(window.__waName || ""), "Content-Type": "application/json" } });
+  const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || "Fehler " + r.status); return d;
+}
+let G = null, ARTEN = [], PERSONEN = [], fokus = null, takt = null, warteSpeichern = {}, zeigtStand = 0;
+
+// ---------- Auswahl ----------
+async function auswahl(nach) {
+  $("titel").textContent = nach ? "📝 Gespräch nachtragen" : "💬 Gespräch starten"; $("unter").textContent = nach ? "Für ein Gespräch, das schon stattgefunden hat" : (RAUM ? RAUM + " · wer hier steht, wird Teilnehmer" : "");
+  let h = '<div class="box"><b>Was für ein Gespräch?</b><div class="arten" style="margin-top:8px">' + ARTEN.map(a => `<button data-art="${a.k}"><b>${a.icon} ${esc(a.name)}</b><span>${esc(a.felder.map(f => f.label.split(" (")[0]).slice(0, 3).join(", "))}</span>${a.leitung ? '<div class="lt">nur Leitung</div>' : ""}</button>`).join("") + "</div></div>";
+  h += nach ? '<button class="k leicht" id="zurueck">← zurück</button>' : '<button class="k leicht" id="nachtragen">📝 Gespräch nachtragen (hat schon stattgefunden)</button>';
+  $("inhalt").innerHTML = h;
+  document.querySelectorAll("[data-art]").forEach(b => b.onclick = () => startFormular(ARTEN.find(a => a.k === b.dataset.art), nach));
+  if ($("nachtragen")) $("nachtragen").onclick = () => auswahl(true); if ($("zurueck")) $("zurueck").onclick = () => auswahl(false);
+}
+async function startFormular(art, nach) {
+  const betroffene = art.betrifft ? await api("/gespraeche/personen?betroffene=1") : [];
+  const opt = l => l.map(p => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join("");
+  let h = `<div class="box"><b>${art.icon} ${esc(art.name)}${nach ? " nachtragen" : ""}</b>`;
+  if (art.betrifft) h += `<label>Mit wem?</label><select id="sBetr"><option value="">– bitte wählen –</option>${opt(betroffene)}</select>`;
+  if (nach) h += `<label>Wann war das Gespräch?</label><input id="sDatum" type="date" max="${heute()}" value="${heute()}"><label>Weitere Teilnehmer (Strg/Cmd für mehrere)</label><select id="sTeil" multiple size="6">${opt(PERSONEN)}</select>`;
+  h += `<div class="fehler" id="sFe"></div><div style="display:flex;gap:6px;margin-top:10px"><button class="k" id="sOk">${nach ? "Weiter" : "Gespräch starten"}</button><button class="k leicht" id="sAb">Abbrechen</button></div></div>`;
+  $("inhalt").innerHTML = h;
+  $("sAb").onclick = () => auswahl(nach);
+  $("sOk").onclick = async () => {
+    const b = { art: art.k, raum: RAUM, nachgetragen: nach };
+    if (art.betrifft) { b.betrifftId = $("sBetr").value; if (!b.betrifftId) return $("sFe").textContent = "Bitte wählen, mit wem das Gespräch ist."; }
+    if (nach) { b.datum = $("sDatum").value; b.teilnehmerIds = [...$("sTeil").selectedOptions].map(o => o.value); }
+    $("sOk").disabled = true;
+    try { G = await api("/gespraeche", { method: "POST", body: JSON.stringify(b) }); zeichnen(); starteTakt(); } catch (e) { $("sFe").textContent = e.message; $("sOk").disabled = false; }
+  };
+}
+
+// ---------- Gesprächsfenster ----------
+function feldHtml(f, v, darf) {
+  const dis = darf ? "" : " disabled";
+  if (f.typ === "noten") return `<label>${esc(f.label)}</label><div class="noten">${f.optionen.map(([k, t]) => `<span>${esc(t)}</span><span class="n" data-noten="${f.k}" data-kat="${k}">${[1, 2, 3, 4, 5].map(n => `<button${dis} data-n="${n}" class="${(v || {})[k] === n ? "an" : ""}">${n}</button>`).join("")}</span>`).join("")}</div>`;
+  if (f.typ === "checkliste") return `<label>${esc(f.label)}</label>${f.optionen.map(o => `<label style="display:flex;gap:7px;font-weight:400;margin:3px 0;color:inherit"><input type="checkbox"${dis} data-cl="${f.k}" value="${esc(o)}" style="width:auto"${(v || []).includes(o) ? " checked" : ""}> ${esc(o)}</label>`).join("")}`;
+  if (f.typ === "auswahl") return `<label>${esc(f.label)}</label><select data-f="${f.k}"${dis}><option value="">–</option>${f.optionen.map(o => `<option${v === o ? " selected" : ""}>${esc(o)}</option>`).join("")}</select>`;
+  if (f.typ === "datum") return `<label>${esc(f.label)}</label><input type="date" data-f="${f.k}" value="${esc(v || "")}"${dis} style="max-width:180px">`;
+  if (f.typ === "text") return `<label>${esc(f.label)}</label><input data-f="${f.k}" value="${esc(v || "")}"${dis}>`;
+  return `<label>${esc(f.label)}</label><textarea data-f="${f.k}"${dis}>${esc(v || "")}</textarea>`;
+}
+function zeichnen() {
+  const g = G, a = g.artDef, darf = g.darfBearbeiten && g.status === "laeuft" || (g.darfBearbeiten && g.status === "fertig" && g.istLeitung);
+  $("titel").textContent = `${a.icon} ${a.name}${g.betrifft ? " · " + g.betrifft.name : ""}${g.mandant ? " · " + g.mandant.name : ""}`;
+  $("unter").textContent = (g.status === "fertig" ? "✓ abgeschlossen · " : g.nachgetragen ? "nachgetragen · " : "läuft · ") + dDE(g.datum) + (g.raum ? " · " + g.raum : "") + (a.sicht === "leitung" ? " · nur für die Leitung sichtbar" : a.sicht === "team" ? " · nach dem Abschluss für das ganze Team sichtbar" : "");
+  let h = `<div class="box"><div class="chips"><b style="font-size:12.5px;margin-right:4px">Teilnehmer:</b>${g.teilnehmer.map(t => `<span class="chip">${esc(t.name)}${t.id === g.gestartetVon.id ? " (führt)" : ""}</span>`).join("")}
+    ${darf && !g.istLeitung ? `<select id="plus" style="width:auto;font-size:12px;padding:3px 6px"><option value="">+ hinzufügen</option>${PERSONEN.filter(p => !g.teilnehmer.some(t => t.id === p.id)).map(p => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join("")}</select>` : ""}</div>`;
+  if (a.mandant) h += `<label>Mandant</label>${g.mandant ? `<div class="chips"><span class="chip">${esc(g.mandant.nr ? g.mandant.nr + " · " : "")}${esc(g.mandant.name)}</span>${darf ? '<a href="#" id="mWeg" style="font-size:12px">ändern</a>' : ""}</div>` : (darf ? '<input id="mSuche" placeholder="Name oder Mandantennummer …"><div id="mTreffer"></div>' : '<div class="leer">–</div>')}`;
+  h += a.felder.map(f => feldHtml(f, (g.felder || {})[f.k], darf)).join("") + "</div>";
+  if (a.aufgaben) {
+    h += `<div class="box"><b>Aufgaben</b> <span class="hin">→ landen beim Abschließen in der Aufgaben Box</span><div id="aufL" style="margin-top:8px">` + (g.aufgaben || []).map((x, i) => `<div class="auf"><input data-a="${i}" data-ak="text" value="${esc(x.text)}"${darf && !x.ticketNr ? "" : " disabled"}>
+      <select data-a="${i}" data-ak="bearbeiterId"${darf && !x.ticketNr ? "" : " disabled"}><option value="">wer?</option>${g.teilnehmer.concat(PERSONEN.filter(p => !g.teilnehmer.some(t => t.id === p.id))).map(p => `<option value="${esc(p.id)}"${p.id === x.bearbeiterId ? " selected" : ""}>${esc(p.name)}</option>`).join("")}</select>
+      <input type="date" data-a="${i}" data-ak="frist" value="${esc(x.frist)}"${darf && !x.ticketNr ? "" : " disabled"}>${x.ticketNr ? `<span class="hin" title="in der Aufgaben Box">${esc(x.ticketNr)}</span>` : darf ? `<button class="k leicht" data-aweg="${i}" style="padding:4px">✕</button>` : "<span></span>"}</div>`).join("")
+      + `</div>${darf ? '<button class="k leicht" id="aufNeu">+ Aufgabe</button>' : ""}</div>`;
+  }
+  if (g.status === "laeuft" && g.darfBearbeiten) h += `<div style="display:flex;gap:6px;flex-wrap:wrap"><button class="k" id="fertig">✓ Gespräch abschließen</button><span style="flex:1"></span>${g.gestartetVon.id === g.ich ? '<button class="k rot" id="weg">Verwerfen</button>' : ""}</div>`;
+  else if (g.status === "fertig") h += `<div class="box"><span class="ok">✓ Abgeschlossen</span> – alle Teilnehmer haben eine Meldung bekommen und finden es im Profil unter „Gespräche“.${g.istLeitung && g.darfBearbeiten ? " Du kannst die Angaben weiter ändern." : ""}<div style="margin-top:8px"><button class="k leicht" id="neu">Neues Gespräch</button></div></div>`;
+  h += '<div class="fehler" id="fe"></div><div class="hin" id="stand"></div>';
+  $("inhalt").innerHTML = h; verdrahten(darf); zeigtStand = g.version || 0;
+}
+function speichern(teil, sofort) {
+  Object.assign(warteSpeichern, teil); clearTimeout(speichern.t);
+  speichern.t = setTimeout(async () => { const b = warteSpeichern; warteSpeichern = {};
+    try { const neu = await api("/gespraeche/" + G.id, { method: "PUT", body: JSON.stringify(b) }); G = neu; zeigtStand = neu.version; $("stand") && ($("stand").textContent = "gespeichert " + new Date().toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit", second: "2-digit" })); if (b.teilnehmerIds || b.mandantId !== undefined || b.aufgaben && sofort) zeichnen(); }
+    catch (e) { $("fe") && ($("fe").textContent = e.message); } }, sofort ? 0 : 600);
+}
+function felderStand() { const f = {}; G.artDef.felder.forEach(d => { f[d.k] = (G.felder || {})[d.k]; }); return f; }
+function verdrahten(darf) {
+  if ($("neu")) $("neu").onclick = () => { stoppeTakt(); G = null; auswahl(false); };
+  if (!darf) return;
+  document.querySelectorAll("[data-f]").forEach(el => { el.onfocus = () => fokus = el; el.onblur = () => fokus = null;
+    el.oninput = el.onchange = () => { G.felder[el.dataset.f] = el.value; speichern({ felder: { [el.dataset.f]: el.value } }); }; });
+  document.querySelectorAll("[data-noten] button").forEach(b => b.onclick = () => { const s = b.parentElement, k = s.dataset.noten, kat = s.dataset.kat, n = +b.dataset.n;
+    const v = { ...(G.felder[k] || {}) }; v[kat] = v[kat] === n ? undefined : n; G.felder[k] = v; s.querySelectorAll("button").forEach(x => x.classList.toggle("an", +x.dataset.n === v[kat])); speichern({ felder: { [k]: v } }); });
+  document.querySelectorAll("[data-cl]").forEach(c => c.onchange = () => { const k = c.dataset.cl; G.felder[k] = [...document.querySelectorAll(`[data-cl="${k}"]:checked`)].map(x => x.value); speichern({ felder: { [k]: G.felder[k] } }); });
+  if ($("plus")) $("plus").onchange = () => { if (!$("plus").value) return; speichern({ teilnehmerIds: [...G.teilnehmer.map(t => t.id), $("plus").value] }, true); };
+  if ($("mWeg")) $("mWeg").onclick = ev => { ev.preventDefault(); speichern({ mandantId: "" }, true); };
+  if ($("mSuche")) $("mSuche").oninput = async () => { const s = $("mSuche").value; if (s.length < 2) return $("mTreffer").innerHTML = "";
+    try { const l = await api("/gespraeche/mandanten?q=" + encodeURIComponent(s)); $("mTreffer").innerHTML = l.map(m => `<div><a href="#" data-m="${esc(m.id)}">${esc(m.nr ? m.nr + " · " : "")}${esc(m.name)}</a></div>`).join("") || '<div class="leer">kein Treffer</div>';
+      document.querySelectorAll("[data-m]").forEach(a => a.onclick = ev => { ev.preventDefault(); speichern({ mandantId: a.dataset.m }, true); }); } catch (e) { $("mTreffer").textContent = e.message; } };
+  const aufStand = () => (G.aufgaben || []).map(x => ({ ...x }));
+  document.querySelectorAll("[data-a]").forEach(el => { el.onfocus = () => fokus = el; el.onblur = () => fokus = null;
+    el.oninput = el.onchange = () => { const l = aufStand(); l[+el.dataset.a][el.dataset.ak] = el.value; G.aufgaben = l; speichern({ aufgaben: l }); }; });
+  document.querySelectorAll("[data-aweg]").forEach(b => b.onclick = () => { const l = aufStand(); l.splice(+b.dataset.aweg, 1); G.aufgaben = l; speichern({ aufgaben: l }, true); zeichnen(); });
+  if ($("aufNeu")) $("aufNeu").onclick = () => { G.aufgaben = [...aufStand(), { text: "", bearbeiterId: "", frist: "" }]; zeichnen(); const l = document.querySelectorAll('[data-ak="text"]'); if (l.length) l[l.length - 1].focus(); };
+  if ($("fertig")) $("fertig").onclick = async () => {
+    if (!confirm("Gespräch abschließen? Alle Teilnehmer bekommen eine Meldung" + (G.artDef.aufgaben ? ", Aufgaben gehen in die Aufgaben Box." : "."))) return;
+    clearTimeout(speichern.t); if (Object.keys(warteSpeichern).length) { const b = warteSpeichern; warteSpeichern = {}; try { await api("/gespraeche/" + G.id, { method: "PUT", body: JSON.stringify(b) }); } catch {} }
+    try { G = await api("/gespraeche/" + G.id + "/abschliessen", { method: "POST" }); stoppeTakt(); zeichnen(); } catch (e) { $("fe").textContent = e.message; } };
+  if ($("weg")) $("weg").onclick = async () => { if (!confirm("Gespräch verwerfen? Alles Eingetragene wird gelöscht.")) return;
+    try { await api("/gespraeche/" + G.id, { method: "DELETE" }); stoppeTakt(); G = null; auswahl(false); } catch (e) { $("fe").textContent = e.message; } };
+}
+// Abgleich mit den anderen im Raum: neue Fassung übernehmen, aber nicht das Feld, in dem man gerade tippt
+function starteTakt() { stoppeTakt(); takt = setInterval(async () => {
+  if (!G || G.status !== "laeuft" || Object.keys(warteSpeichern).length) return;
+  try { const neu = await api("/gespraeche/" + G.id); if ((neu.version || 0) <= zeigtStand && neu.status === G.status) return;
+    const f = fokus, k = f && (f.dataset.f || (f.dataset.a + "|" + f.dataset.ak)), v = f && f.value, pos = f && f.selectionStart;
+    G = neu; zeichnen();
+    if (k) { const el = f.dataset.f ? document.querySelector(`[data-f="${f.dataset.f}"]`) : document.querySelector(`[data-a="${f.dataset.a}"][data-ak="${f.dataset.ak}"]`); if (el) { el.value = v; el.focus(); try { el.setSelectionRange(pos, pos); } catch {} } }
+  } catch (e) { if (/nicht gefunden/.test(e.message)) { stoppeTakt(); G = null; $("inhalt").innerHTML = '<div class="box">Das Gespräch wurde verworfen.</div>'; } }
+}, 2500); }
+function stoppeTakt() { clearInterval(takt); takt = null; }
+
+async function start() {
+  if (!IM_DASHBOARD && !ausweis()) { $("inhalt").innerHTML = '<div class="box">Bitte zuerst das Büro entsperren (Anmelden), dann noch einmal die Leertaste drücken.</div>'; return; }
+  try {
+    [ARTEN, PERSONEN] = await Promise.all([api("/gespraeche/arten"), api("/gespraeche/personen")]);
+    const id = q.get("id");
+    G = id ? await api("/gespraeche/" + encodeURIComponent(id)) : RAUM ? await api("/gespraeche/laufend?raum=" + encodeURIComponent(RAUM)) : null;
+    if (G && G.id && !G.artDef) G = await api("/gespraeche/" + G.id);
+    if (G) { zeichnen(); if (G.status === "laeuft") starteTakt(); } else auswahl(q.get("nachtragen") === "1");
+  } catch (e) { $("inhalt").innerHTML = '<div class="box">' + esc(/ausweis/.test(e.message) ? "Bitte das Büro kurz neu entsperren." : e.message) + "</div>"; }
+}
+(async () => { if (IM_DASHBOARD) return start(); for (let i = 0; i < 30 && typeof WA === "undefined"; i++) await new Promise(r => setTimeout(r, 100)); try { await Promise.race([WA.onInit(), new Promise(r => setTimeout(r, 2500))]); window.__waName = WA.player.name || ""; } catch {} start(); })();
+</script>
+</body>
+</html>

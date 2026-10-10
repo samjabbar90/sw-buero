@@ -88,7 +88,8 @@ function zeigen() {
     + zeile("Abteilungen", (p.abteilungen || []).join(", ")) + zeile("Spezialgebiet", p.spezial);
   if (reiter === "kontakt") inhalt = zeile("Durchwahl", p.durchwahl) + zeile("Bürozeiten", p.buerozeiten) || `<div class="leer">Noch keine Kontaktangaben hinterlegt.</div>`;
   if (reiter === "zeit") inhalt = '<div id="zeitBox"><div class="leer">Lade …</div></div>';
-  const REITER = [["ueber", "Über mich"], ["zust", "Zuständig"], ["kontakt", "Kontakt"], ...((p.zeitQuellen || []).length ? [["zeit", "⏱ Zeit"]] : [])];
+  if (reiter === "fb" || reiter === "gesp") inhalt = '<div id="gespBox"><div class="leer">Lade …</div></div>';
+  const REITER = [["ueber", "Über mich"], ["zust", "Zuständig"], ["kontakt", "Kontakt"], ...((p.zeitQuellen || []).length ? [["zeit", "⏱ Zeit"]] : []), ...(p.ich ? [["fb", "💬 Feedback"], ["gesp", "🗂 Gespräche"]] : [])];
   $("seite").innerHTML = `<div class="banner"><div class="firma">SW DIGITAL TAX</div></div>
     <div class="foto" style="${p.foto ? "background-image:url('" + p.foto + "')" : ""}">${p.foto ? "" : esc(initialen)}</div>
     <div class="name">${esc(p.name)}</div><div class="rolle">${esc([p.rolle, (p.abteilungen || []).join(", ")].filter(Boolean).join(" · "))}</div>
@@ -98,7 +99,47 @@ function zeigen() {
     ${p.ich ? "" : `<div class="knoepfe">${p.durchwahl ? `<a class="haupt" href="tel:${esc(p.durchwahl)}">📞 Anrufen</a>` : ""}<button id="hin">🚶 Zu ${esc(v)} gehen</button></div>`}`;
   document.querySelectorAll("[data-r]").forEach(b => b.onclick = () => { reiter = b.dataset.r; zeigen(); });
   if (reiter === "zeit") zeitLaden();
+  if (reiter === "fb") feedbackLaden(); if (reiter === "gesp") gespraecheLaden();
   const hin = $("hin"); if (hin) hin.onclick = () => { try { WA.player.state.saveVariable("swAktion", { was: "zuPerson", name: p.name, buero: NAME, t: Date.now() }, { public: false, persist: false }); } catch (e) { console.warn(e); } };
+}
+// Reiter „💬 Feedback“ + „🗂 Gespräche“ (10.10.2026, Sam: Idee A) — nur im eigenen Profil, nur lesen. Feedback = Gespräche mit der
+// Leitung (Noten, Stärken, Ziele), Gespräche = alle abgeschlossenen Gespräche, an denen man teilnahm (Meeting-Notizen, Mandantengespräche …)
+const FB_KAT = { fachkompetenz: "Fachkompetenz", fristen: "Fristen", mandanten: "Mandanten", qualitaet: "Qualität", team: "Teamarbeit", initiative: "Initiative" };
+const dDE = s => s ? String(s).slice(0, 10).split("-").reverse().join(".") : "";
+const fett = t => `<b style="display:inline;text-transform:none;letter-spacing:0;font-size:12.5px;color:inherit">${t}</b>`;
+async function feedbackLaden() {
+  const box = $("gespBox"); if (!box) return;
+  let l; try { l = await api("/gesp/gespraeche/feedback/meine"); } catch (e) { box.innerHTML = '<div class="leer">' + esc(e.message) + "</div>"; return; }
+  if (!l.length) { box.innerHTML = '<div class="leer">Noch kein Feedbackgespräch.</div>'; return; }
+  box.innerHTML = l.map((f, i) => {
+    const n = Object.entries(f.bewertungen || {}).filter(([, v]) => v);
+    const farbe = v => v <= 2 ? "rgba(16,185,129,.3)" : v === 3 ? "rgba(245,158,11,.3)" : "rgba(239,68,68,.3)";
+    const noten = n.length ? '<div style="display:flex;gap:4px;flex-wrap:wrap;margin:6px 0">' + n.map(([k, v]) => `<span style="font-size:11.5px;padding:2px 8px;border-radius:999px;background:${farbe(v)}">${v} ${esc(FB_KAT[k] || k)}</span>`).join("") + "</div>" : "";
+    const texte = [["Stärken", f.staerken], ["Entwicklung", f.entwicklung], ["Ziele", f.ziele], ["Notizen", f.notizen]].filter(x => x[1])
+      .map(([t, v]) => `<div style="font-size:12.5px;margin-top:3px;white-space:pre-wrap">${fett(t + ":")} ${esc(v)}</div>`).join("");
+    return `<div class="z" style="${i ? "opacity:.8" : ""}">${fett(dDE(f.datum) + (f.anlass ? " · " + esc(f.anlass) : ""))}
+      <div style="font-size:11.5px;opacity:.7">von ${esc(f.erstelltVon || "")}</div>${noten}${texte}
+      ${f.naechstes ? `<div style="font-size:11.5px;opacity:.7;margin-top:5px">Nächstes Gespräch: ${dDE(f.naechstes)}</div>` : ""}</div>`;
+  }).join("");
+}
+async function gespraecheLaden() {
+  const box = $("gespBox"); if (!box) return;
+  let l; try { l = await api("/gesp/gespraeche?meine=1"); } catch (e) { box.innerHTML = '<div class="leer">' + esc(e.message) + "</div>"; return; }
+  l = l.filter(g => g.status === "fertig" && g.art !== "feedback");
+  if (!l.length) { box.innerHTML = '<div class="leer">Noch keine abgeschlossenen Gespräche.<br>Im Besprechungsraum: Leertaste → Gespräch / Notizen.</div>'; return; }
+  box.innerHTML = l.map(g => `<div class="z" data-g="${esc(g.id)}" style="cursor:pointer">${fett(esc(g.icon) + " " + esc(g.artName) + (g.titel ? " · " + esc(g.titel) : ""))}
+    <div style="font-size:11.5px;opacity:.7">${dDE(g.datum)}${g.nachgetragen ? " · nachgetragen" : ""} · ${esc(g.teilnehmer.map(t => t.name).join(", "))}</div><div data-detail="${esc(g.id)}"></div></div>`).join("");
+  document.querySelectorAll("[data-g]").forEach(el => el.onclick = async () => {
+    const d = el.querySelector("[data-detail]"); if (d.innerHTML) { d.innerHTML = ""; return; }
+    try {
+      const g = await api("/gesp/gespraeche/" + encodeURIComponent(el.dataset.g)), a = g.artDef;
+      const leer = v => !v || (Array.isArray(v) && !v.length) || (typeof v === "object" && !Array.isArray(v) && !Object.keys(v).length);
+      d.innerHTML = a.felder.map(f => { const v = (g.felder || {})[f.k]; if (leer(v)) return "";
+        const txt = Array.isArray(v) ? v.join(", ") : typeof v === "object" ? Object.entries(v).map(([k, n]) => n + " " + (FB_KAT[k] || k)).join(", ") : f.typ === "datum" ? dDE(v) : v;
+        return `<div style="font-size:12.5px;margin-top:5px;white-space:pre-wrap">${fett(esc(f.label.split(" (")[0]) + ":")} ${esc(txt)}</div>`; }).join("")
+        + ((g.aufgaben || []).length ? `<div style="font-size:12.5px;margin-top:6px">${fett("Aufgaben:")} ` + g.aufgaben.map(x => esc(x.text) + (x.bearbeiterName ? " (" + esc(x.bearbeiterName) + (x.frist ? ", " + dDE(x.frist) : "") + ")" : "")).join(" · ") + "</div>" : "");
+    } catch (e) { d.textContent = e.message; }
+  });
 }
 // Reiter „⏱ Zeit“ (09.10.2026, Sam): Kachel antippen = nur diese Quelle (nochmal = alle), Tag / Woche / Monat + Datum, Zeile antippen = Tagesansicht
 const Z = { art: "woche", basis: new Date(), quelle: "alle" };
