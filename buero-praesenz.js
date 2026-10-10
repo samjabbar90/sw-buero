@@ -20,6 +20,34 @@
     });
     setTimeout(() => WA.nav.goToPage(DASHBOARD), 4e3);
   }
+  var nachrichtHinweis = null;
+  function nachrichtZeigen(m) {
+    try {
+      nachrichtHinweis && nachrichtHinweis.remove();
+    } catch {
+    }
+    const vorname2 = String(m.von || "").split(" ")[0];
+    try {
+      nachrichtHinweis = WA.ui.displayActionMessage({
+        message: `\u{1F4AC} ${vorname2}: ${String(m.text || "").slice(0, 140)} \xB7 Leertaste = antworten`,
+        callback: () => {
+          nachrichtHinweis = null;
+          glasFenster(SEITEN + "wer.html?an=" + encodeURIComponent(m.von) + "&t=" + Date.now());
+        }
+      });
+      const h = nachrichtHinweis;
+      setTimeout(() => {
+        try {
+          if (nachrichtHinweis === h) {
+            h.remove();
+            nachrichtHinweis = null;
+          }
+        } catch {
+        }
+      }, 3e4);
+    } catch {
+    }
+  }
   function melden(event, start = false) {
     if (beendet || gesperrt && event !== "verlassen") return Promise.resolve();
     zuletztGemeldet = Date.now();
@@ -40,6 +68,7 @@
       keepalive: true
     }).then((r) => r.json()).then((d) => {
       if (d && typeof d.system === "boolean") mitSystemZeit = d.system;
+      if (d && Array.isArray(d.nachrichten)) for (const m of d.nachrichten) nachrichtZeigen(m);
       if (d && d.inaktiv) return wegVomRechner();
       if (d && d.abgeloest) beenden();
     }).catch(() => {
