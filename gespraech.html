@@ -58,7 +58,7 @@ let G = null, ARTEN = [], PERSONEN = [], fokus = null, takt = null, warteSpeiche
 // ---------- Auswahl ----------
 async function auswahl(nach) {
   $("titel").textContent = nach ? "📝 Gespräch nachtragen" : "💬 Gespräch starten"; $("unter").textContent = nach ? "Für ein Gespräch, das schon stattgefunden hat" : (RAUM ? RAUM + " · wer hier steht, wird Teilnehmer" : "");
-  let h = '<div class="box"><b>Was für ein Gespräch?</b><div class="arten" style="margin-top:8px">' + ARTEN.map(a => `<button data-art="${a.k}"><b>${a.icon} ${esc(a.name)}</b><span>${esc(a.felder.map(f => f.label.split(" (")[0]).slice(0, 3).join(", "))}</span>${a.leitung ? '<div class="lt">nur Leitung</div>' : ""}</button>`).join("") + "</div></div>";
+  let h = '<div class="box"><b>Was für ein Gespräch?</b><div class="hin">Gespräche hier sind immer intern – der Mandant ist nicht dabei. Mit Mandant verknüpft, stehen sie in seiner Akte unter „Gespräche intern“.</div><div class="arten" style="margin-top:8px">' + ARTEN.map(a => `<button data-art="${a.k}"><b>${a.icon} ${esc(a.name)}</b><span>${esc(a.felder.map(f => f.label.split(" (")[0]).slice(0, 3).join(", "))}</span>${a.leitung ? '<div class="lt">nur Leitung</div>' : ""}</button>`).join("") + "</div></div>";
   h += nach ? '<button class="k leicht" id="zurueck">← zurück</button>' : '<button class="k leicht" id="nachtragen">📝 Gespräch nachtragen (hat schon stattgefunden)</button>';
   $("inhalt").innerHTML = h;
   document.querySelectorAll("[data-art]").forEach(b => b.onclick = () => startFormular(ARTEN.find(a => a.k === b.dataset.art), nach));
@@ -74,7 +74,7 @@ async function startFormular(art, nach) {
   $("inhalt").innerHTML = h;
   $("sAb").onclick = () => auswahl(nach);
   $("sOk").onclick = async () => {
-    const b = { art: art.k, raum: RAUM, nachgetragen: nach };
+    const b = { art: art.k, raum: RAUM, nachgetragen: nach, mandantId: q.get("mandant") || "" };
     if (art.betrifft) { b.betrifftId = $("sBetr").value; if (!b.betrifftId) return $("sFe").textContent = "Bitte wählen, mit wem das Gespräch ist."; }
     if (nach) { b.datum = $("sDatum").value; b.teilnehmerIds = [...$("sTeil").selectedOptions].map(o => o.value); }
     $("sOk").disabled = true;
@@ -98,7 +98,7 @@ function zeichnen() {
   $("unter").textContent = (g.status === "fertig" ? "✓ abgeschlossen · " : g.nachgetragen ? "nachgetragen · " : "läuft · ") + dDE(g.datum) + (g.raum ? " · " + g.raum : "") + (a.sicht === "leitung" ? " · nur für die Leitung sichtbar" : a.sicht === "team" ? " · nach dem Abschluss für das ganze Team sichtbar" : "");
   let h = `<div class="box"><div class="chips"><b style="font-size:12.5px;margin-right:4px">Teilnehmer:</b>${g.teilnehmer.map(t => `<span class="chip">${esc(t.name)}${t.id === g.gestartetVon.id ? " (führt)" : ""}</span>`).join("")}
     ${darf && !g.istLeitung ? `<select id="plus" style="width:auto;font-size:12px;padding:3px 6px"><option value="">+ hinzufügen</option>${PERSONEN.filter(p => !g.teilnehmer.some(t => t.id === p.id)).map(p => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join("")}</select>` : ""}</div>`;
-  if (a.mandant) h += `<label>Mandant</label>${g.mandant ? `<div class="chips"><span class="chip">${esc(g.mandant.nr ? g.mandant.nr + " · " : "")}${esc(g.mandant.name)}</span>${darf ? '<a href="#" id="mWeg" style="font-size:12px">ändern</a>' : ""}</div>` : (darf ? '<input id="mSuche" placeholder="Name oder Mandantennummer …"><div id="mTreffer"></div>' : '<div class="leer">–</div>')}`;
+  if (a.mandant) h += `<label>${g.art === "mandant" ? "Mandant" : "Mandant (optional – dann steht es beim Mandanten unter „Gespräche intern“)"}</label>${g.mandant ? `<div class="chips"><span class="chip">${esc(g.mandant.nr ? g.mandant.nr + " · " : "")}${esc(g.mandant.name)}</span>${darf ? '<a href="#" id="mWeg" style="font-size:12px">ändern</a>' : ""}</div>` : (darf ? '<input id="mSuche" placeholder="Name oder Mandantennummer …"><div id="mTreffer"></div>' : '<div class="leer">–</div>')}`;
   h += a.felder.map(f => feldHtml(f, (g.felder || {})[f.k], darf)).join("") + "</div>";
   if (a.aufgaben) {
     h += `<div class="box"><b>Aufgaben</b> <span class="hin">→ landen beim Abschließen in der Aufgaben Box</span><div id="aufL" style="margin-top:8px">` + (g.aufgaben || []).map((x, i) => `<div class="auf"><input data-a="${i}" data-ak="text" value="${esc(x.text)}"${darf && !x.ticketNr ? "" : " disabled"}>
@@ -157,7 +157,7 @@ function stoppeTakt() { clearInterval(takt); takt = null; }
 async function start() {
   if (!IM_DASHBOARD && !ausweis()) { $("inhalt").innerHTML = '<div class="box">Bitte zuerst das Büro entsperren (Anmelden), dann noch einmal die Leertaste drücken.</div>'; return; }
   try {
-    [ARTEN, PERSONEN] = await Promise.all([api("/gespraeche/arten"), api("/gespraeche/personen")]);
+    [ARTEN, PERSONEN] = await Promise.all([api("/gespraeche/arten" + (RAUM ? "?raum=" + encodeURIComponent(RAUM) : "")), api("/gespraeche/personen")]);
     const id = q.get("id");
     G = id ? await api("/gespraeche/" + encodeURIComponent(id)) : RAUM ? await api("/gespraeche/laufend?raum=" + encodeURIComponent(RAUM)) : null;
     if (G && G.id && !G.artDef) G = await api("/gespraeche/" + G.id);
