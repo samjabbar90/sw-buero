@@ -33,8 +33,8 @@
 <header><span style="font-size:22px">🎓</span><h1 id="kopf">Lernzimmer</h1><button id="zurueck" style="display:none">↩︎ Alle Kurse</button></header>
 <main id="inhalt"><div class="leer">Lade …</div></main>
 <script>
-// Lernzimmer im virtuellen Büro (08.10.2026, Sam: „mit unserem E-Learning“) — Kurse aus dem Dashboard (Schulungen) für
-// die Person zum Büro-Namen; Videos und Texte direkt hier, Lektionen abhaken = derselbe Fortschritt wie im Dashboard.
+// Lernzimmer im virtuellen Büro (08.10.2026, Sam: „mit unserem E-Learning“) — Kurse aus dem SW-internen Portal (Schulungen) für
+// die Person zum Büro-Namen; Videos und Texte direkt hier, Lektionen abhaken = derselbe Fortschritt wie im SW-internen Portal.
 const KEY = "a21b2aa2a42fe6189b05773c07bbc9ad78e38b34ba3bb6fe", API = "https://swdigitaltest.de/buero-praesenz/lernen";
 const NAME = new URLSearchParams(location.search).get("name") || "";
 const $ = id => document.getElementById(id);
@@ -71,7 +71,7 @@ async function kurs(id) {
       return ab + `<div class="lektion${erledigt.has(l.id) ? " fertig" : ""}" id="l-${esc(l.id)}"><div class="titel">${esc(l.titel)}</div>
         ${l.video ? `<div class="video"><iframe src="${esc(einbetten(l.video))}" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe></div>` : ""}
         ${l.text ? `<div class="text">${esc(l.text)}</div>` : ""}
-        ${l.datei ? `<div class="klein" style="margin-top:8px">📎 ${esc(l.dateiName || "Datei")} – öffnen im <a href="https://swdigitaltest.de/dashboard.html" target="_blank" rel="noopener">Dashboard › Schulungen</a></div>` : ""}
+        ${l.datei ? `<div class="klein" style="margin-top:8px">📎 ${esc(l.dateiName || "Datei")} – öffnen im <a href="https://swdigitaltest.de/dashboard.html" target="_blank" rel="noopener">SW-internes Portal › Schulungen</a></div>` : ""}
         <div class="zeile"><button class="haken${erledigt.has(l.id) ? " an" : ""}" data-l="${esc(l.id)}">${erledigt.has(l.id) ? "✓ Erledigt" : "Als erledigt markieren"}</button></div></div>`;
     }).join("");
     document.querySelectorAll("button.haken").forEach(btn => btn.onclick = async () => {

@@ -41,7 +41,7 @@
 <main id="inhalt"><div class="leer">Lädt …</div></main>
 <script src="https://play.workadventu.re/iframe_api.js"></script>
 <script>
-// Dieselbe Datei liegt auch im Dashboard (app/frontend/public/gespraech.html): dort mit Dashboard-Anmeldung statt Büro-Ausweis
+// Dieselbe Datei liegt auch im SW-internen Portal (app/frontend/public/gespraech.html): dort mit SW-Portal-Anmeldung statt Büro-Ausweis
 const IM_DASHBOARD = location.hostname === "swdigitaltest.de";
 const KEY = "a21b2aa2a42fe6189b05773c07bbc9ad78e38b34ba3bb6fe", API = IM_DASHBOARD ? "/api" : "https://swdigitaltest.de/buero-praesenz/gesp";
 const $ = id => document.getElementById(id), q = new URLSearchParams(location.search), RAUM = q.get("raum") || "";

@@ -34,12 +34,12 @@
 <header><h1>❤️ Health &amp; Wellbeing</h1><div class="unter" id="unter">Fitnessraum</div></header>
 <main id="inhalt"><div class="leer">Lade …</div></main>
 <script>
-// Health & Wellbeing am Empfang im Fitnessraum (08.10.2026, Sam) — zeigt den eigenen Stand aus dem Dashboard
-// (nur lesen). Abhaken passiert im Dashboard, weil die Punkte zu einer Prämie führen.
+// Health & Wellbeing am Empfang im Fitnessraum (08.10.2026, Sam) — zeigt den eigenen Stand aus dem SW-internen Portal
+// (nur lesen). Abhaken passiert im SW-internen Portal, weil die Punkte zu einer Prämie führen.
 const KEY = "a21b2aa2a42fe6189b05773c07bbc9ad78e38b34ba3bb6fe";
 const NAME = new URLSearchParams(location.search).get("name") || "";
 const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-const DASH = '<a class="knopf" href="https://swdigitaltest.de/dashboard.html" target="_blank" rel="noopener">Im Dashboard abhaken ↗</a>';
+const DASH = '<a class="knopf" href="https://swdigitaltest.de/dashboard.html" target="_blank" rel="noopener">Im SW-internen Portal abhaken ↗</a>';
 const liste = (titel, a) => a.length ? `<div class="karte"><h2>${titel}</h2>${a.map(x => `<div class="aufgabe${x.erledigt ? " fertig" : ""}"><div class="haken">${x.erledigt ? "✓" : ""}</div>
   <div><div class="t">${esc(x.titel)}${x.uebungDesTages ? " ⭐" : ""}</div><div class="h">${esc(x.hinweis || "")}${x.nachweis ? " · 📷 mit Nachweis" : ""}</div></div><div class="p">+${x.punkte}</div></div>`).join("")}</div>` : "";
 (async () => {
@@ -48,7 +48,7 @@ const liste = (titel, a) => a.length ? `<div class="karte"><h2>${titel}</h2>${a.
     const s = await r.json(); if (!r.ok) throw new Error(s.error || "Fehler");
     document.getElementById("unter").textContent = "Fitnessraum" + (s.vorname ? " · " + s.vorname : "");
     if (!s.aktiv) { document.getElementById("inhalt").innerHTML = `<div class="karte"><div class="t">Du hast die 6-Monats-Challenge noch nicht gestartet.</div>
-      <div class="klein">Tägliche Übungen, Punkte sammeln – ab ${s.zielProzent} % wartet eine Prämie.</div></div><a class="knopf" href="https://swdigitaltest.de/dashboard.html" target="_blank" rel="noopener">Im Dashboard starten ↗</a>`; return; }
+      <div class="klein">Tägliche Übungen, Punkte sammeln – ab ${s.zielProzent} % wartet eine Prämie.</div></div><a class="knopf" href="https://swdigitaltest.de/dashboard.html" target="_blank" rel="noopener">Im SW-internen Portal starten ↗</a>`; return; }
     const offen = s.heute.filter(a => !a.erledigt).length;
     document.getElementById("inhalt").innerHTML = `<div class="karte"><div class="gross">${s.prozent.toLocaleString("de-DE")} %</div>
       <div class="balken"><div style="width:${Math.min(100, s.prozent)}%"></div><span class="ziel" style="left:${s.zielProzent}%"></span></div>

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Kalender</title>
 <!-- Kalender im Büro (10.10.2026, Sam: Layout B „Kalender-Fenster“): Tag/Woche, eigener Kalender oder Kollegen (je nach Freigabe),
-     Termin anlegen/ändern/löschen, Raum buchen. Gleiche Daten wie „Mein Kalender“ im Dashboard (inkl. verbundenem Google-Kalender).
+     Termin anlegen/ändern/löschen, Raum buchen. Gleiche Daten wie „Mein Kalender“ im SW-internen Portal (inkl. verbundenem Google-Kalender).
      Nur mit Büro-Ausweis. -->
 <style>
   * { box-sizing:border-box; }
@@ -232,7 +232,7 @@ async function raumForm() {
     S.form = { art: "raum", raeume: raeume.filter(r => !/^Büro /.test(r)), meine: alle.filter(r => r.name === ich) }; zeichnen(); }
   catch (e) { if (e.message === "ausweis") return anmelden(); alert(e.message); }
 }
-// ===== Anträge (10.10.2026, Sam: Layout A „Reiter im Kalender“) — dieselben Anträge wie im Dashboard, nur die eigenen =====
+// ===== Anträge (10.10.2026, Sam: Layout A „Reiter im Kalender“) — dieselben Anträge wie im SW-internen Portal, nur die eigenen =====
 const API_ANTR = "https://swdigitaltest.de/buero-praesenz/antr";
 const ARTEN = { urlaub: "🏖️ Urlaub", krankmeldung: "🤒 Krank", ueberstunden: "⏱️ Überstunden", homeoffice: "🏠 Home-Office" };
 const A = { form: null, liste: [], konto: null };

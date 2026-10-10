@@ -45,7 +45,7 @@
 <header><span style="font-size:18px">👤</span><h1 id="kopf">Profil</h1></header>
 <div id="seite"><div class="leer">Lade …</div></div>
 <script>
-// Daten kommen vom Dashboard (GET /buero-praesenz/profil) — nur mit Büro-Ausweis (einmal pro Gerät Benutzername + Büro-PIN),
+// Daten kommen vom SW-internen Portal (GET /buero-praesenz/profil) — nur mit Büro-Ausweis (einmal pro Gerät Benutzername + Büro-PIN),
 // derselbe Ausweis wie bei „Meine Ideen“. Gezeigt wird nur das Büro-Profil, nie Anschrift, Vertrag, Notfallkontakt.
 const KEY = "a21b2aa2a42fe6189b05773c07bbc9ad78e38b34ba3bb6fe", API = "https://swdigitaltest.de/buero-praesenz";
 const q = new URLSearchParams(location.search), NAME = q.get("name") || "", ICH = q.get("ich") === "1", TORE = Number(q.get("tore")) || 0;
@@ -61,7 +61,7 @@ async function api(pfad) {
 function ausweisFormular(meldung) {
   $("kopf").textContent = "Büro-Ausweis";
   $("seite").innerHTML = `<div class="box"><div style="font-size:14px">Einmal pro Gerät: Profile sehen nur angemeldete Kollegen.</div>
-    <div style="font-size:12px;opacity:.75;margin-top:4px">Die Büro-PIN erzeugst du im Dashboard auf der Startseite unter 🔑 Büro-PIN.</div>
+    <div style="font-size:12px;opacity:.75;margin-top:4px">Die Büro-PIN erzeugst du im SW-internen Portal auf der Startseite unter 🔑 Büro-PIN.</div>
     <label>Benutzername</label><input id="ben" autocomplete="username">
     <label>Büro-PIN</label><input id="pin" inputmode="numeric" autocomplete="one-time-code" maxlength="7">
     <div class="fehler" id="fe">${esc(meldung || "")}</div><div class="knoepfe" style="padding:6px 0 0"><button class="haupt" id="los">Ausweis speichern</button></div></div>`;
@@ -94,13 +94,31 @@ function zeigen() {
     <div class="foto" style="${p.foto ? "background-image:url('" + p.foto + "')" : ""}">${p.foto ? "" : esc(initialen)}</div>
     <div class="name">${esc(p.name)}</div><div class="rolle">${esc([p.rolle, (p.abteilungen || []).join(", ")].filter(Boolean).join(" · "))}</div>
     ${abz.length ? `<div class="abz">${abz.map(a => `<span>${esc(a)}</span>`).join("")}</div>` : ""}
+    <div id="liveBox"></div>
     <div class="reiter">${REITER.map(([k, t]) => `<button data-r="${k}" class="${k === reiter ? "an" : ""}">${t}</button>`).join("")}</div>
     <div class="inhalt">${inhalt}</div>
     ${p.ich ? "" : `<div class="knoepfe">${p.durchwahl ? `<a class="haupt" href="tel:${esc(p.durchwahl)}">📞 Anrufen</a>` : ""}<button id="hin">🚶 Zu ${esc(v)} gehen</button></div>`}`;
   document.querySelectorAll("[data-r]").forEach(b => b.onclick = () => { reiter = b.dataset.r; zeigen(); });
+  liveLaden();
   if (reiter === "zeit") zeitLaden();
   if (reiter === "fb") feedbackLaden(); if (reiter === "gesp") gespraecheLaden(); if (reiter === "danke") dankeLaden();
   const hin = $("hin"); if (hin) hin.onclick = () => { try { WA.player.state.saveVariable("swAktion", { was: "zuPerson", name: p.name, buero: NAME, t: Date.now() }, { public: false, persist: false }); } catch (e) { console.warn(e); } };
+}
+// Live-Kasten (11.10.2026, Sam): woran die Person gerade im SW-internen Portal arbeitet — nur mit Recht „Live-Anzeige“ und Freigabe
+// für diese Person; sonst bleibt der Kasten leer. Mit „arbeiten“ auch der Verlauf von heute. Aktualisiert sich jede Minute.
+const minSeit = ms => { const m = Math.max(0, Math.round((Date.now() - ms) / 60000)); return m < 60 ? m + " Min" : Math.floor(m / 60) + " Std " + (m % 60) + " Min"; };
+async function liveLaden() {
+  const box = $("liveBox"); if (!box) return;
+  let d; try { d = await api("/live?" + (P && P.ich ? "ich=1" : "name=" + encodeURIComponent(NAME))); } catch { return; }
+  if (!d || !d.pfad) { box.innerHTML = ""; return; }
+  const zeit = t => new Date(t).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
+  box.innerHTML = `<div style="margin:12px 14px 0;background:rgba(20,184,166,.13);border:1px solid rgba(94,234,212,.4);border-radius:10px;padding:10px 12px">
+    <div style="display:flex;justify-content:space-between;font-size:11.5px">${d.live ? '<span style="color:#fca5a5;font-weight:700">● Live im SW-internen Portal</span><span style="opacity:.8">seit ' + minSeit(d.seit) + "</span>"
+      : '<span style="opacity:.75">zuletzt im SW-internen Portal vor ' + minSeit(d.zuletzt) + "</span><span></span>"}</div>
+    <div style="font-size:14px;font-weight:700;margin:4px 0 2px">${esc(d.pfad)}</div>${d.detail ? `<div style="font-size:12.5px;color:#5eead4">${esc(d.detail)}</div>` : ""}
+    ${(d.verlauf || []).length ? '<div style="margin-top:8px;border-top:1px solid rgba(255,255,255,.1);padding-top:6px;font-size:11.5px;opacity:.75;line-height:1.6">Heute davor:<br>'
+      + d.verlauf.map(v => esc(zeit(v.von) + " " + v.pfad + (v.detail ? " · " + v.detail : "") + " · " + minSeit(Date.now() - (v.bis - v.von)))).join("<br>") + "</div>" : ""}</div>`;
+  clearTimeout(liveLaden.t); liveLaden.t = setTimeout(liveLaden, 60000);
 }
 // Reiter „💬 Feedback“ + „🗂 Gespräche“ (10.10.2026, Sam: Idee A) — nur im eigenen Profil, nur lesen. Feedback = Gespräche mit der
 // Leitung (Noten, Stärken, Ziele), Gespräche = alle abgeschlossenen Gespräche, an denen man teilnahm (Meeting-Notizen, Mandantengespräche …)

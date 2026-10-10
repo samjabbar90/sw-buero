@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Zitat des Tages</title>
 <!-- Zitat-Tafel am Eingang (10.10.2026, Sam: Idee B, Ort 1): Leertaste an der Tafel öffnet dieses Fenster. Gleiches Zitat wie im
-     Dashboard (zitate.js vom Dashboard-Server, gleiche Tagesregel), blättern zu früheren Tagen, Reaktionen mit Büro-Ausweis. -->
+     SW-internes Portal (zitate.js vom SW-internen Portal-Server, gleiche Tagesregel), blättern zu früheren Tagen, Reaktionen mit Büro-Ausweis. -->
 <style>
   * { box-sizing:border-box; }
   body { margin:0; font-family:system-ui,-apple-system,"Segoe UI",sans-serif; padding:14px; }
@@ -41,8 +41,8 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const ausweis = () => { try { return localStorage.getItem("swBueroAusweis") || ""; } catch { return ""; } };
 const ARTEN = [["gefaellt", "👍 Gefällt mir"], ["lachen", "😄 Musste lachen"], ["nachdenklich", "🤔 Nachdenklich"]];
-const START = new Date(2026, 7, 2); // seit 02.08.2026 gibt es das Tageszitat (wie im Dashboard)
-// gleiche Regel wie zitatFuer() im Dashboard — gleicher Tag = gleiches Zitat
+const START = new Date(2026, 7, 2); // seit 02.08.2026 gibt es das Tageszitat (wie im SW-internen Portal)
+// gleiche Regel wie zitatFuer() im SW-internen Portal — gleicher Tag = gleiches Zitat
 function zitatFuer(d) {
   const Z = window.ZITATE || []; if (!Z.length) return null;
   const jahr = d.getFullYear(), doy = Math.round((Date.UTC(jahr, d.getMonth(), d.getDate()) - Date.UTC(jahr, 0, 1)) / 86400000) + 1;

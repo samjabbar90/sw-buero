@@ -1423,6 +1423,8 @@
           ["sw-schnellreise", "Reise", "reise", schnellreise],
           ["sw-ideen", "Ideen", "ideen", () => ideenOeffnen()],
           ["sw-kalender", "Kalender", "kalender", () => glasFenster(SEITEN + "kalender.html?t=" + Date.now())],
+          ["sw-wer", "Wer ist da", "wer", () => glasFenster(SEITEN + "wer.html?t=" + Date.now())],
+          // 11.10.: Liste mit Live-Anzeige (Recht „live“)
           ["sw-mein-profil", "Profil", "profil", () => glasFenster(SEITEN + "profil.html?ich=1&tore=" + toreVon(WA.player.name || "") + "&t=" + Date.now())],
           ...tcAktiv ? [["sw-tagescheck", "Tages-Check", "tagescheck", () => glasFenster(SEITEN + "tagescheck.html?t=" + Date.now())]] : [],
           ...kzAktiv ? [["sw-arbeitszeit", "Arbeitszeit", "arbeitszeit", () => glasFenster(SEITEN + "kernzeit.html?t=" + Date.now())], ["sw-feierabend", "Feierabend", "feierabend", feierabendOeffnen]] : []

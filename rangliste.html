@@ -36,7 +36,7 @@ const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;"
     document.getElementById("u").textContent = `Health & Wellbeing · ${d.liste.length} machen mit · Ziel ${d.zielProzent} %`;
     document.getElementById("liste").innerHTML = d.liste.length ? d.liste.map((x, i) => `<div class="z${x.ich ? " ich" : ""}"><span class="n">${i < 3 ? M[i] : (i + 1) + "."} ${esc(x.name)}${x.ich ? " (du)" : ""}${x.geschafft ? " 🎉" : ""}</span>
       <span class="b"><div style="width:${Math.min(100, x.prozent)}%"></div><span class="ziel" style="left:${d.zielProzent}%"></span></span><span class="p">${x.prozent.toLocaleString("de-DE")} %</span></div>`).join("")
-      : '<div class="leer">Noch macht niemand mit – starte die Challenge im Dashboard.</div>';
+      : '<div class="leer">Noch macht niemand mit – starte die Challenge im SW-internen Portal.</div>';
   } catch (e) { document.getElementById("liste").innerHTML = '<div class="leer">' + esc(e.message) + "</div>"; }
 })();
 </script>

@@ -53,7 +53,7 @@
 <header><span style="font-size:22px">💡</span><h1 id="kopf">Meine Ideen</h1><span class="schloss">🔒 nur du</span></header>
 <main id="inhalt"><div class="leer">Lade …</div></main>
 <script>
-// „Meine Ideen“ im virtuellen Büro (08.10.2026, Sam) — dasselbe Board wie im Dashboard. Privat: Zugriff nur mit dem
+// „Meine Ideen“ im virtuellen Büro (08.10.2026, Sam) — dasselbe Board wie im SW-internen Portal. Privat: Zugriff nur mit dem
 // Büro-Ausweis (einmal pro Gerät Benutzername + Büro-PIN), der Token liegt nur in diesem Browser.
 const KEY = "a21b2aa2a42fe6189b05773c07bbc9ad78e38b34ba3bb6fe", API = "https://swdigitaltest.de/buero-praesenz";
 const $ = id => document.getElementById(id);
@@ -68,7 +68,7 @@ async function api(pfad, opt = {}) {
 function ausweisFormular(meldung) {
   $("kopf").textContent = "Büro-Ausweis";
   $("inhalt").innerHTML = `<div class="box"><div style="font-size:14px">Einmal pro Gerät: damit nur <b>du</b> deine Ideen siehst.</div>
-    <div class="m">Die Büro-PIN erzeugst du im Dashboard auf der Startseite unter 🔑 Büro-PIN.</div>
+    <div class="m">Die Büro-PIN erzeugst du im SW-internen Portal auf der Startseite unter 🔑 Büro-PIN.</div>
     <label>Benutzername</label><input id="ben" autocomplete="username">
     <label>Büro-PIN</label><input id="pin" inputmode="numeric" autocomplete="one-time-code" maxlength="7">
     <div class="fehler" id="fe">${esc(meldung || "")}</div><button id="los" style="width:100%">Ausweis speichern</button></div>`;

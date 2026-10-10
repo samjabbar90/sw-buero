@@ -40,8 +40,8 @@
 <script src="https://swdigitaltest.de/hc-masken.js"></script>
 <script>
 // SW-Bot am Empfang im virtuellen Büro (08.10.2026, Sam: Figur B). Gleiche Bereiche und Masken wie das Helpcenter
-// (hc-masken.js vom Dashboard geladen — dort liegt die einzige Fassung), nur interne Ticket-Arten. Die Seite liegt auf GitHub Pages,
-// weil das Dashboard sich nicht in fremde Fenster einbetten lässt (X-Frame-Options). Das Ticket entsteht über /buero-praesenz/helpdesk/ticket unter dem Büro-Namen.
+// (hc-masken.js vom SW-internen Portal geladen — dort liegt die einzige Fassung), nur interne Ticket-Arten. Die Seite liegt auf GitHub Pages,
+// weil das SW-interne Portal sich nicht in fremde Fenster einbetten lässt (X-Frame-Options). Das Ticket entsteht über /buero-praesenz/helpdesk/ticket unter dem Büro-Namen.
 const KEY = "a21b2aa2a42fe6189b05773c07bbc9ad78e38b34ba3bb6fe";
 const NAME = new URLSearchParams(location.search).get("name") || "";
 const $chat = document.getElementById("chat");
@@ -79,8 +79,8 @@ function maske(k, s) {
   sag("Alles klar! Bitte noch kurz ausfüllen:");
   const alt = document.getElementById("form-content"); if (alt) alt.removeAttribute("id");
   const f = document.createElement("div"); f.id = "form-content"; f.innerHTML = getFormHTML(s.id);
-  // Anhänge gehen nur im Dashboard
-  f.querySelectorAll('input[type="file"]').forEach(e => { const fg = e.closest(".fg"); if (fg) fg.innerHTML = '<span class="hinweis">📎 Anhänge kannst du danach im Dashboard am Ticket ergänzen.</span>'; });
+  // Anhänge gehen nur im SW-internen Portal
+  f.querySelectorAll('input[type="file"]').forEach(e => { const fg = e.closest(".fg"); if (fg) fg.innerHTML = '<span class="hinweis">📎 Anhänge kannst du danach im SW-internen Portal am Ticket ergänzen.</span>'; });
   // Mitarbeiter-Auswahl (z. B. Offboarding) füllen
   f.querySelectorAll("select#f-ma, select#f-direkt-ma").forEach(sel => start.mitarbeiter.forEach(n => { const o = document.createElement("option"); o.value = n; o.textContent = n; sel.appendChild(o); }));
   $chat.appendChild(f);
@@ -105,7 +105,7 @@ async function absenden(k, s, f, fehler, btn) {
     if (!r.ok || !d.ok) throw new Error(d.error || "Unbekannter Fehler");
     f.querySelectorAll("input,select,textarea").forEach(e => e.disabled = true);
     sag(`✅ Danke${start.vorname ? ", " + start.vorname : ""}! Dein Ticket ${d.nummer || ""} „${d.betreff}“ ist in der Aufgaben Box. Das Team kümmert sich darum.`);
-    sag("Du bekommst eine Meldung, sobald sich etwas tut. Alle deine Tickets findest du in der Aufgaben Box im Dashboard.");
+    sag("Du bekommst eine Meldung, sobald sich etwas tut. Alle deine Tickets findest du in der Aufgaben Box im SW-internen Portal.");
     knoepfe([["➕ Noch etwas anderes", () => bereichWaehlen()], ["👋 Danke, das war’s", () => sag("Gern geschehen! Einen schönen Tag 😊")]], true);
   } catch (e) {
     sag("😕 Das hat nicht geklappt: " + e.message);

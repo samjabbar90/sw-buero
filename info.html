@@ -86,7 +86,7 @@ $('news').addEventListener('click', async () => {
   setTimeout(newsZaehlen, 4000);
 });
 newsZaehlen(); setInterval(newsZaehlen, 60000);
-// Online seit (09.10., Sam: Layout 1): erstes Betreten heute laut Dashboard + wie lange schon
+// Online seit (09.10., Sam: Layout 1): erstes Betreten heute laut SW-internem Portal + wie lange schon
 let seitMin = null;
 async function onlineLaden() {
   try { const d = await (await fetch("https://swdigitaltest.de/buero-praesenz/online?name=" + encodeURIComponent(WA.player.name || ""), { headers: { "X-Buero-Key": NEWS_KEY } })).json();

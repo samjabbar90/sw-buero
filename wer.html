@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Wer ist da</title>
+<!-- „Wer ist da“ (11.10.2026, Sam): alle im Büro mit Raum; mit Recht „Live-Anzeige“ zusätzlich, woran die freigeschalteten Kollegen
+     gerade im SW-internen Portal arbeiten (rotes „Live“). Klick auf eine Person = Profil, 🚶 = hingehen. Server: /buero-praesenz/wer -->
+<style>
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:system-ui,-apple-system,"Segoe UI",sans-serif; background:#f8fafc; color:#0f172a; }
+  header { position:sticky; top:0; z-index:2; background:#0f766e; color:#fff; padding:12px 14px; display:flex; align-items:center; gap:8px; }
+  header h1 { margin:0; font-size:17px; flex:1; } main { padding:8px 10px 20px; }
+  .r { display:flex; align-items:center; gap:10px; padding:9px 8px; border-radius:10px; cursor:pointer; }
+  .r:hover { background:rgba(13,148,136,.08); }
+  .av { width:34px; height:34px; border-radius:50%; background:#0d9488 center/cover no-repeat; color:#fff; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; flex:none; }
+  .n { font-weight:700; font-size:14px; } .s { font-size:12px; color:#64748b; margin-top:1px; }
+  .live { display:inline-flex; align-items:center; gap:4px; font-size:10.5px; font-weight:700; color:#b91c1c; background:#fee2e2; border-radius:999px; padding:1px 7px; margin-left:4px; }
+  .live:before { content:""; width:6px; height:6px; border-radius:50%; background:#ef4444; }
+  .zul { font-size:11px; color:#94a3b8; margin-left:4px; }
+  .was { font-size:12px; color:#0f766e; margin-top:2px; }
+  button.hin { font:inherit; font-size:12px; border:1.5px solid #cbd5e1; background:#fff; border-radius:8px; padding:4px 8px; cursor:pointer; flex:none; }
+  .leer { color:#64748b; font-size:13px; padding:20px 8px; text-align:center; }
+  html.glas header { background:transparent !important; } html.glas .s, html.glas .zul { color:rgba(255,255,255,.6) !important; } html.glas .was { color:#5eead4 !important; }
+  html.glas .r:hover { background:rgba(255,255,255,.06) !important; } html.glas button.hin { background:rgba(255,255,255,.08) !important; border-color:rgba(255,255,255,.2) !important; color:#fff !important; }
+  html.glas .live { background:rgba(239,68,68,.2) !important; color:#fca5a5 !important; }
+</style>
+<script src="glas.js?v=1791559958"></script>
+</head>
+<body>
+<header><h1 id="kopf">👥 Wer ist da</h1></header>
+<main id="liste"><div class="leer">Lade …</div></main>
+<script src="https://play.workadventu.re/iframe_api.js"></script>
+<script>
+const KEY = "a21b2aa2a42fe6189b05773c07bbc9ad78e38b34ba3bb6fe", API = "https://swdigitaltest.de/buero-praesenz";
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const ausweis = () => { try { return localStorage.getItem("swBueroAusweis") || ""; } catch { return ""; } };
+const glas = new URLSearchParams(location.search).has("glas") ? "&glas=1" : "";
+const minSeit = ms => { const m = Math.max(0, Math.round((Date.now() - ms) / 60000)); return m < 60 ? m + " Min" : Math.floor(m / 60) + " Std"; };
+async function laden() {
+  let l;
+  try { const r = await fetch(API + "/wer", { headers: { "X-Buero-Key": KEY, "X-Buero-Ausweis": ausweis(), "X-Buero-Name": encodeURIComponent(window.__waName || "") } });
+    l = await r.json(); if (!r.ok) throw new Error(l.error || "Fehler"); }
+  catch (e) { $("liste").innerHTML = `<div class="leer">${esc(/ausweis/.test(e.message) ? "Bitte das Büro kurz neu entsperren." : e.message)}</div>`; return; }
+  $("kopf").textContent = "👥 Wer ist da · " + l.length;
+  if (!l.length) { $("liste").innerHTML = '<div class="leer">Gerade ist niemand im Büro.</div>'; return; }
+  $("liste").innerHTML = l.map(p => {
+    const ini = String(p.name).split(/\s+/).map(t => t[0] || "").join("").slice(0, 2).toUpperCase(), lv = p.live;
+    const status = lv && lv.pfad ? (lv.live ? '<span class="live">Live</span>' : `<span class="zul">zuletzt im Portal vor ${minSeit(lv.zuletzt)}</span>`) : "";
+    const was = lv && lv.pfad && lv.live ? `<div class="was">${esc(lv.pfad.split(" › ").slice(-2).join(" › "))}${lv.detail ? " · " + esc(lv.detail) : ""}</div>` : "";
+    return `<div class="r" data-p="${esc(p.name)}"><div class="av" style="${p.foto ? "background-image:url('" + esc(p.foto) + "')" : ""}">${p.foto ? "" : esc(ini)}</div>
+      <div style="flex:1;min-width:0"><div class="n">${esc(p.name)}${status}</div><div class="s">${esc(p.bereich)}${p.telefoniert ? " · 📞 telefoniert" : ""}${p.tuer === "zu" ? " · 🔒 Tür zu" : p.tuer === "besetzt" ? " · beschäftigt" : ""}</div>${was}</div>
+      <button class="hin" data-hin="${esc(p.name)}" title="Zu ${esc(p.name)} gehen">🚶</button></div>`;
+  }).join("");
+  document.querySelectorAll("[data-p]").forEach(el => el.onclick = ev => { if (ev.target.closest("[data-hin]")) return; location.href = "profil.html?name=" + encodeURIComponent(el.dataset.p) + glas + "&t=" + Date.now(); });
+  document.querySelectorAll("[data-hin]").forEach(b => b.onclick = () => { try { WA.player.state.saveVariable("swAktion", { was: "zuPerson", name: b.dataset.hin, t: Date.now() }, { public: false, persist: false }); } catch {} });
+  clearTimeout(laden.t); laden.t = setTimeout(laden, 30000);
+}
+(async () => { for (let i = 0; i < 30 && typeof WA === "undefined"; i++) await new Promise(r => setTimeout(r, 100)); try { await Promise.race([WA.onInit(), new Promise(r => setTimeout(r, 2500))]); window.__waName = WA.player.name || ""; } catch {} laden(); })();
+</script>
+</body>
+</html>
