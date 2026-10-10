@@ -44,14 +44,23 @@
   html.glas .raster .std { border-color:rgba(255,255,255,.12) !important; color:rgba(255,255,255,.55) !important; }
   html.glas .blk { background:rgba(99,102,241,.45) !important; color:#fff !important; } html.glas .blk.google { background:rgba(8,145,178,.45) !important; } html.glas .blk.besetzt { background:rgba(255,255,255,.14) !important; }
   html.glas .mini span.wt { color:rgba(255,255,255,.6) !important; }
+  /* Anträge (Reiter, 10.10.2026) */
+  .konto { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:10px; } .konto div { background:#fff; border:1.5px solid #e2e8f0; border-radius:12px; padding:8px; text-align:center; }
+  .konto b { display:block; font-size:22px; } .konto small { color:#64748b; font-size:12px; }
+  .arten { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:6px; } @media (max-width:560px) { .arten { grid-template-columns:1fr 1fr; } }
+  .arten button { background:#fff; color:#0f766e; padding:9px 4px; } .arten button.an { background:#0d9488; color:#fff; }
+  .antr { display:flex; justify-content:space-between; align-items:center; gap:8px; padding:8px 4px; border-top:1px solid #e2e8f0; font-size:13.5px; } .antr:first-child { border-top:0; }
+  .st { font-size:12px; font-weight:700; padding:2px 9px; border-radius:999px; white-space:nowrap; } .st.offen { background:#fef3c7; color:#92400e; } .st.genehmigt { background:#dcfce7; color:#166534; } .st.abgelehnt { background:#fee2e2; color:#991b1b; }
+  html.glas .konto div { background:rgba(255,255,255,.08) !important; border-color:rgba(255,255,255,.15) !important; } html.glas .konto small { color:rgba(255,255,255,.7) !important; }
+  html.glas .antr { border-color:rgba(255,255,255,.12) !important; } html.glas .arten button:not(.an) { background:rgba(255,255,255,.08) !important; color:#e2e8f0 !important; }
   html.glas .t { background:rgba(99,102,241,.22) !important; } html.glas .t.google { background:rgba(8,145,178,.22) !important; } html.glas .t.besetzt { background:rgba(255,255,255,.08) !important; }
   html.glas .t .z, html.glas .tag { color:#e2e8f0 !important; } html.glas .t .m, html.glas .leer { color:rgba(255,255,255,.7) !important; } html.glas .tag.heute { color:#5eead4 !important; }
 </style>
 <script src="glas.js?v=1791559958"></script>
 </head>
 <body>
-<header><h1>📅 Kalender</h1>
-  <div class="leiste">
+<header><h1 style="display:flex;gap:6px;align-items:center">📅 <button class="an" id="rKal">Kalender</button><button class="leicht" id="rAntr">📝 Anträge</button></h1>
+  <div class="leiste" id="kalLeiste">
     <select id="wer" title="Wessen Kalender"></select>
     <button class="leicht" id="zur">‹</button><b id="titel" style="min-width:120px;text-align:center"></b><button class="leicht" id="vor">›</button>
     <button class="leicht" id="heute">Heute</button>
@@ -223,6 +232,87 @@ async function raumForm() {
     S.form = { art: "raum", raeume: raeume.filter(r => !/^Büro /.test(r)), meine: alle.filter(r => r.name === ich) }; zeichnen(); }
   catch (e) { if (e.message === "ausweis") return anmelden(); alert(e.message); }
 }
+// ===== Anträge (10.10.2026, Sam: Layout A „Reiter im Kalender“) — dieselben Anträge wie im Dashboard, nur die eigenen =====
+const API_ANTR = "https://swdigitaltest.de/buero-praesenz/antr";
+const ARTEN = { urlaub: "🏖️ Urlaub", krankmeldung: "🤒 Krank", ueberstunden: "⏱️ Überstunden", homeoffice: "🏠 Home-Office" };
+const A = { form: null, liste: [], konto: null };
+async function apiAntr(pfad, opt = {}) {
+  const h = { "X-Buero-Key": KEY, "X-Buero-Ausweis": ausweis.holen(), "X-Buero-Name": encodeURIComponent(window.__waName || "") };
+  if (!(opt.body instanceof FormData)) h["Content-Type"] = "application/json";
+  const r = await fetch(API_ANTR + pfad, { ...opt, headers: h });
+  const d = await r.json().catch(() => ({}));
+  if (r.status === 401 && /ausweis/.test(d.error || "")) { ausweis.setzen(""); throw new Error("ausweis"); }
+  if (!r.ok) throw new Error(d.error || "Fehler"); return d;
+}
+const dDE = s => s ? String(s).slice(0, 10).split("-").reverse().join(".") : "";
+function reiter(n) {
+  S.reiter = n; $("rKal").className = n === "kal" ? "an" : "leicht"; $("rAntr").className = n === "antr" ? "an" : "leicht";
+  $("kalLeiste").style.display = n === "kal" ? "" : "none";
+  if (n === "kal") laden(); else antrLaden();
+}
+async function antrLaden() {
+  $("inhalt").innerHTML = '<div class="leer">Lädt …</div>';
+  try { [A.liste, A.konto] = await Promise.all([apiAntr("/meine"), apiAntr("/urlaub/konto")]); }
+  catch (e) { if (e.message === "ausweis") return anmelden("Bitte kurz neu anmelden."); $("inhalt").innerHTML = '<div class="leer">' + esc(e.message) + "</div>"; return; }
+  antrZeichnen();
+}
+const zahl = n => String(Math.round(n * 10) / 10).replace(".", ",");
+function antrZeile(a) {
+  const art = a.art === "standort" ? (a.typ === "standort" ? "📍 " + (a.standortName || "Standort") : ARTEN.homeoffice) : (ARTEN[a.typ] || (a.typ === "minusstunden" ? "⏱️ Minusstunden" : a.typ));
+  const zeit = dDE(a.von) + (a.bis && a.bis !== a.von ? " – " + dDE(a.bis) : "");
+  const umfang = a.stunden ? zahl(a.stunden) + " Std" : a.halb ? "½ Tag" : "";
+  const st = a.status === "genehmigt" ? (a.typ === "krankmeldung" ? "zur Kenntnis" : "genehmigt") : a.status === "abgelehnt" ? "abgelehnt" : "offen";
+  return `<div class="antr"><div><b>${esc(art)}</b> · ${esc(zeit)}${umfang ? " · " + esc(umfang) : ""}${a.datei ? " · 📎" : ""}
+    ${a.notiz || a.kommentar ? `<div class="leer" style="padding:2px 0 0">${esc(a.notiz || a.kommentar)}</div>` : ""}${a.entscheidKommentar ? `<div class="leer" style="padding:2px 0 0">💬 ${esc(a.entscheidKommentar)}</div>` : ""}</div>
+    <span class="st ${esc(a.status || "offen")}">${esc(st)}</span></div>`;
+}
+function antrFormHtml() {
+  const f = A.form, h = heuteIso();
+  let x = `<div class="box"><b>Neuer Antrag</b><div class="arten" style="margin-top:8px">${Object.entries(ARTEN).map(([k, v]) => `<button data-art="${k}" class="${f.art === k ? "an" : ""}">${v}</button>`).join("")}</div>`;
+  const einTag = f.art === "ueberstunden" || f.umfang === "stunden";
+  x += `<div class="reihe"><div><label>${einTag ? "Tag" : "von"}</label><input id="aVon" type="date" value="${esc(f.von || h)}" style="width:100%"></div>${einTag ? "<div></div>" : `<div><label>bis</label><input id="aBis" type="date" value="${esc(f.bis || f.von || h)}" style="width:100%"></div>`}</div>`;
+  if (f.art === "urlaub") x += `<label>Umfang</label><select id="aUmfang" style="width:100%"><option value="ganz">ganze Tage</option><option value="halb" ${f.umfang === "halb" ? "selected" : ""}>½ Tag</option><option value="stunden" ${f.umfang === "stunden" ? "selected" : ""}>stundenweise (ein Tag)</option></select>`;
+  if (f.art === "krankmeldung") x += `<label style="display:flex;gap:6px;align-items:center"><input id="aHalb" type="checkbox" ${f.umfang === "halb" ? "checked" : ""}> nur ½ Tag</label><label>Nachweis (optional, Bild oder PDF, max. 5 MB)</label><input id="aDatei" type="file" accept="image/*,application/pdf" style="width:100%">`;
+  if (f.art === "ueberstunden" || f.umfang === "stunden") x += `<label>Stunden</label><input id="aStd" type="number" min="0.5" max="${f.art === "ueberstunden" ? 8 : 7.5}" step="0.5" value="${esc(f.stunden || "")}" style="width:100%" placeholder="z. B. 2,5">
+    ${f.art === "ueberstunden" ? '<div class="leer">Überstunden abfeiern – geht nur mit Guthaben aus der Zeiterfassung, max. 8 Std pro Tag.</div>' : ""}`;
+  x += `<label>Notiz (optional)</label><input id="aNotiz" maxlength="500" style="width:100%" value="${esc(f.notiz || "")}">
+    <div class="fehler" id="aFe"></div><div style="display:flex;gap:6px;margin-top:8px"><button id="aOk">Beantragen</button><button class="leicht" id="aAbbr">Abbrechen</button></div></div>`;
+  return x;
+}
+function antrZeichnen() {
+  const k = A.konto || {};
+  let h = `<div class="konto"><div><b>${zahl(k.kontingent || 0)}</b><small>Urlaub ${esc(k.jahr || "")}</small></div><div><b>${zahl(k.genommen || 0)}</b><small>genommen</small></div><div><b>${zahl(k.rest || 0)}</b><small>Rest</small></div></div>`;
+  h += A.form ? antrFormHtml() : '<button id="aNeu" style="width:100%;padding:10px;margin-bottom:10px">＋ Neuer Antrag</button>';
+  h += `<div class="box"><b>Meine Anträge</b><div style="margin-top:6px">${A.liste.length ? A.liste.map(antrZeile).join("") : '<div class="leer">Noch keine Anträge.</div>'}</div></div>
+    <div class="leer">Genehmigt wird wie bisher von der Verwaltung – du bekommst eine Meldung, sobald entschieden ist.</div>`;
+  $("inhalt").innerHTML = h;
+  if ($("aNeu")) $("aNeu").onclick = () => { A.form = { art: "urlaub", umfang: "ganz" }; antrZeichnen(); };
+  if (!A.form) return;
+  const merken = () => { const f = A.form; f.von = $("aVon").value; if ($("aBis")) f.bis = $("aBis").value; if ($("aUmfang")) f.umfang = $("aUmfang").value;
+    if ($("aHalb")) f.umfang = $("aHalb").checked ? "halb" : "ganz"; if ($("aStd")) f.stunden = $("aStd").value; f.notiz = $("aNotiz").value; };
+  document.querySelectorAll("[data-art]").forEach(b => b.onclick = () => { merken(); A.form.art = b.dataset.art; A.form.umfang = "ganz"; antrZeichnen(); });
+  if ($("aUmfang")) $("aUmfang").onchange = () => { merken(); antrZeichnen(); };
+  $("aAbbr").onclick = () => { A.form = null; antrZeichnen(); };
+  $("aOk").onclick = async () => {
+    merken(); const f = A.form, k = $("aOk"); $("aFe").textContent = "";
+    const von = f.von, bis = (f.art === "ueberstunden" || f.umfang === "stunden") ? f.von : (f.bis || f.von);
+    if (!von) return $("aFe").textContent = "Bitte ein Datum wählen.";
+    if (bis < von) return $("aFe").textContent = "„bis“ liegt vor „von“.";
+    if ((f.art === "ueberstunden" || f.umfang === "stunden") && !(parseFloat(String(f.stunden).replace(",", ".")) > 0)) return $("aFe").textContent = "Bitte die Stunden eintragen.";
+    k.disabled = true;
+    try {
+      if (f.art === "homeoffice") await apiAntr("/standort-antraege", { method: "POST", body: JSON.stringify({ typ: "homeoffice", von, bis, kommentar: f.notiz || "" }) });
+      else {
+        const fd = new FormData(); fd.append("typ", f.art); fd.append("von", von); fd.append("bis", bis); fd.append("notiz", f.notiz || "");
+        if (f.umfang === "halb") fd.append("halb", "true");
+        if (f.art === "ueberstunden" || f.umfang === "stunden") fd.append("stunden", String(f.stunden).replace(",", "."));
+        const datei = $("aDatei") && $("aDatei").files[0]; if (datei) fd.append("datei", datei);
+        await apiAntr("/antraege", { method: "POST", body: fd });
+      }
+      A.form = null; await antrLaden();
+    } catch (e) { k.disabled = false; if (e.message === "ausweis") return anmelden("Bitte kurz neu anmelden."); $("aFe").textContent = e.message; }
+  };
+}
 async function start() {
   if (!ausweis.holen()) return anmelden();
   try { S.personen = await api("/kalender/personen"); }
@@ -245,7 +335,9 @@ async function start() {
   $("ansTag").onclick = () => { S.ansicht = "tag"; laden(); }; $("ansWoche").onclick = () => { S.ansicht = "woche"; laden(); };
   $("neu").onclick = () => { S.form = { art: "termin", t: null }; zeichnen(); };
   $("raum").onclick = raumForm;
-  laden();
+  $("rKal").onclick = () => reiter("kal"); $("rAntr").onclick = () => reiter("antr");
+  // direkt in die Anträge springen: kalender.html?reiter=antraege (z. B. aus einer Meldung)
+  if (new URLSearchParams(location.search).get("reiter") === "antraege") reiter("antr"); else laden();
 }
 start();
 </script>
