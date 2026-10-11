@@ -43,7 +43,7 @@ const uhr = am => am ? new Date(am).toLocaleString("de-DE", { day: "2-digit", mo
 const AGENT = (new URLSearchParams(location.search).get("agent") || "rengid").toLowerCase();
 const WER = {
   rengid: { name: "Rengid", titel: "IT-Agent · IT-Abteilung", foto: "rengid-foto.jpg", gruss: "Hallo 👋 Ich bin <b>Rengid</b>, euer IT-Agent. Alle 15 Minuten prüfe ich DATEV, KI, E-Mail, Portale, Büro, Server, Sicherungen, Automatisierungen und Sicherheit. Wird etwas rot, bekommst du sofort eine Glocke. Reparieren tue ich nichts selbst – ich sage dir, was los ist und was zu tun ist." },
-  olga: { name: "Olga", titel: "IT-Abteilung", foto: "olga-foto.jpg", gruss: "Hallo 👋 Ich bin <b>Olga</b> aus der IT-Abteilung. Hier siehst du, was Rengid zuletzt geprüft hat." },
+  olga: { name: "Olga", titel: "Sicherheit & Mitarbeiter · IT-Abteilung", foto: "olga-foto.jpg", gruss: "Hallo 👋 Ich bin <b>Olga</b>. Ich passe auf die <b>Sicherheit</b> auf (fehlgeschlagene Anmeldungen, neue Geräte, Rechte, unbenutzte Konten) und auf <b>neue und ausgeschiedene Mitarbeiter</b>. Montags um 8 Uhr schicke ich dir den Wochenbericht. Sperren tue ich nichts selbst – ich sage dir Bescheid." },
 }[AGENT] || null;
 const A = WER || { name: "IT-Abteilung", titel: "", foto: "rengid-foto.jpg", gruss: "" };
 document.title = A.name + " · IT-Abteilung"; $("name").textContent = A.name; $("titel").textContent = A.titel; $("foto").src = A.foto;
@@ -52,7 +52,8 @@ async function laden() {
   let d;
   try { const r = await fetch(API, { headers: kopf() }); d = await r.json(); if (!r.ok) throw new Error(d.error || ("HTTP " + r.status)); }
   catch (e) { $("liste").innerHTML = '<div class="tipp">' + esc(/ausweis/.test(e.message) ? "Bitte erst im Büro anmelden (Büro-PIN)." : e.message) + '</div>'; return; }
-  const S = d.summe || {}, P = (d.pruefungen || []).slice().sort((a, b) => RANG[a.stufe] - RANG[b.stufe]);
+  const OLGA = ["Sicherheit", "Mitarbeiter"], alle = (d.pruefungen || []).filter(p => AGENT === "olga" ? OLGA.includes(p.gruppe) : !OLGA.includes(p.gruppe) || p.k === "admins" || p.k === "updates");
+  const S = { rot: alle.filter(p => p.stufe === "rot").length, gelb: alle.filter(p => p.stufe === "gelb").length, gruen: alle.filter(p => p.stufe === "gruen").length }, P = alle.slice().sort((a, b) => RANG[a.stufe] - RANG[b.stufe]);
   let h = '<div class="kopf">' + A.gruss
     + '<div class="zahlen"><div><b style="color:' + FB.rot + '">' + (S.rot || 0) + '</b>Problem</div><div><b style="color:' + FB.gelb + '">' + (S.gelb || 0) + '</b>Achtung</div><div><b style="color:' + FB.gruen + '">' + (S.gruen || 0) + '</b>in Ordnung</div></div>'
     + '<div class="tipp" style="padding:4px 0 0">Letzte Prüfung: ' + (d.am ? uhr(d.am) : "noch keine") + '</div>'
