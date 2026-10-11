@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>IT-Abteilung</title>
+<!-- IT-Abteilung (11.10.2026, Sam): Leertaste bei Rengid (IT-Agent) bzw. Olga. Zeigt den aktuellen IT-Status aus der
+     Prüfrunde des IT-Agenten (alle 15 Minuten, ohne KI). Nur Admins. Vollständige Ansicht: Portal › Controlling › IT-Status. -->
+<style>
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:system-ui,-apple-system,"Segoe UI",sans-serif; background:#f8fafc; color:#0f172a; display:flex; flex-direction:column; height:100vh; }
+  header { background:#334155; color:#fff; padding:12px 14px; display:flex; align-items:center; gap:10px; flex:none; }
+  .av { width:38px; height:38px; border-radius:50%; flex:none; border:2px solid #94a3b8; overflow:hidden; background:#475569; }
+  .av img { width:100%; height:100%; object-fit:cover; }
+  header h1 { margin:0; font-size:16px; } header .s { font-size:12px; color:#cbd5e1; }
+  main { flex:1; overflow-y:auto; padding:12px; }
+  .tipp { color:#64748b; font-size:13px; padding:6px 2px; line-height:1.5; }
+  .kopf { background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:10px 12px; font-size:13px; line-height:1.5; margin-bottom:10px; }
+  .zahlen { display:flex; gap:8px; margin:8px 0 2px; } .zahlen div { flex:1; text-align:center; background:#f1f5f9; border-radius:10px; padding:6px; font-size:11.5px; color:#475569; } .zahlen b { display:block; font-size:20px; }
+  .e { background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:9px 12px; margin:7px 0; font-size:13px; display:flex; gap:9px; }
+  .p { width:10px; height:10px; border-radius:50%; margin-top:5px; flex:none; }
+  .e b { font-size:13.5px; } .e .w { font-size:12px; color:#64748b; margin-top:2px; }
+  a.k { display:inline-block; font-size:13px; font-weight:700; border-radius:9px; padding:7px 14px; background:#334155; color:#fff; text-decoration:none; margin-top:6px; }
+  html.glas .e, html.glas .kopf { background:rgba(255,255,255,.08) !important; border-color:rgba(255,255,255,.15) !important; color:#fff !important; }
+  html.glas .tipp, html.glas .e .w { color:rgba(255,255,255,.65) !important; } html.glas .zahlen div { background:rgba(255,255,255,.1) !important; color:#fff !important; }
+</style>
+<script src="glas.js?v=1791560000"></script>
+</head>
+<body>
+<header>
+  <div class="av"><img id="foto" src="rengid-foto.jpg" alt=""></div>
+  <div><h1 id="name">Rengid</h1><div class="s" id="titel">IT-Agent · IT-Abteilung</div></div>
+</header>
+<main id="liste"><div class="tipp">Lade …</div></main>
+<script src="https://play.workadventu.re/iframe_api.js"></script>
+<script>
+const KEY = "a21b2aa2a42fe6189b05773c07bbc9ad78e38b34ba3bb6fe", API = "https://swdigitaltest.de/buero-praesenz/it-status";
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const ausweis = () => { try { return localStorage.getItem("swBueroAusweis") || ""; } catch { return ""; } };
+const kopf = () => ({ "X-Buero-Key": KEY, "X-Buero-Ausweis": ausweis(), "X-Buero-Name": encodeURIComponent(window.__waName || "") });
+const uhr = am => am ? new Date(am).toLocaleString("de-DE", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "";
+const AGENT = (new URLSearchParams(location.search).get("agent") || "rengid").toLowerCase();
+const WER = {
+  rengid: { name: "Rengid", titel: "IT-Agent · IT-Abteilung", foto: "rengid-foto.jpg", gruss: "Hallo 👋 Ich bin <b>Rengid</b>, euer IT-Agent. Alle 15 Minuten prüfe ich DATEV, KI, E-Mail, Portale, Büro, Server, Sicherungen, Automatisierungen und Sicherheit. Wird etwas rot, bekommst du sofort eine Glocke. Reparieren tue ich nichts selbst – ich sage dir, was los ist und was zu tun ist." },
+  olga: { name: "Olga", titel: "IT-Abteilung", foto: "olga-foto.jpg", gruss: "Hallo 👋 Ich bin <b>Olga</b> aus der IT-Abteilung. Hier siehst du, was Rengid zuletzt geprüft hat." },
+}[AGENT] || null;
+const A = WER || { name: "IT-Abteilung", titel: "", foto: "rengid-foto.jpg", gruss: "" };
+document.title = A.name + " · IT-Abteilung"; $("name").textContent = A.name; $("titel").textContent = A.titel; $("foto").src = A.foto;
+const FB = { rot: "#dc2626", gelb: "#d97706", gruen: "#16a34a", grau: "#94a3b8" }, RANG = { rot: 0, gelb: 1, grau: 3, gruen: 2 };
+async function laden() {
+  let d;
+  try { const r = await fetch(API, { headers: kopf() }); d = await r.json(); if (!r.ok) throw new Error(d.error || ("HTTP " + r.status)); }
+  catch (e) { $("liste").innerHTML = '<div class="tipp">' + esc(/ausweis/.test(e.message) ? "Bitte erst im Büro anmelden (Büro-PIN)." : e.message) + '</div>'; return; }
+  const S = d.summe || {}, P = (d.pruefungen || []).slice().sort((a, b) => RANG[a.stufe] - RANG[b.stufe]);
+  let h = '<div class="kopf">' + A.gruss
+    + '<div class="zahlen"><div><b style="color:' + FB.rot + '">' + (S.rot || 0) + '</b>Problem</div><div><b style="color:' + FB.gelb + '">' + (S.gelb || 0) + '</b>Achtung</div><div><b style="color:' + FB.gruen + '">' + (S.gruen || 0) + '</b>in Ordnung</div></div>'
+    + '<div class="tipp" style="padding:4px 0 0">Letzte Prüfung: ' + (d.am ? uhr(d.am) : "noch keine") + '</div>'
+    + '<a class="k" href="https://swdigitaltest.de/dashboard.html" target="_blank" rel="noopener">Ganzer IT-Status im Portal ↗</a></div>';
+  h += P.length ? P.map(p => '<div class="e"><span class="p" style="background:' + FB[p.stufe] + '"></span><div><b>' + esc(p.titel) + '</b><div>' + esc(p.text) + '</div>'
+      + (p.stufe !== "gruen" && p.wirkung ? '<div class="w"><b>Was heißt das:</b> ' + esc(p.wirkung) + '</div>' : '')
+      + (p.stufe !== "gruen" && p.tun ? '<div class="w"><b>Was tun:</b> ' + esc(p.tun) + '</div>' : '') + '</div></div>').join("")
+    : '<div class="tipp">Die erste Prüfrunde läuft kurz nach dem Start des Portals.</div>';
+  $("liste").innerHTML = h;
+}
+(async () => { for (let i = 0; i < 30 && typeof WA === "undefined"; i++) await new Promise(r => setTimeout(r, 100)); try { await Promise.race([WA.onInit(), new Promise(r => setTimeout(r, 2500))]); window.__waName = WA.player.name || ""; } catch {} laden(); })();
+</script>
+</body>
+</html>

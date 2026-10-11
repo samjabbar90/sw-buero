@@ -1138,6 +1138,23 @@
       fenster = null;
     });
   }
+  function itPlatz() {
+    [["rengid", "Rengid · IT-Agent", 94], ["olga", "Olga · IT", 96]].forEach(([k, t, x]) => {
+      let fenster = null;
+      leertasteBereich("it-" + k + "-platz", { x, y: 19, w: 2, h: 2 }, "💬 " + t + " – Leertaste", async () => {
+        try {
+          fenster = await glasFenster(SEITEN + "it-status.html?agent=" + k + "&t=" + Date.now());
+        } catch {
+        }
+      }, () => {
+        try {
+          fenster && fenster.close();
+        } catch {
+        }
+        fenster = null;
+      });
+    });
+  }
   function fussball() {
     try {
       WA.event.on("sw-tor").subscribe((ev) => {
@@ -1450,6 +1467,7 @@
     fussball();
     minaPlatz();
     jaPlatz();
+    itPlatz();
     fussgaengerAmpel();
     klingel();
     hundStarten();
