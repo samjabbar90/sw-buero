@@ -44,6 +44,25 @@ function freiesFeld(px, py, box) {
   return { x: px, y: py };
 }
 function reisen(ziel) { WA.player.teleport(ziel.x, ziel.y); WA.ui.modal.closeModal(); }
+// 11.10.2026 (Sam: „bei Reise immer vor einem Zimmer, nie in ein Zimmer“): vom Raum aus über begehbare Felder suchen — das erste
+// Feld mit mindestens 1 Feld Abstand außerhalb des Raums liegt direkt vor der Tür (der Weg führt ja durch die Tür hinaus)
+// feste Ziele, wo der eingetragene Bereich kleiner ist als der Raum (Feld vor der Tür)
+const VOR_DER_TUER = { "Fitnessraum": [73, 15] };
+function vorDemRaum(r) {
+  if (VOR_DER_TUER[r.name]) { const [fx, fy] = VOR_DER_TUER[r.name]; return { x: fx * T + T / 2, y: fy * T + T / 2 }; }
+  const W = karte.width, H = karte.height, x0 = r.x / T, y0 = r.y / T, x1 = (r.x + r.w) / T - 1, y1 = (r.y + r.h) / T - 1;
+  const innen = (x, y) => x >= x0 && x <= x1 && y >= y0 && y <= y1, nah = (x, y) => x >= x0 - 1 && x <= x1 + 1 && y >= y0 - 1 && y <= y1 + 1;
+  const frei = (x, y) => x >= 0 && y >= 0 && x < W && y < H && !kollision[y * W + x];
+  const start = freiesFeld(r.x + r.w / 2, r.y + r.h / 2, { x0, y0, x1, y1 }), sx = Math.floor(start.x / T), sy = Math.floor(start.y / T);
+  const gesehen = new Set([sx + ',' + sy]), q = [[sx, sy]];
+  while (q.length) {
+    const [x, y] = q.shift();
+    if (!nah(x, y)) return { x: x * T + T / 2, y: y * T + T / 2 };
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const nx = x + dx, ny = y + dy, k = nx + ',' + ny; if (!gesehen.has(k) && frei(nx, ny)) { gesehen.add(k); q.push([nx, ny]); } }
+  }
+  return freiesFeld(r.x + r.w / 2, r.y + r.h + T); // kein Weg gefunden: unterhalb des Raums
+}
+const raumVon = (px, py) => raeume.filter(r => px >= r.x && px < r.x + r.w && py >= r.y && py < r.y + r.h).sort((a, b) => a.w * a.h - b.w * b.h)[0];
 
 function zeichnen() {
   const s = document.getElementById('suche').value.trim().toLowerCase();
@@ -55,8 +74,8 @@ function zeichnen() {
 }
 document.addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
-  if (b.dataset.raum) { const r = raeume[+b.dataset.raum]; reisen(freiesFeld(r.x + r.w / 2, r.y + r.h / 2, { x0: r.x / T, y0: r.y / T, x1: (r.x + r.w) / T - 1, y1: (r.y + r.h) / T - 1 })); }
-  if (b.dataset.spieler) { const p = [...WA.players.list()].find(x => String(x.playerId) === b.dataset.spieler); if (p) reisen(freiesFeld(p.position.x + T, p.position.y)); }
+  if (b.dataset.raum) { const r = raeume[+b.dataset.raum]; reisen(vorDemRaum(r)); }
+  if (b.dataset.spieler) { const p = [...WA.players.list()].find(x => String(x.playerId) === b.dataset.spieler); if (p) { const r = raumVon(p.position.x, p.position.y); reisen(r ? vorDemRaum(r) : freiesFeld(p.position.x + T, p.position.y)); } }
 });
 document.getElementById('suche').addEventListener('input', zeichnen);
 
@@ -70,6 +89,9 @@ WA.onInit().then(async () => {
   alle.filter(l => l.type === 'objectgroup').forEach(l => l.objects.forEach(o => {
     if ((o.class === 'area' || o.type === 'area') && o.name && o.name !== 'start' && !o.name.startsWith('zu-')) raeume.push({ name: o.name, x: o.x, y: o.y, w: o.width, h: o.height });
   }));
+  // Plätze innerhalb eines Raums (z. B. „Mina“ im Social-Media-Büro) sind keine eigenen Reiseziele; doppelte Namen (Fitnessraum) nur einmal
+  raeume = raeume.filter(a => !raeume.some(b => b !== a && b.w * b.h > a.w * a.h && a.x >= b.x && a.y >= b.y && a.x + a.w <= b.x + b.w && a.y + a.h <= b.y + b.h));
+  raeume = raeume.filter((a, i) => raeume.findIndex(b => b.name === a.name) === i);
   // Eigene Büros zuerst alphabetisch, gemeinsame Räume oben
   raeume.sort((a, b) => (a.name.startsWith('Büro') - b.name.startsWith('Büro')) || a.name.localeCompare(b.name, 'de'));
   zeichnen();
