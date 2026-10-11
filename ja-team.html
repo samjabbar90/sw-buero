@@ -49,10 +49,10 @@ async function laden() {
   let h = '<div class="kopf">Hallo 👋 Ich bin <b>Harvey</b>, euer Abschluss-Agent. Ich prüfe beim Jahresabschluss <b>Rückstellungen, Rechnungsabgrenzung, Abschreibungen und Pkw</b> und lege Buchungsvorschläge mit Begründung und Fragen an den Mandanten ab. Ich buche nie selbst – ihr gebt frei.'
     + '<br><a class="k" href="https://swdigitaltest.de/dashboard.html" target="_blank" rel="noopener">Im SW-internen Portal arbeiten ↗</a>'
     + '<div class="tipp" style="padding:6px 0 0">Starten: Mandantenakte › Reiter 📘 Jahresabschluss › „Abschluss-Agent starten“ · ca. 4 Cent je Lauf · diesen Monat '
-    + (M.usd || 0).toFixed(2).replace(".", ",") + ' $ von ' + (M.budget || 0) + ' $' + (d.nurTest ? ' · vorerst nur Test-Mandanten' : '') + '</div></div>';
+    + (M.euro || '0,00 €') + ' von ca. ' + (M.budgetEur || 0) + ' €' + (d.nurTest ? ' · vorerst nur Test-Mandanten' : '') + '</div></div>';
   const L = d.laeufe || [];
   h += L.length ? L.map(l => '<div class="e"><h3>' + esc(l.mandant || "Mandant") + ' · ' + l.jahr + '<span class="st ' + l.status + '">' + (STAT[l.status] || esc(l.status)) + '</span></h3>'
-      + '<div class="meta">' + uhr(l.start) + (l.von ? ' · gestartet von ' + esc(l.von) : '') + (l.usd ? ' · ca. ' + (l.usd * 100).toFixed(1).replace(".", ",") + ' Cent' : '') + '</div>'
+      + '<div class="meta">' + uhr(l.start) + (l.von ? ' · gestartet von ' + esc(l.von) : '') + (l.euro ? ' · ca. ' + esc(l.euro) : '') + '</div>'
       + (l.status === "fertig" ? '<div class="txt">' + esc(l.zusammenfassung) + '</div><div class="chips"><span>' + l.buchungen + ' Buchungsvorschläge</span><span>' + l.fragen + ' Fragen</span></div>' : '')
       + (l.status === "fehler" ? '<div class="txt" style="color:#b91c1c">' + esc(l.fehler) + '</div>' : '') + '</div>').join("")
     : '<div class="tipp">Noch keine Läufe. Starte mich im Portal bei einem Mandanten.</div>';

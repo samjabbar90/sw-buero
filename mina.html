@@ -140,7 +140,7 @@ function zeichnen() {
   }
   const C = DATEN.chat || [];
   $("liste").innerHTML = (C.length ? "" : '<div class="m mina">' + esc(AGD.gruss) + '</div>')
-    + C.map(m => `<div class="m ${m.rolle === "mina" ? "mina" : "du"}">${md(m.text)}</div><div class="zeit ${m.rolle === "mina" ? "" : "du"}">${m.rolle === "mina" ? AGD.name : "Du"} · ${uhr(m.am)}${m.rolle === "mina" ? (m.ohneKi ? ' · <span class="kost frei">kostenlos</span>' : (m.usd != null ? ' · <span class="kost">≈ ' + (m.usd * 100).toLocaleString("de-DE", { maximumFractionDigits: 1 }) + ' ct' + (m.suche ? ' · mit Recherche' : '') + '</span>' : "")) : ""}</div>`).join("")
+    + C.map(m => `<div class="m ${m.rolle === "mina" ? "mina" : "du"}">${md(m.text)}</div><div class="zeit ${m.rolle === "mina" ? "" : "du"}">${m.rolle === "mina" ? AGD.name : "Du"} · ${uhr(m.am)}${m.rolle === "mina" ? (m.ohneKi ? ' · <span class="kost frei">kostenlos</span>' : (m.usd != null ? ' · <span class="kost">≈ ' + (m.usd * 100 * ((DATEN && DATEN.eurKurs) || 0.86)).toLocaleString("de-DE", { maximumFractionDigits: 1 }) + ' Cent' + (m.suche ? ' · mit Recherche' : '') + '</span>' : "")) : ""}</div>`).join("")
     + (wartet ? '<div class="m mina">✍️ ' + AGD.name + ' schreibt … (mit Recherche kann das bis zu einer Minute dauern)</div>' : "");
   $("vor").innerHTML = C.length ? "" : VORSCHLAEGE.map(v => `<button>${esc(v)}</button>`).join("");
   $("vor").querySelectorAll("button").forEach(b => b.onclick = () => { $("text").value = b.textContent; $("text").focus(); });
