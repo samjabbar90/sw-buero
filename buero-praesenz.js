@@ -1125,7 +1125,7 @@
   }
   function jaPlatz() {
     let fenster = null;
-    leertasteBereich("ja-abschluss-platz", { x: 92, y: 8, w: 2, h: 2 }, "📘 Abschluss-Agent · Jahresabschluss – Leertaste", async () => {
+    leertasteBereich("ja-abschluss-platz", { x: 92, y: 8, w: 2, h: 2 }, "💬 Harvey · Abschluss-Agent – Leertaste", async () => {
       try {
         fenster = await glasFenster(SEITEN + "ja-team.html?t=" + Date.now());
       } catch {
