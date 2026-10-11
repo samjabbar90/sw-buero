@@ -33,6 +33,13 @@
   .neu { display:flex; gap:6px; margin:6px 0 10px; } .neu input { flex:1; font:inherit; font-size:13px; padding:7px 9px; border:1.5px solid #cbd5e1; border-radius:9px; }
   .x { font:inherit; font-size:12px; border:1.5px solid #cbd5e1; background:#fff; border-radius:8px; padding:2px 8px; cursor:pointer; margin-left:auto; }
   html.glas .hilfe, html.glas .kost { color:rgba(255,255,255,.6) !important; } html.glas .neu input { background:rgba(255,255,255,.08) !important; border-color:rgba(255,255,255,.2) !important; color:#fff !important; }
+  .e { background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:10px 12px; margin:8px 0; font-size:13px; }
+  .e h3 { margin:0; font-size:14px; } .e .meta { font-size:11.5px; color:#64748b; margin:2px 0 6px; } .e .txt { line-height:1.5; max-height:220px; overflow:auto; border-top:1px solid #e2e8f0; padding-top:6px; }
+  .st { font-size:11px; font-weight:700; padding:2px 8px; border-radius:999px; margin-left:6px; } .st.neu { background:#fef3c7; color:#92400e; } .st.freigegeben { background:#dcfce7; color:#166534; } .st.aendern { background:#ffedd5; color:#9a3412; } .st.verworfen { background:#f1f5f9; color:#64748b; }
+  .eb { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; } .eb button, .eb a { font:inherit; font-size:12.5px; font-weight:600; border:1.5px solid #cbd5e1; background:#fff; border-radius:8px; padding:4px 10px; cursor:pointer; text-decoration:none; color:#0f172a; }
+  .eb .ok { background:#1F7F7A; border-color:#1F7F7A; color:#fff; }
+  html.glas .e { background:rgba(255,255,255,.08) !important; border-color:rgba(255,255,255,.15) !important; color:#fff !important; } html.glas .e .meta { color:rgba(255,255,255,.6) !important; }
+  html.glas .eb button, html.glas .eb a { background:rgba(255,255,255,.08) !important; border-color:rgba(255,255,255,.2) !important; color:#fff !important; } html.glas .eb .ok { background:#1F7F7A !important; }
   .a input { margin-top:3px; } .a .s { font-size:11.5px; color:#94a3b8; text-decoration:none; }
   html.glas header { background:rgba(23,107,102,.75) !important; } html.glas .m.mina { background:rgba(255,255,255,.08) !important; border-color:rgba(255,255,255,.15) !important; color:#fff !important; }
   html.glas .m.mina a { color:#5eead4 !important; } html.glas footer { background:transparent !important; border-color:rgba(255,255,255,.15) !important; }
@@ -45,7 +52,7 @@
 <header>
   <div class="av"><img src="mina-foto.jpg" alt="Mina" style="width:100%;height:100%;object-fit:cover"></div>
   <div><h1>Mina</h1><div class="s">Social Media · SW Digital Tax</div></div>
-  <div class="tabs"><button id="tChat" class="an">💬 Chat</button><button id="tAuf">📌 Aufträge</button><button id="tWis">🧠 Gedächtnis</button></div>
+  <div class="tabs"><button id="tChat" class="an">💬 Chat</button><button id="tEnt">📝 Entwürfe</button><button id="tAuf">📌 Aufträge</button><button id="tWis">🧠 Gedächtnis</button></div>
 </header>
 <main id="liste"><div class="tipp">Lade …</div></main>
 <footer id="fuss">
@@ -75,6 +82,20 @@ const VORSCHLAEGE = ["Was weißt du?", "recherchiere: Welche Steuer-News gibt es
 function zeichnen() {
   if (!DATEN) return;
   $("tChat").classList.toggle("an", ansicht === "chat"); $("tAuf").classList.toggle("an", ansicht === "auf"); $("tWis").classList.toggle("an", ansicht === "wis");
+  $("tEnt").classList.toggle("an", ansicht === "ent");
+  if (ansicht === "ent") {
+    $("fuss").style.display = "none";
+    const E = DATEN.entwuerfe || [], darf = DATEN.stufe === "arbeiten", ST = { neu: "wartet auf dich", freigegeben: "✓ freigegeben", aendern: "Änderung gewünscht", verworfen: "verworfen" };
+    $("liste").innerHTML = '<div class="tipp">Minas Entwürfe aus ihrem Morgen-Lauf (in Claude). Freigeben = darf so gepostet werden · Ändern lassen = Mina überarbeitet ihn beim nächsten Lauf. Gepostet wird nichts automatisch.</div>'
+      + (E.length ? E.map(e => `<div class="e"><h3>${esc(e.titel)}<span class="st ${esc(e.status)}">${ST[e.status] || esc(e.status)}</span></h3>
+        <div class="meta">${esc(e.rubrik || "")}${e.postTag ? " · für " + new Date(e.postTag).toLocaleDateString("de-DE", { weekday: "long", day: "2-digit", month: "2-digit" }) : ""} · erstellt ${uhr(e.am)}${e.statusVon ? " · " + esc(e.statusVon) : ""}</div>
+        ${e.kommentar ? '<div class="meta">✎ Wunsch: ' + esc(e.kommentar) + '</div>' : ""}
+        <div class="txt">${md(e.text)}${e.story ? "<br><b>Story:</b><br>" + md(e.story) : ""}</div>
+        <div class="eb">${e.canvaLink ? '<a href="' + esc(e.canvaLink) + '" target="_blank" rel="noopener">🎨 Bild in Canva</a>' : ""}${darf && e.status !== "freigegeben" ? '<button class="ok" data-e="' + esc(e.id) + '" data-s="freigegeben">✔ Freigeben</button>' : ""}${darf ? '<button data-e="' + esc(e.id) + '" data-s="aendern">✎ Ändern lassen</button><button data-e="' + esc(e.id) + '" data-s="verworfen">✗ Verwerfen</button>' : ""}</div></div>`).join("")
+        : '<div class="tipp">Noch keine Entwürfe. Mina legt sie bei ihrem nächsten Morgen-Lauf hier ab (oder in Claude bei „Mina – Social Media“ auf „Run now“ klicken).</div>');
+    document.querySelectorAll("[data-e]").forEach(b => b.onclick = () => entwurf(b.dataset.e, b.dataset.s));
+    return;
+  }
   if (ansicht === "wis") {
     $("fuss").style.display = "none";
     const W = DATEN.wissen || [], darf = DATEN.stufe === "arbeiten";
@@ -115,6 +136,12 @@ async function senden() {
   } catch (e) { wartet = false; DATEN.chat.push({ rolle: "mina", text: "⚠️ " + e.message, am: new Date().toISOString() }); zeichnen(); }
   $("senden").disabled = false;
 }
+async function entwurf(id, status) {
+  let kommentar = "";
+  if (status === "aendern") { kommentar = prompt("Was soll Mina ändern?") || ""; if (!kommentar.trim()) return; }
+  try { await fetch(API + "/entwurf", { method: "POST", headers: kopf({ "Content-Type": "application/json" }), body: JSON.stringify({ id, status, kommentar }) }); } catch { /* egal */ }
+  laden();
+}
 async function wissen(body) {
   if (!body.id && !(body.text || "").trim()) return;
   try { await fetch(API + "/wissen", { method: "POST", headers: kopf({ "Content-Type": "application/json" }), body: JSON.stringify(body) }); } catch { /* egal */ }
@@ -126,7 +153,7 @@ async function auftragStatus(id, status) {
 }
 $("senden").onclick = senden;
 $("text").addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); senden(); } });
-$("tChat").onclick = () => { ansicht = "chat"; zeichnen(); }; $("tAuf").onclick = () => { ansicht = "auf"; zeichnen(); }; $("tWis").onclick = () => { ansicht = "wis"; zeichnen(); };
+$("tChat").onclick = () => { ansicht = "chat"; zeichnen(); }; $("tAuf").onclick = () => { ansicht = "auf"; zeichnen(); }; $("tWis").onclick = () => { ansicht = "wis"; zeichnen(); }; $("tEnt").onclick = () => { ansicht = "ent"; zeichnen(); };
 (async () => { for (let i = 0; i < 30 && typeof WA === "undefined"; i++) await new Promise(r => setTimeout(r, 100)); try { await Promise.race([WA.onInit(), new Promise(r => setTimeout(r, 2500))]); window.__waName = WA.player.name || ""; } catch {} laden(); })();
 </script>
 </body>
