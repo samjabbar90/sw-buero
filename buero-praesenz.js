@@ -1107,18 +1107,20 @@
     }
   }
   function minaPlatz() {
-    let fenster = null;
-    leertasteBereich("mina-platz", { x: 105, y: 8, w: 4, h: 2 }, "💬 Mina · Social Media – Leertaste zum Sprechen", async () => {
-      try {
-        fenster = await glasFenster(SEITEN + "mina.html?t=" + Date.now());
-      } catch {
-      }
-    }, () => {
-      try {
-        fenster && fenster.close();
-      } catch {
-      }
-      fenster = null;
+    [["leon", "Leon · Recherche", 104], ["mina", "Mina · Social Media", 106], ["sophie", "Sophie · Content", 108]].forEach(([k, t, x]) => {
+      let fenster = null;
+      leertasteBereich(k + "-platz", { x, y: 8, w: 2, h: 2 }, "💬 " + t + " – Leertaste zum Sprechen", async () => {
+        try {
+          fenster = await glasFenster(SEITEN + "mina.html?agent=" + k + "&t=" + Date.now());
+        } catch {
+        }
+      }, () => {
+        try {
+          fenster && fenster.close();
+        } catch {
+        }
+        fenster = null;
+      });
     });
   }
   function fussball() {
