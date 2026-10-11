@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Abschluss-Agent · Jahresabschlussersteller</title>
+<!-- Raum „Jahresabschlussersteller“ (11.10.2026, Sam): Leertaste am Platz des Abschluss-Agenten. Zeigt die letzten Läufe des
+     JA-Teams (nur lesend). Gestartet und freigegeben wird im SW-internen Portal im Reiter „Jahresabschluss“ einer Mandantenakte. -->
+<style>
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:system-ui,-apple-system,"Segoe UI",sans-serif; background:#f8fafc; color:#0f172a; display:flex; flex-direction:column; height:100vh; }
+  header { background:#007a2f; color:#fff; padding:12px 14px; display:flex; align-items:center; gap:10px; flex:none; }
+  .av { width:38px; height:38px; border-radius:50%; background:#009639; display:flex; align-items:center; justify-content:center; flex:none; border:2px solid #7fd49b; font-size:19px; }
+  header h1 { margin:0; font-size:16px; } header .s { font-size:12px; color:#d6f2df; }
+  main { flex:1; overflow-y:auto; padding:12px; }
+  .tipp { color:#64748b; font-size:13px; padding:6px 2px; line-height:1.5; }
+  .kopf { background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:10px 12px; font-size:13px; line-height:1.5; margin-bottom:10px; }
+  .e { background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:10px 12px; margin:8px 0; font-size:13px; }
+  .e h3 { margin:0; font-size:14px; display:flex; gap:8px; align-items:center; } .e .meta { font-size:11.5px; color:#64748b; margin:2px 0 6px; }
+  .e .txt { line-height:1.5; border-top:1px solid #e2e8f0; padding-top:6px; }
+  .st { font-size:11px; font-weight:700; padding:2px 8px; border-radius:999px; margin-left:auto; } .st.fertig { background:#dcfce7; color:#166534; } .st.laeuft { background:#e0f2fe; color:#075985; } .st.fehler { background:#fee2e2; color:#991b1b; }
+  .chips { display:flex; gap:6px; flex-wrap:wrap; margin-top:6px; } .chips span { font-size:11.5px; font-weight:600; padding:2px 9px; border-radius:999px; background:#f1f5f9; color:#334155; }
+  a.k { display:inline-block; font-size:13px; font-weight:700; border-radius:9px; padding:7px 14px; background:#009639; color:#fff; text-decoration:none; margin-top:6px; }
+  html.glas .e, html.glas .kopf { background:rgba(255,255,255,.08) !important; border-color:rgba(255,255,255,.15) !important; color:#fff !important; }
+  html.glas .tipp, html.glas .e .meta { color:rgba(255,255,255,.65) !important; } html.glas .chips span { background:rgba(255,255,255,.1) !important; color:#fff !important; }
+</style>
+<script src="glas.js?v=1791560000"></script>
+</head>
+<body>
+<header>
+  <div class="av">📘</div>
+  <div><h1>Abschluss-Agent</h1><div class="s">Jahresabschlussersteller · SW Digital Tax</div></div>
+</header>
+<main id="liste"><div class="tipp">Lade …</div></main>
+<script src="https://play.workadventu.re/iframe_api.js"></script>
+<script>
+const KEY = "a21b2aa2a42fe6189b05773c07bbc9ad78e38b34ba3bb6fe", API = "https://swdigitaltest.de/buero-praesenz/ja-team";
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const ausweis = () => { try { return localStorage.getItem("swBueroAusweis") || ""; } catch { return ""; } };
+const kopf = () => ({ "X-Buero-Key": KEY, "X-Buero-Ausweis": ausweis(), "X-Buero-Name": encodeURIComponent(window.__waName || "") });
+const uhr = am => am ? new Date(am).toLocaleString("de-DE", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "";
+const STAT = { fertig: "fertig", laeuft: "arbeitet …", fehler: "Fehler" };
+async function laden() {
+  let d;
+  try { const r = await fetch(API, { headers: kopf() }); d = await r.json(); if (!r.ok) throw new Error(d.error || ("HTTP " + r.status)); }
+  catch (e) { $("liste").innerHTML = '<div class="tipp">' + esc(/ausweis/.test(e.message) ? "Bitte erst im Büro anmelden (Büro-PIN)." : e.message) + '</div>'; return; }
+  const M = d.monat || {};
+  let h = '<div class="kopf">Hallo 👋 Ich bin der <b>Abschluss-Agent</b>. Ich prüfe beim Jahresabschluss <b>Rückstellungen, Rechnungsabgrenzung, Abschreibungen und Pkw</b> und lege Buchungsvorschläge mit Begründung und Fragen an den Mandanten ab. Ich buche nie selbst – ihr gebt frei.'
+    + '<br><a class="k" href="https://swdigitaltest.de/dashboard.html" target="_blank" rel="noopener">Im SW-internen Portal arbeiten ↗</a>'
+    + '<div class="tipp" style="padding:6px 0 0">Starten: Mandantenakte › Reiter 📘 Jahresabschluss › „Abschluss-Agent starten“ · ca. 4 Cent je Lauf · diesen Monat '
+    + (M.usd || 0).toFixed(2).replace(".", ",") + ' $ von ' + (M.budget || 0) + ' $' + (d.nurTest ? ' · vorerst nur Test-Mandanten' : '') + '</div></div>';
+  const L = d.laeufe || [];
+  h += L.length ? L.map(l => '<div class="e"><h3>' + esc(l.mandant || "Mandant") + ' · ' + l.jahr + '<span class="st ' + l.status + '">' + (STAT[l.status] || esc(l.status)) + '</span></h3>'
+      + '<div class="meta">' + uhr(l.start) + (l.von ? ' · gestartet von ' + esc(l.von) : '') + (l.usd ? ' · ca. ' + (l.usd * 100).toFixed(1).replace(".", ",") + ' Cent' : '') + '</div>'
+      + (l.status === "fertig" ? '<div class="txt">' + esc(l.zusammenfassung) + '</div><div class="chips"><span>' + l.buchungen + ' Buchungsvorschläge</span><span>' + l.fragen + ' Fragen</span></div>' : '')
+      + (l.status === "fehler" ? '<div class="txt" style="color:#b91c1c">' + esc(l.fehler) + '</div>' : '') + '</div>').join("")
+    : '<div class="tipp">Noch keine Läufe. Starte mich im Portal bei einem Mandanten.</div>';
+  $("liste").innerHTML = h;
+  if (L.some(l => l.status === "laeuft")) setTimeout(laden, 5000);
+}
+(async () => { for (let i = 0; i < 30 && typeof WA === "undefined"; i++) await new Promise(r => setTimeout(r, 100)); try { await Promise.race([WA.onInit(), new Promise(r => setTimeout(r, 2500))]); window.__waName = WA.player.name || ""; } catch {} laden(); })();
+</script>
+</body>
+</html>
