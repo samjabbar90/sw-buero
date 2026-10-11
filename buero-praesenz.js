@@ -1247,6 +1247,10 @@
       an ? sessionStorage.setItem("swSchlossOffen", String(Date.now())) : sessionStorage.removeItem("swSchlossOffen");
     } catch {
     }
+    try {
+      WA.player.state.saveVariable("swSchlossZeit", an ? Date.now() : 0, { public: false, persist: true });
+    } catch {
+    }
   };
   function schliessen(grund = "") {
     gesperrt = true;
@@ -1340,7 +1344,14 @@
   WA.onInit().then(async () => {
     const frisch = async () => {
       try {
-        const r = await fetch(ENDPOINT.replace(/melden$/, "ausweis/frisch"), { method: "POST", headers: { "Content-Type": "application/json", "X-Buero-Key": BUERO_KEY }, body: JSON.stringify({ name: WA.player.name }) });
+        const r = await fetch(ENDPOINT.replace(/melden$/, "ausweis/frisch"), { method: "POST", headers: { "Content-Type": "application/json", "X-Buero-Key": BUERO_KEY }, body: JSON.stringify({ name: WA.player.name, kurzZuvor: (() => {
+          try {
+            const v = Number(WA.player.state.swSchlossZeit || 0);
+            return v > 0 && Date.now() - v < 5 * 60 * 1e3;
+          } catch {
+            return false;
+          }
+        })() }) });
         return !!(await r.json()).frisch;
       } catch {
         return false;
