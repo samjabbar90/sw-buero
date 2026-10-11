@@ -1439,7 +1439,7 @@
     hundStarten();
     profilKarten();
     kernzeitStarten();
-    const breite = 87 * 32, hoehe = 62 * 32;
+    const breite = 116 * 32, hoehe = 62 * 32;
     void karte;
     let blick = 0, uebersichtAn = false;
     const uebersicht = () => {

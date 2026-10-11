@@ -12,6 +12,7 @@
   input { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid #475569; background: #0f172a; color: var(--text); font-size: 15px; margin-bottom: 12px; }
   h2 { font-size: 12px; letter-spacing: .6px; text-transform: uppercase; color: var(--leise); margin: 14px 0 6px; }
   .liste { display: grid; gap: 6px; }
+  .zeile { display: flex; gap: 6px; } .zeile > button:first-child { flex: 1; } .zoom { width: auto !important; flex: none; justify-content: center; padding: 10px 12px !important; }
   button { text-align: left; width: 100%; padding: 10px 12px; border: 1px solid #334155; border-radius: 10px; background: var(--karte); color: var(--text); font-size: 14px; cursor: pointer; display: flex; gap: 8px; align-items: center; }
   button:hover { border-color: var(--akzent); }
   .leer { color: var(--leise); font-size: 13px; }
@@ -22,7 +23,7 @@
 <input id="suche" placeholder="Raum oder Kollege suchen …" autocomplete="off">
 <h2>Kollegen im Büro</h2>
 <div class="liste" id="leute"><div class="leer">Lädt …</div></div>
-<h2>Räume</h2>
+<h2>Räume <span style="font-weight:400;font-size:12px;opacity:.7">· 👁 = nur ansehen (Kamera zoomt hin, du bleibst stehen; „Zu mir“ oben holt dich zurück)</span></h2>
 <div class="liste" id="raeume"><div class="leer">Lädt …</div></div>
 <script>
 // Schnellreise (06.10.2026): Räume aus der Karte + Kollegen im Büro; Klick = sofort dort (WA.player.teleport).
@@ -68,13 +69,15 @@ function zeichnen() {
   const s = document.getElementById('suche').value.trim().toLowerCase();
   const passt = n => !s || n.toLowerCase().includes(s);
   const r = raeume.filter(x => passt(x.name));
-  document.getElementById('raeume').innerHTML = r.length ? r.map((x, i) => `<button data-raum="${raeume.indexOf(x)}">🚪 ${esc(x.name)}</button>`).join('') : '<div class="leer">Kein Raum gefunden</div>';
+  document.getElementById('raeume').innerHTML = r.length ? r.map((x, i) => `<div class="zeile"><button data-raum="${raeume.indexOf(x)}">🚪 ${esc(x.name)}</button><button class="zoom" data-zoom="${raeume.indexOf(x)}" title="Nur ansehen – Kamera zoomt auf ${esc(x.name)}">👁</button></div>`).join('') : '<div class="leer">Kein Raum gefunden</div>';
   const leute = [...WA.players.list()].filter(p => passt(p.name)).sort((a, b) => a.name.localeCompare(b.name, 'de'));
   document.getElementById('leute').innerHTML = leute.length ? leute.map(p => `<button data-spieler="${esc(p.playerId)}"><span class="punkt"></span>${esc(p.name)}</button>`).join('') : '<div class="leer">Gerade niemand außer dir</div>';
 }
 document.addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
   if (b.dataset.raum) { const r = raeume[+b.dataset.raum]; reisen(vorDemRaum(r)); }
+  // 11.10.2026 (Sam: „direkt zoomen, wenn ich etwas sehen will, z. B. das Social-Media-Büro“): Kamera fährt auf den Raum, Figur bleibt stehen
+  if (b.dataset.zoom) { const r = raeume[+b.dataset.zoom], rand = 6 * T; try { WA.camera.set(r.x + r.w / 2, r.y + r.h / 2, Math.max(r.w + rand, 14 * T), Math.max(r.h + rand, 10 * T), false, true); } catch { /* ältere Version */ } WA.ui.modal.closeModal(); }
   if (b.dataset.spieler) { const p = [...WA.players.list()].find(x => String(x.playerId) === b.dataset.spieler); if (p) { const r = raumVon(p.position.x, p.position.y); reisen(r ? vorDemRaum(r) : freiesFeld(p.position.x + T, p.position.y)); } }
 });
 document.getElementById('suche').addEventListener('input', zeichnen);
