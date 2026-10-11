@@ -115,9 +115,9 @@ async function liveLaden() {
   box.innerHTML = `<div style="margin:12px 14px 0;background:rgba(20,184,166,.13);border:1px solid rgba(94,234,212,.4);border-radius:10px;padding:10px 12px">
     <div style="display:flex;justify-content:space-between;font-size:11.5px">${d.live ? '<span style="color:#fca5a5;font-weight:700">● Live im SW-internen Portal</span><span style="opacity:.8">seit ' + minSeit(d.seit) + "</span>"
       : '<span style="opacity:.75">zuletzt im SW-internen Portal vor ' + minSeit(d.zuletzt) + "</span><span></span>"}</div>
-    <div style="font-size:14px;font-weight:700;margin:4px 0 2px">${esc(d.pfad)}</div>${d.detail ? `<div style="font-size:12.5px;color:#5eead4">${esc(d.detail)}</div>` : ""}
+    <div style="font-size:14px;font-weight:700;margin:4px 0 2px">${esc(d.pfad)}</div>${d.mandant ? `<div style="font-size:13px;font-weight:600;color:#fde68a">👔 ${esc(d.mandant)}</div>` : ""}${d.detail ? `<div style="font-size:12.5px;color:#5eead4">${esc(d.detail)}</div>` : ""}
     ${(d.verlauf || []).length ? '<div style="margin-top:8px;border-top:1px solid rgba(255,255,255,.1);padding-top:6px;font-size:11.5px;opacity:.75;line-height:1.6">Heute davor:<br>'
-      + d.verlauf.map(v => esc(zeit(v.von) + " " + v.pfad + (v.detail ? " · " + v.detail : "") + " · " + minSeit(Date.now() - (v.bis - v.von)))).join("<br>") + "</div>" : ""}</div>`;
+      + d.verlauf.map(v => esc(zeit(v.von) + " " + v.pfad + (v.mandant ? " · " + v.mandant : "") + (v.detail ? " · " + v.detail : "") + " · " + minSeit(Date.now() - (v.bis - v.von)))).join("<br>") + "</div>" : ""}</div>`;
   clearTimeout(liveLaden.t); liveLaden.t = setTimeout(liveLaden, 60000);
 }
 // Reiter „💬 Feedback“ + „🗂 Gespräche“ (10.10.2026, Sam: Idee A) — nur im eigenen Profil, nur lesen. Feedback = Gespräche mit der

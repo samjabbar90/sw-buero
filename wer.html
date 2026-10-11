@@ -61,7 +61,7 @@ function unterZeile(p) {
 function zeileDa(p) {
   const lv = p.live;
   const status = lv && lv.pfad ? (lv.live ? '<span class="live">Live</span>' : `<span class="zul">zuletzt im Portal vor ${minSeit(lv.zuletzt)}</span>`) : "";
-  const was = lv && lv.pfad && lv.live ? `<div class="was">${esc(lv.pfad.split(" › ").slice(-2).join(" › "))}${lv.detail ? " · " + esc(lv.detail) : ""}</div>` : "";
+  const was = lv && lv.pfad && lv.live ? `<div class="was">${esc(lv.pfad.split(" › ").slice(-2).join(" › "))}${lv.mandant ? " · <b>" + esc(lv.mandant) + "</b>" : ""}${lv.detail ? " · " + esc(lv.detail) : ""}</div>` : "";
   const extra = (p.telefoniert ? " · 📞 telefoniert" : "") + (p.tuer === "zu" ? " · 🔒 Tür zu" : p.tuer === "besetzt" ? " · beschäftigt" : "");
   return `<div class="r" data-p="${esc(p.name)}"><div class="av" style="${p.foto ? "background-image:url('" + esc(p.foto) + "')" : ""}">${p.foto ? "" : esc(initialen(p.name))}</div>
     <div style="flex:1;min-width:0"><div class="n">${esc(p.name)}${status}</div><div class="s">${esc(p.bereich)}${extra}</div>${was}</div>${knoepfe(p, true)}</div>${unterZeile(p)}`;
