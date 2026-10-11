@@ -1106,6 +1106,21 @@
       kurzMeldung(`\u26BD TOOOR! ${wer} trifft ${wo}!`, 6e3);
     }
   }
+  function minaPlatz() {
+    let fenster = null;
+    leertasteBereich("mina-platz", { x: 105, y: 8, w: 4, h: 2 }, "💬 Mina · Social Media – Leertaste zum Sprechen", async () => {
+      try {
+        fenster = await glasFenster(SEITEN + "mina.html?t=" + Date.now());
+      } catch {
+      }
+    }, () => {
+      try {
+        fenster && fenster.close();
+      } catch {
+      }
+      fenster = null;
+    });
+  }
   function fussball() {
     try {
       WA.event.on("sw-tor").subscribe((ev) => {
@@ -1416,6 +1431,7 @@
     dankeWand();
     gespraechsRaeume();
     fussball();
+    minaPlatz();
     fussgaengerAmpel();
     klingel();
     hundStarten();

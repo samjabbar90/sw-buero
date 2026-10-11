@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mina · Social Media</title>
+<!-- Mina live (11.10.2026, Sam): Chat mit der Social-Media-Agentin im Social-Media-Büro (Leertaste an ihrem Platz).
+     Nachrichten gehen über das SW-interne Portal an Claude (Sonnet + Websuche), Verlauf je Person; „als Auftrag merken“ legt
+     einen Auftrag für Minas täglichen Lauf an. Nur mit Büro-Ausweis und Recht „Social Media“ (Admin immer). Mina postet nie. -->
+<style>
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:system-ui,-apple-system,"Segoe UI",sans-serif; background:#f8fafc; color:#0f172a; display:flex; flex-direction:column; height:100vh; }
+  header { background:#176B66; color:#fff; padding:12px 14px; display:flex; align-items:center; gap:10px; flex:none; }
+  .av { width:38px; height:38px; border-radius:50%; background:#1F7F7A; display:flex; align-items:center; justify-content:center; flex:none; overflow:hidden; border:2px solid #4FC2B9; }
+  header h1 { margin:0; font-size:16px; } header .s { font-size:12px; color:#D7EFEC; }
+  .tabs { display:flex; gap:6px; margin-left:auto; } .tabs button { font:inherit; font-size:12.5px; font-weight:600; border:1.5px solid rgba(255,255,255,.4); background:transparent; color:#fff; border-radius:999px; padding:4px 11px; cursor:pointer; }
+  .tabs button.an { background:#fff; color:#176B66; border-color:#fff; }
+  main { flex:1; overflow-y:auto; padding:12px 12px 6px; }
+  .m { max-width:86%; margin:6px 0; padding:9px 12px; border-radius:14px; font-size:13.5px; line-height:1.5; white-space:normal; word-wrap:break-word; }
+  .m.mina { background:#fff; border:1px solid #e2e8f0; border-bottom-left-radius:4px; }
+  .m.du { background:#1F7F7A; color:#fff; margin-left:auto; border-bottom-right-radius:4px; }
+  .m a { color:#0f766e; } .m.du a { color:#D7EFEC; }
+  .m ul { margin:4px 0; padding-left:18px; }
+  .zeit { font-size:10.5px; color:#94a3b8; margin:-2px 4px 6px; } .zeit.du { text-align:right; }
+  .tipp { color:#64748b; font-size:13px; padding:6px 2px; }
+  footer { flex:none; padding:8px 10px 10px; border-top:1px solid #e2e8f0; background:#fff; }
+  textarea { width:100%; font:inherit; font-size:13.5px; padding:8px 10px; border:1.5px solid #cbd5e1; border-radius:10px; resize:none; height:62px; }
+  .zeile { display:flex; align-items:center; gap:8px; margin-top:6px; } .zeile label { font-size:12.5px; color:#475569; display:flex; gap:5px; align-items:center; flex:1; }
+  .k { font:inherit; font-size:13px; font-weight:700; border:0; border-radius:9px; padding:7px 16px; background:#1F7F7A; color:#fff; cursor:pointer; } .k:disabled { opacity:.5; }
+  .vor { display:flex; gap:6px; flex-wrap:wrap; margin:4px 0 8px; } .vor button { font:inherit; font-size:12px; border:1.5px solid #cbd5e1; background:#fff; border-radius:999px; padding:4px 10px; cursor:pointer; }
+  .a { display:flex; gap:8px; align-items:flex-start; padding:9px 4px; border-top:1px solid #e2e8f0; font-size:13px; } .a.erl { color:#94a3b8; text-decoration:line-through; }
+  .a input { margin-top:3px; } .a .s { font-size:11.5px; color:#94a3b8; text-decoration:none; }
+  html.glas header { background:rgba(23,107,102,.75) !important; } html.glas .m.mina { background:rgba(255,255,255,.08) !important; border-color:rgba(255,255,255,.15) !important; color:#fff !important; }
+  html.glas .m.mina a { color:#5eead4 !important; } html.glas footer { background:transparent !important; border-color:rgba(255,255,255,.15) !important; }
+  html.glas textarea { background:rgba(255,255,255,.08) !important; border-color:rgba(255,255,255,.2) !important; color:#fff !important; } html.glas .zeile label, html.glas .tipp { color:rgba(255,255,255,.7) !important; }
+  html.glas .vor button { background:rgba(255,255,255,.08) !important; border-color:rgba(255,255,255,.2) !important; color:#fff !important; } html.glas .a { border-color:rgba(255,255,255,.15) !important; }
+</style>
+<script src="glas.js?v=1791560000"></script>
+</head>
+<body>
+<header>
+  <div class="av"><svg width="34" height="34" viewBox="0 0 32 32" shape-rendering="crispEdges"><rect x="6" y="5" width="20" height="18" fill="#5a3524"/><rect x="8" y="3" width="16" height="3" fill="#4a2c1d"/><rect x="10" y="7" width="12" height="12" fill="#efc3a0"/><rect x="10" y="7" width="12" height="3" fill="#5a3524"/><rect x="12" y="12" width="2" height="2" fill="#2b2e3a"/><rect x="18" y="12" width="2" height="2" fill="#2b2e3a"/><rect x="14" y="16" width="4" height="1" fill="#c96b5e"/><rect x="7" y="22" width="18" height="10" fill="#1F7F7A"/><rect x="15" y="22" width="2" height="3" fill="#efc3a0"/></svg></div>
+  <div><h1>Mina</h1><div class="s">Social Media · SW Digital Tax</div></div>
+  <div class="tabs"><button id="tChat" class="an">💬 Chat</button><button id="tAuf">📌 Aufträge</button></div>
+</header>
+<main id="liste"><div class="tipp">Lade …</div></main>
+<footer id="fuss">
+  <div class="vor" id="vor"></div>
+  <textarea id="text" maxlength="4000" placeholder="Schreib Mina … z. B. „Mach mir einen Post zur Grundsteuer“"></textarea>
+  <div class="zeile"><label><input type="checkbox" id="auftrag"> auch als Auftrag für Minas Morgen-Lauf merken</label><button class="k" id="senden">Senden</button></div>
+</footer>
+<script src="https://play.workadventu.re/iframe_api.js"></script>
+<script>
+const KEY = "a21b2aa2a42fe6189b05773c07bbc9ad78e38b34ba3bb6fe", API = "https://swdigitaltest.de/buero-praesenz/mina";
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const ausweis = () => { try { return localStorage.getItem("swBueroAusweis") || ""; } catch { return ""; } };
+const kopf = h => ({ "X-Buero-Key": KEY, "X-Buero-Ausweis": ausweis(), "X-Buero-Name": encodeURIComponent(window.__waName || ""), ...h });
+const uhr = am => am ? new Date(am).toLocaleString("de-DE", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "";
+// kleines Markdown: **fett**, Links, Aufzählungen, Absätze
+function md(t) {
+  let h = esc(t).replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>").replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+    .replace(/(^|[\s(])(https?:\/\/[^\s<)]+)/g, '$1<a href="$2" target="_blank" rel="noopener">$2</a>');
+  const zeilen = h.split(/\n/); let out = "", liste = false;
+  for (const z of zeilen) { const m = z.match(/^\s*[-•*]\s+(.*)/); if (m) { if (!liste) { out += "<ul>"; liste = true; } out += "<li>" + m[1] + "</li>"; } else { if (liste) { out += "</ul>"; liste = false; } out += z ? z + "<br>" : "<br>"; } }
+  return (liste ? out + "</ul>" : out).replace(/(<br>){3,}/g, "<br><br>");
+}
+let DATEN = null, ansicht = "chat", wartet = false;
+const VORSCHLAEGE = ["Was steht diese Woche an?", "Mach mir einen Post zur nächsten Steuerfrist", "Welche Steuer-News gibt es heute?", "Schreib eine Story-Idee für Freitag"];
+function zeichnen() {
+  if (!DATEN) return;
+  $("tChat").classList.toggle("an", ansicht === "chat"); $("tAuf").classList.toggle("an", ansicht === "auf");
+  $("fuss").style.display = ansicht === "chat" && DATEN.stufe === "arbeiten" ? "" : "none";
+  if (ansicht === "auf") {
+    const A = DATEN.auftraege || [];
+    $("liste").innerHTML = '<div class="tipp">Aufträge an Mina – sie berücksichtigt offene Aufträge bei ihrem Morgen-Lauf.</div>'
+      + (A.length ? A.map(a => `<div class="a ${a.status === "erledigt" ? "erl" : ""}"><input type="checkbox" data-a="${esc(a.id)}" ${a.status === "erledigt" ? "checked" : ""} ${DATEN.stufe === "arbeiten" ? "" : "disabled"}><div>${esc(a.text)}<div class="s">${esc(a.von || "")} · ${uhr(a.am)}</div></div></div>`).join("") : '<div class="tipp">Noch keine Aufträge. Im Chat „auch als Auftrag merken“ anhaken.</div>');
+    document.querySelectorAll("[data-a]").forEach(c => c.onchange = () => auftragStatus(c.dataset.a, c.checked ? "erledigt" : "offen"));
+    return;
+  }
+  const C = DATEN.chat || [];
+  $("liste").innerHTML = (C.length ? "" : '<div class="m mina">Hallo, ich bin Mina 👋 Ich kümmere mich um euren Social-Media-Auftritt: Ich recherchiere Steuer-News und Fristen, schreibe Post-Entwürfe und baue die Bilder in Canva. Ich poste nie selbst – du gibst frei. Was soll ich für dich tun?</div>')
+    + C.map(m => `<div class="m ${m.rolle === "mina" ? "mina" : "du"}">${md(m.text)}</div><div class="zeit ${m.rolle === "mina" ? "" : "du"}">${m.rolle === "mina" ? "Mina" : "Du"} · ${uhr(m.am)}</div>`).join("")
+    + (wartet ? '<div class="m mina">✍️ Mina schreibt … (mit Websuche kann das bis zu einer Minute dauern)</div>' : "");
+  $("vor").innerHTML = C.length ? "" : VORSCHLAEGE.map(v => `<button>${esc(v)}</button>`).join("");
+  $("vor").querySelectorAll("button").forEach(b => b.onclick = () => { $("text").value = b.textContent; $("text").focus(); });
+  $("liste").scrollTop = $("liste").scrollHeight;
+}
+async function laden() {
+  try { const r = await fetch(API, { headers: kopf({}) }); const d = await r.json(); if (!r.ok) throw new Error(d.error || "Fehler"); DATEN = d; zeichnen(); }
+  catch (e) { $("fuss").style.display = "none"; $("liste").innerHTML = `<div class="tipp">${esc(/ausweis/.test(e.message) ? "Bitte das Büro kurz neu entsperren." : e.message)}</div>`; }
+}
+async function senden() {
+  const t = $("text").value.trim(); if (!t || wartet) return;
+  wartet = true; $("senden").disabled = true; DATEN.chat = [...(DATEN.chat || []), { rolle: "du", text: t, am: new Date().toISOString() }]; $("text").value = ""; zeichnen();
+  try {
+    const r = await fetch(API + "/chat", { method: "POST", headers: kopf({ "Content-Type": "application/json" }), body: JSON.stringify({ text: t, auftrag: $("auftrag").checked }) });
+    const d = await r.json(); if (!r.ok) throw new Error(d.error || "Fehler");
+    $("auftrag").checked = false; wartet = false; await laden();
+  } catch (e) { wartet = false; DATEN.chat.push({ rolle: "mina", text: "⚠️ " + e.message, am: new Date().toISOString() }); zeichnen(); }
+  $("senden").disabled = false;
+}
+async function auftragStatus(id, status) {
+  try { await fetch(API + "/auftrag", { method: "POST", headers: kopf({ "Content-Type": "application/json" }), body: JSON.stringify({ id, status }) }); } catch { /* egal */ }
+  laden();
+}
+$("senden").onclick = senden;
+$("text").addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); senden(); } });
+$("tChat").onclick = () => { ansicht = "chat"; zeichnen(); }; $("tAuf").onclick = () => { ansicht = "auf"; zeichnen(); };
+(async () => { for (let i = 0; i < 30 && typeof WA === "undefined"; i++) await new Promise(r => setTimeout(r, 100)); try { await Promise.race([WA.onInit(), new Promise(r => setTimeout(r, 2500))]); window.__waName = WA.player.name || ""; } catch {} laden(); })();
+</script>
+</body>
+</html>
