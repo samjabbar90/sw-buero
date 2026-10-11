@@ -1092,12 +1092,12 @@
   }
   var FUSSBALL = {
     tore: [
-      { name: "platz-tor-oben", x: 146, y: 5, w: 13, h: 6 },
-      { name: "platz-tor-unten", x: 146, y: 34, w: 13, h: 6 },
-      { name: "bolzplatz-tor-oben", x: 172, y: 5, w: 7, h: 4 },
-      { name: "bolzplatz-tor-unten", x: 172, y: 23, w: 7, h: 4 }
+      { name: "platz-tor-oben", x: 172, y: 5, w: 13, h: 6 },
+      { name: "platz-tor-unten", x: 172, y: 34, w: 13, h: 6 },
+      { name: "bolzplatz-tor-oben", x: 198, y: 5, w: 7, h: 4 },
+      { name: "bolzplatz-tor-unten", x: 198, y: 23, w: 7, h: 4 }
     ],
-    vereinsheim: { x: 168, y: 38, w: 14, h: 2 }
+    vereinsheim: { x: 194, y: 38, w: 14, h: 2 }
   };
   function torGeschossen(wer, wo) {
     try {
@@ -1150,7 +1150,7 @@
     });
   }
   var AMPEL_START = Date.now();
-  var AMPEL_KREUZUNGEN = [{ x: 89, y: 67, sv: 4, sh: 6 }, { x: 89, y: 84, sv: 4, sh: 4 }];
+  var AMPEL_KREUZUNGEN = [{ x: 115, y: 67, sv: 4, sh: 6 }, { x: 115, y: 84, sv: 4, sh: 4 }];
   function ampelText() {
     const ZYK = 128 * 120, t = (Date.now() - AMPEL_START) % ZYK, f = Math.floor(t / 120);
     const status = (von, bis) => {
