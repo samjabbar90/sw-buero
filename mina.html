@@ -29,6 +29,10 @@
   .k { font:inherit; font-size:13px; font-weight:700; border:0; border-radius:9px; padding:7px 16px; background:#1F7F7A; color:#fff; cursor:pointer; } .k:disabled { opacity:.5; }
   .vor { display:flex; gap:6px; flex-wrap:wrap; margin:4px 0 8px; } .vor button { font:inherit; font-size:12px; border:1.5px solid #cbd5e1; background:#fff; border-radius:999px; padding:4px 10px; cursor:pointer; }
   .a { display:flex; gap:8px; align-items:flex-start; padding:9px 4px; border-top:1px solid #e2e8f0; font-size:13px; } .a.erl { color:#94a3b8; text-decoration:line-through; }
+  .hilfe { font-size:11.5px; color:#64748b; margin-top:6px; line-height:1.45; } .kost { font-size:10.5px; color:#94a3b8; margin:-2px 4px 6px; } .kost.frei { color:#16a34a; }
+  .neu { display:flex; gap:6px; margin:6px 0 10px; } .neu input { flex:1; font:inherit; font-size:13px; padding:7px 9px; border:1.5px solid #cbd5e1; border-radius:9px; }
+  .x { font:inherit; font-size:12px; border:1.5px solid #cbd5e1; background:#fff; border-radius:8px; padding:2px 8px; cursor:pointer; margin-left:auto; }
+  html.glas .hilfe, html.glas .kost { color:rgba(255,255,255,.6) !important; } html.glas .neu input { background:rgba(255,255,255,.08) !important; border-color:rgba(255,255,255,.2) !important; color:#fff !important; }
   .a input { margin-top:3px; } .a .s { font-size:11.5px; color:#94a3b8; text-decoration:none; }
   html.glas header { background:rgba(23,107,102,.75) !important; } html.glas .m.mina { background:rgba(255,255,255,.08) !important; border-color:rgba(255,255,255,.15) !important; color:#fff !important; }
   html.glas .m.mina a { color:#5eead4 !important; } html.glas footer { background:transparent !important; border-color:rgba(255,255,255,.15) !important; }
@@ -41,13 +45,14 @@
 <header>
   <div class="av"><svg width="34" height="34" viewBox="0 0 32 32" shape-rendering="crispEdges"><rect x="6" y="5" width="20" height="18" fill="#5a3524"/><rect x="8" y="3" width="16" height="3" fill="#4a2c1d"/><rect x="10" y="7" width="12" height="12" fill="#efc3a0"/><rect x="10" y="7" width="12" height="3" fill="#5a3524"/><rect x="12" y="12" width="2" height="2" fill="#2b2e3a"/><rect x="18" y="12" width="2" height="2" fill="#2b2e3a"/><rect x="14" y="16" width="4" height="1" fill="#c96b5e"/><rect x="7" y="22" width="18" height="10" fill="#1F7F7A"/><rect x="15" y="22" width="2" height="3" fill="#efc3a0"/></svg></div>
   <div><h1>Mina</h1><div class="s">Social Media · SW Digital Tax</div></div>
-  <div class="tabs"><button id="tChat" class="an">💬 Chat</button><button id="tAuf">📌 Aufträge</button></div>
+  <div class="tabs"><button id="tChat" class="an">💬 Chat</button><button id="tAuf">📌 Aufträge</button><button id="tWis">🧠 Gedächtnis</button></div>
 </header>
 <main id="liste"><div class="tipp">Lade …</div></main>
 <footer id="fuss">
   <div class="vor" id="vor"></div>
   <textarea id="text" maxlength="4000" placeholder="Schreib Mina … z. B. „Mach mir einen Post zur Grundsteuer“"></textarea>
   <div class="zeile"><label><input type="checkbox" id="auftrag"> auch als Auftrag für Minas Morgen-Lauf merken</label><button class="k" id="senden">Senden</button></div>
+  <div class="hilfe">Kostenlos: <b>„Merk dir: …“</b> · <b>„Was weißt du?“</b> · dieselbe Frage nochmal. Internet-Recherche: <b>„recherchiere: …“</b> (ca. 5 ct) · frische Antwort statt Wiederholung: <b>„neu: …“</b></div>
 </footer>
 <script src="https://play.workadventu.re/iframe_api.js"></script>
 <script>
@@ -66,10 +71,20 @@ function md(t) {
   return (liste ? out + "</ul>" : out).replace(/(<br>){3,}/g, "<br><br>");
 }
 let DATEN = null, ansicht = "chat", wartet = false;
-const VORSCHLAEGE = ["Was steht diese Woche an?", "Mach mir einen Post zur nächsten Steuerfrist", "Welche Steuer-News gibt es heute?", "Schreib eine Story-Idee für Freitag"];
+const VORSCHLAEGE = ["Was weißt du?", "recherchiere: Welche Steuer-News gibt es heute?", "Mach mir einen Post zur nächsten Steuerfrist", "Schreib eine Story-Idee für Freitag"];
 function zeichnen() {
   if (!DATEN) return;
-  $("tChat").classList.toggle("an", ansicht === "chat"); $("tAuf").classList.toggle("an", ansicht === "auf");
+  $("tChat").classList.toggle("an", ansicht === "chat"); $("tAuf").classList.toggle("an", ansicht === "auf"); $("tWis").classList.toggle("an", ansicht === "wis");
+  if (ansicht === "wis") {
+    $("fuss").style.display = "none";
+    const W = DATEN.wissen || [], darf = DATEN.stufe === "arbeiten";
+    $("liste").innerHTML = '<div class="tipp">Das weiß Mina dauerhaft – in jedem Gespräch, für alle. Kostenlos. Sie merkt sich Wichtiges auch selbst aus dem Gespräch.</div>'
+      + (darf ? '<div class="neu"><input id="wisNeu" maxlength="500" placeholder="z. B. Freitags immer ein Teamfoto vorschlagen"><button class="k" id="wisDazu">Merken</button></div>' : "")
+      + (W.length ? W.map(w => `<div class="a"><div>${esc(w.text)}<div class="s">${esc(w.von || "")} · ${uhr(w.am)}</div></div>${darf ? `<button class="x" data-w="${esc(w.id)}" title="Vergessen">✗</button>` : ""}</div>`).join("") : '<div class="tipp">Noch nichts gemerkt.</div>');
+    if ($("wisDazu")) { $("wisDazu").onclick = () => wissen({ text: $("wisNeu").value }); $("wisNeu").onkeydown = e => { if (e.key === "Enter") wissen({ text: $("wisNeu").value }); }; }
+    document.querySelectorAll("[data-w]").forEach(b => b.onclick = () => wissen({ id: b.dataset.w, loeschen: true }));
+    return;
+  }
   $("fuss").style.display = ansicht === "chat" && DATEN.stufe === "arbeiten" ? "" : "none";
   if (ansicht === "auf") {
     const A = DATEN.auftraege || [];
@@ -80,8 +95,8 @@ function zeichnen() {
   }
   const C = DATEN.chat || [];
   $("liste").innerHTML = (C.length ? "" : '<div class="m mina">Hallo, ich bin Mina 👋 Ich kümmere mich um euren Social-Media-Auftritt: Ich recherchiere Steuer-News und Fristen, schreibe Post-Entwürfe und baue die Bilder in Canva. Ich poste nie selbst – du gibst frei. Was soll ich für dich tun?</div>')
-    + C.map(m => `<div class="m ${m.rolle === "mina" ? "mina" : "du"}">${md(m.text)}</div><div class="zeit ${m.rolle === "mina" ? "" : "du"}">${m.rolle === "mina" ? "Mina" : "Du"} · ${uhr(m.am)}</div>`).join("")
-    + (wartet ? '<div class="m mina">✍️ Mina schreibt … (mit Websuche kann das bis zu einer Minute dauern)</div>' : "");
+    + C.map(m => `<div class="m ${m.rolle === "mina" ? "mina" : "du"}">${md(m.text)}</div><div class="zeit ${m.rolle === "mina" ? "" : "du"}">${m.rolle === "mina" ? "Mina" : "Du"} · ${uhr(m.am)}${m.rolle === "mina" ? (m.ohneKi ? ' · <span class="kost frei">kostenlos</span>' : (m.usd != null ? ' · <span class="kost">≈ ' + (m.usd * 100).toLocaleString("de-DE", { maximumFractionDigits: 1 }) + ' ct' + (m.suche ? ' · mit Recherche' : '') + '</span>' : "")) : ""}</div>`).join("")
+    + (wartet ? '<div class="m mina">✍️ Mina schreibt … (mit Recherche kann das bis zu einer Minute dauern)</div>' : "");
   $("vor").innerHTML = C.length ? "" : VORSCHLAEGE.map(v => `<button>${esc(v)}</button>`).join("");
   $("vor").querySelectorAll("button").forEach(b => b.onclick = () => { $("text").value = b.textContent; $("text").focus(); });
   $("liste").scrollTop = $("liste").scrollHeight;
@@ -100,13 +115,18 @@ async function senden() {
   } catch (e) { wartet = false; DATEN.chat.push({ rolle: "mina", text: "⚠️ " + e.message, am: new Date().toISOString() }); zeichnen(); }
   $("senden").disabled = false;
 }
+async function wissen(body) {
+  if (!body.id && !(body.text || "").trim()) return;
+  try { await fetch(API + "/wissen", { method: "POST", headers: kopf({ "Content-Type": "application/json" }), body: JSON.stringify(body) }); } catch { /* egal */ }
+  laden();
+}
 async function auftragStatus(id, status) {
   try { await fetch(API + "/auftrag", { method: "POST", headers: kopf({ "Content-Type": "application/json" }), body: JSON.stringify({ id, status }) }); } catch { /* egal */ }
   laden();
 }
 $("senden").onclick = senden;
 $("text").addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); senden(); } });
-$("tChat").onclick = () => { ansicht = "chat"; zeichnen(); }; $("tAuf").onclick = () => { ansicht = "auf"; zeichnen(); };
+$("tChat").onclick = () => { ansicht = "chat"; zeichnen(); }; $("tAuf").onclick = () => { ansicht = "auf"; zeichnen(); }; $("tWis").onclick = () => { ansicht = "wis"; zeichnen(); };
 (async () => { for (let i = 0; i < 30 && typeof WA === "undefined"; i++) await new Promise(r => setTimeout(r, 100)); try { await Promise.race([WA.onInit(), new Promise(r => setTimeout(r, 2500))]); window.__waName = WA.player.name || ""; } catch {} laden(); })();
 </script>
 </body>
