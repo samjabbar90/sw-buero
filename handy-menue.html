@@ -36,7 +36,9 @@ if (q.has("knopf")) {
 } else {
   const P = [["karte", "🗺", "Übersicht"], ["zumir", "📍", "Zu mir"], ["reise", "🚀", "Schnellreise"], ["news", "📰", "News"], "-",
     ["ideen", "💡", "Ideen"], ["kalender", "📅", "Kalender"], ["meinProfil", "👤", "Mein Profil"]]
-    .concat(q.has("tc") ? [["tagescheck", "✅", "Tages-Check"]] : [], q.has("kz") ? [["arbeitszeit", "⏰", "Meine Arbeitszeit"], ["feierabend", "🚪", "Feierabend"]] : [], q.has("tuer") ? ["-", ["tuer", "🔁", "Tür umschalten"]] : []);
+    .concat(q.has("tc") ? [["tagescheck", "✅", "Tages-Check"]] : [], q.has("kz") ? [["arbeitszeit", "⏰", "Meine Arbeitszeit"], ["feierabend", "🚪", "Feierabend"]] : [], q.has("tuer") ? ["-", ["tuer", "🔁", "Tür umschalten"]] : [],
+    // 12.10.2026 (Sam: „auf dem Handy immer bleiben, bis ich mich abmelde“): am Handy bleibt man im Büro, bis man hier abmeldet
+    ["-", ["abmelden", "🚪", "Aus dem Büro abmelden"]]);
   app.style.height = "100%";
   app.innerHTML = '<div class="menue"><div class="kopf"><div><b id="name">…</b><div class="seit" id="seit"></div></div><button class="zu" id="zu">✕</button></div>'
     + P.map(p => p === "-" ? '<div class="trenn"></div>' : `<button class="p" data-w="${p[0]}"><span>${p[1]}</span>${p[2]}</button>`).join("") + "</div>";

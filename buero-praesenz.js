@@ -64,9 +64,10 @@
         tuer: meine ? { raum: meine.raum, status: tuerStatus(meine) } : null,
         pos: position,
         gespraech: [...gespraech],
-        ruhe: Date.now() - letzteAktivitaet
+        ruhe: Date.now() - letzteAktivitaet,
+        handy: HANDY
       }),
-      // 12.10.: ms seit der letzten Bewegung — der Server rechnet alle Aktivitäten zusammen (10 Min Ruhe → raus)
+      // handy: am Handy bleibt man drin, bis man sich abmeldet (12.10., Sam) // 12.10.: ms seit der letzten Bewegung — der Server rechnet alle Aktivitäten zusammen (10 Min Ruhe → raus)
       keepalive: true
     }).then((r) => r.json()).then((d) => {
       if (d && typeof d.system === "boolean") mitSystemZeit = d.system;
@@ -1549,7 +1550,7 @@
   }
   function schlossWache() {
     setInterval(async () => {
-      if (gesperrt) return;
+      if (gesperrt || HANDY) return;
       if (gespraech.size) {
         letzteAktivitaet = Date.now();
       }
@@ -1775,6 +1776,12 @@
         if (v.was === "menue") return menueUmschalten(String(v.m || ""));
         if (v.was === "handyMenue") return handyMenueUmschalten();
         if (ZIMMER_AKTIONEN[v.was]) return ZIMMER_AKTIONEN[v.was](v);
+        if (v.was === "abmelden") {
+          return melden("verlassen").then(() => {
+            beendet = true;
+            WA.nav.goToPage(SEITEN + "weg.html?grund=abgemeldet");
+          });
+        }
         menueZu();
         handyMenueZu();
         const tuer = meineTuer();
@@ -1836,6 +1843,8 @@
     } catch {
     }
     setInterval(() => melden("heartbeat"), 3e4);
-    window.addEventListener("pagehide", () => melden("verlassen"));
+    window.addEventListener("pagehide", (e) => {
+      if (!HANDY || !e.persisted) melden("verlassen");
+    });
   });
 })();
