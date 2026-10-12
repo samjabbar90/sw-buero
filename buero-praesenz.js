@@ -63,8 +63,10 @@
         start,
         tuer: meine ? { raum: meine.raum, status: tuerStatus(meine) } : null,
         pos: position,
-        gespraech: [...gespraech]
+        gespraech: [...gespraech],
+        ruhe: Date.now() - letzteAktivitaet
       }),
+      // 12.10.: ms seit der letzten Bewegung — der Server rechnet alle Aktivitäten zusammen (10 Min Ruhe → raus)
       keepalive: true
     }).then((r) => r.json()).then((d) => {
       if (d && typeof d.system === "boolean") mitSystemZeit = d.system;
