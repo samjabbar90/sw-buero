@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Blick</title>
+<!-- Blick durchs Büro (12.10.2026, Sam: Layout 4 „Joystick + Mini-Karte“, ersetzt Hoch/Runter).
+     ?teil=stick → runder Joystick unten links: ziehen = Blick wandert, loslassen = bleibt stehen, Mitte antippen = zurück zu mir.
+     ?teil=karte → Mini-Karte unten rechts (mini-karte.png, 4 px je Kachel, Felder 0–115 × 0–61): Klick = Blick springt dorthin,
+     Rahmen = was man gerade sieht, Punkt = eigene Figur. Beide Teile steuern direkt WA.camera. -->
+<style>
+  html, body { margin:0; height:100%; background:transparent; overflow:hidden; color-scheme:dark; user-select:none; -webkit-user-select:none; touch-action:none; font-family:system-ui,sans-serif; }
+  #stick { position:absolute; inset:4px; border-radius:50%; background:rgba(38,33,92,.35); border:2px solid rgba(206,203,246,.75); }
+  #knopf { position:absolute; left:50%; top:50%; width:42%; height:42%; margin:-21% 0 0 -21%; border-radius:50%; background:#EEEDFE; border:2px solid #AFA9EC;
+    box-shadow:0 2px 6px rgba(0,0,0,.35); cursor:grab; display:flex; align-items:center; justify-content:center; font-size:12px; color:#3C3489; font-weight:700; }
+  #stick.zieht #knopf { cursor:grabbing; background:#fff; }
+  .pfeil { position:absolute; color:rgba(238,237,254,.8); font-size:11px; pointer-events:none; }
+  #karte { position:absolute; inset:0; border-radius:8px; border:2px solid rgba(255,255,255,.55); background:#1b1b1b url(mini-karte.png) 0 0 / 100% 100% no-repeat; cursor:crosshair; overflow:hidden; image-rendering:pixelated; }
+  #rahmen { position:absolute; border:2px solid #5DCAA5; border-radius:2px; pointer-events:none; box-shadow:0 0 0 1px rgba(0,0,0,.5); }
+  #ich { position:absolute; width:8px; height:8px; margin:-4px 0 0 -4px; border-radius:50%; background:#FAC775; border:1.5px solid #412402; pointer-events:none; }
+</style>
+</head>
+<body>
+<div id="stick" hidden><span class="pfeil" style="left:50%;top:3px;transform:translateX(-50%)">▲</span><span class="pfeil" style="left:50%;bottom:3px;transform:translateX(-50%)">▼</span>
+  <span class="pfeil" style="left:5px;top:50%;transform:translateY(-50%)">◀</span><span class="pfeil" style="right:5px;top:50%;transform:translateY(-50%)">▶</span>
+  <div id="knopf" title="Ziehen = umsehen · antippen = zurück zu mir">●</div></div>
+<div id="karte" hidden title="Klick = Blick dorthin"><div id="rahmen"></div><div id="ich"></div></div>
+<script src="https://play.workadventu.re/iframe_api.js"></script>
+<script>
+const teil = new URLSearchParams(location.search).get("teil") === "karte" ? "karte" : "stick";
+const BREITE = 116 * 32, HOEHE = 62 * 32, $ = id => document.getElementById(id);
+let blick = null; // aktuelle Mitte des Blicks in Pixeln der Karte
+const klemmen = (v, max) => Math.max(0, Math.min(max, v));
+function kameraSetzen(x, y, weich) { blick = { x: klemmen(x, BREITE), y: klemmen(y, HOEHE) }; try { WA.camera.set(blick.x, blick.y, undefined, undefined, true, !!weich); } catch (e) { /* ältere Version */ } }
+async function startpunkt() { if (blick) return blick; try { const p = await WA.player.getPosition(); blick = { x: p.x, y: p.y }; } catch { blick = { x: BREITE / 2, y: HOEHE / 2 }; } return blick; }
+function zuMir() { blick = null; try { WA.camera.followPlayer(true); } catch (e) { /* ältere Version */ } }
+
+function joystick() {
+  const st = $("stick"), kn = $("knopf"); st.hidden = false;
+  let zug = null, richtung = { x: 0, y: 0 }, takt = null, bewegt = false;
+  const loslassen = () => { if (!zug) return; st.classList.remove("zieht"); kn.style.transform = ""; clearInterval(takt); takt = null;
+    if (!bewegt) zuMir(); zug = null; richtung = { x: 0, y: 0 }; };
+  kn.addEventListener("pointerdown", async e => { e.preventDefault(); kn.setPointerCapture(e.pointerId); st.classList.add("zieht"); bewegt = false;
+    const r = st.getBoundingClientRect(); zug = { mx: r.left + r.width / 2, my: r.top + r.height / 2, max: r.width * 0.32 };
+    await startpunkt();
+    // je Takt: bis 28 px (am Rand) — weiter weg ziehen = schneller
+    takt = setInterval(() => { if (!richtung.x && !richtung.y) return; kameraSetzen(blick.x + richtung.x * 28, blick.y + richtung.y * 28, false); }, 40); });
+  kn.addEventListener("pointermove", e => { if (!zug) return;
+    let dx = e.clientX - zug.mx, dy = e.clientY - zug.my; const l = Math.hypot(dx, dy); if (l > zug.max) { dx *= zug.max / l; dy *= zug.max / l; }
+    if (l > 6) bewegt = true; kn.style.transform = `translate(${dx}px,${dy}px)`; richtung = { x: dx / zug.max, y: dy / zug.max }; });
+  kn.addEventListener("pointerup", loslassen); kn.addEventListener("pointercancel", loslassen); kn.addEventListener("lostpointercapture", loslassen);
+}
+
+function miniKarte() {
+  const k = $("karte"), ra = $("rahmen"), ich = $("ich"); k.hidden = false;
+  const zeigen = (wv) => { if (!wv) return; const sx = k.clientWidth / BREITE, sy = k.clientHeight / HOEHE;
+    ra.style.left = wv.x * sx + "px"; ra.style.top = wv.y * sy + "px"; ra.style.width = Math.max(6, wv.width * sx) + "px"; ra.style.height = Math.max(6, wv.height * sy) + "px"; };
+  const figur = (p) => { if (!p) return; ich.style.left = p.x / BREITE * k.clientWidth + "px"; ich.style.top = p.y / HOEHE * k.clientHeight + "px"; };
+  try { WA.camera.onCameraUpdate().subscribe(zeigen); } catch (e) { /* ältere Version */ }
+  try { WA.player.onPlayerMove(figur); } catch (e) { /* ältere Version */ }
+  WA.player.getPosition().then(figur).catch(() => {});
+  let ziehen = false;
+  const hin = (e, weich) => { const r = k.getBoundingClientRect(); kameraSetzen((e.clientX - r.left) / r.width * BREITE, (e.clientY - r.top) / r.height * HOEHE, weich); };
+  k.addEventListener("pointerdown", e => { e.preventDefault(); k.setPointerCapture(e.pointerId); ziehen = true; hin(e, true); });
+  k.addEventListener("pointermove", e => { if (ziehen) hin(e, false); });
+  k.addEventListener("pointerup", () => { ziehen = false; }); k.addEventListener("pointercancel", () => { ziehen = false; });
+  k.addEventListener("dblclick", zuMir); // Doppelklick = zurück zu mir
+}
+
+(async () => {
+  for (let i = 0; i < 40 && typeof WA === "undefined"; i++) await new Promise(r => setTimeout(r, 100));
+  try { await Promise.race([WA.onInit(), new Promise(r => setTimeout(r, 3000))]); } catch {}
+  // Wer selbst losläuft, sieht wieder seine Figur (Kamera folgt) — nur der Joystick-Teil kümmert sich darum
+  if (teil === "stick") try { WA.player.onPlayerMove(() => { if (blick && !document.querySelector(".zieht")) zuMir(); }); } catch {}
+  teil === "karte" ? miniKarte() : joystick();
+})();
+</script>
+</body>
+</html>

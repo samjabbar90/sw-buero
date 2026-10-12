@@ -1736,6 +1736,26 @@
       } catch {
       }
     };
+    try {
+      const w = WA.ui.website;
+      await w.open({
+        url: SEITEN + "blick.html?teil=stick&v=1",
+        allowApi: true,
+        visible: true,
+        position: { vertical: "bottom", horizontal: "left" },
+        size: { width: HANDY ? "96px" : "116px", height: HANDY ? "96px" : "116px" },
+        margin: { bottom: HANDY ? "96px" : "20px", left: HANDY ? "8px" : "20px" }
+      });
+      await w.open({
+        url: SEITEN + "blick.html?teil=karte&v=1",
+        allowApi: true,
+        visible: true,
+        position: { vertical: "bottom", horizontal: "right" },
+        size: { width: HANDY ? "174px" : "232px", height: HANDY ? "93px" : "124px" },
+        margin: { bottom: HANDY ? "96px" : "20px", right: HANDY ? "8px" : "20px" }
+      });
+    } catch {
+    }
     const schnellreise = () => {
       try {
         WA.ui.modal.openModal({ title: "Schnellreise", src: SEITEN + "schnellreise.html", allowApi: true, position: HANDY ? "center" : "right" });
@@ -1747,8 +1767,6 @@
         const KNOEPFE = [
           ["sw-uebersicht", "\xDCbersicht", "karte", () => uebersichtAn ? zuMir() : uebersicht()],
           ["sw-zu-mir", "Zu mir", "zumir", zuMir],
-          ["sw-blick-hoch", "Hoch", "hoch", () => blicken(-6)],
-          ["sw-blick-runter", "Runter", "runter", () => blicken(6)],
           ["sw-schnellreise", "Reise", "reise", schnellreise],
           ["sw-ideen", "Ideen", "ideen", () => ideenOeffnen()],
           ["sw-kalender", "Kalender", "kalender", () => glasFenster(SEITEN + "kalender.html?t=" + Date.now())],
