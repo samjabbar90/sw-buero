@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Gespräch läuft</title>
+<!-- Live-Leiste fürs Kurzgespräch im Büro (12.10.2026, Sam: Layout A): schwebt unten über dem Büro, zeigt mit wem, Thema, Mandant und
+     die laufende Zeit. Knöpfe melden über die Spieler-Variable „swAktion“ ans Büro-Skript (buero-praesenz.js), das die Fenster öffnet.
+     ?weiter=1: wer binnen 3 Min ins Büro zurückkommt, dessen Zeit läuft weiter. Server: routes/gespraeche.js (Art „zimmer“). -->
+<script src="https://play.workadventu.re/iframe_api.js"></script>
+<style>
+  html, body { margin:0; height:100%; background:transparent; color-scheme:dark; font-family:system-ui,-apple-system,"Segoe UI",sans-serif; overflow:hidden; }
+  .l { height:100%; box-sizing:border-box; display:flex; align-items:center; gap:10px; padding:0 8px 0 14px; background:rgba(20,24,34,.92);
+    border:1px solid rgba(255,255,255,.18); border-radius:16px; color:#f1f5f9; }
+  .t { flex:1; min-width:0; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; } .t b { font-weight:700; } .t span { color:rgba(255,255,255,.65); }
+  .z { font:700 15px system-ui,sans-serif; font-variant-numeric:tabular-nums; color:#6ee7b7; } .z.stop { color:#fcd34d; }
+  button { border:1px solid rgba(255,255,255,.22); background:rgba(255,255,255,.08); color:#f1f5f9; font:600 12px system-ui,sans-serif; border-radius:9px; padding:6px 9px; cursor:pointer; white-space:nowrap; }
+  button:hover { background:rgba(255,255,255,.16); } button.rot { border-color:rgba(248,113,113,.6); color:#fecaca; }
+</style>
+</head>
+<body>
+<div class="l"><div class="t" id="t">💬 Gespräch …</div><div class="z" id="z">0:00</div>
+  <button data-was="gespraechOeffnen" data-fokus="protokoll" title="Protokoll schreiben">📝 Notiz</button>
+  <button data-was="gespraechOeffnen" data-fokus="aufgabe" title="Aufgabe für die Aufgaben Box">＋ Aufgabe</button>
+  <button data-was="gespraechOeffnen" data-fokus="" title="Großes Fenster">⤢</button>
+  <button data-was="zimmerEnde" class="rot" title="Gespräch beenden – Zeit stoppen">■</button></div>
+<script>
+const KEY = "a21b2aa2a42fe6189b05773c07bbc9ad78e38b34ba3bb6fe", API = "https://swdigitaltest.de/buero-praesenz/gesp";
+const q = new URLSearchParams(location.search), ID = q.get("id") || "", $ = id => document.getElementById(id);
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const ausweis = () => { try { return localStorage.getItem("swBueroAusweis") || ""; } catch { return ""; } };
+async function api(pfad, opt = {}) {
+  const r = await fetch(API + pfad, { ...opt, headers: { "X-Buero-Key": KEY, "X-Buero-Ausweis": ausweis(), "X-Buero-Name": encodeURIComponent(window.__waName || ""), "Content-Type": "application/json" } });
+  const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || "Fehler " + r.status); return d;
+}
+function buero(aktion) { try { WA.player.state.saveVariable("swAktion", { ...aktion, id: ID, t: Date.now() }, { public: false, persist: false }); } catch (e) { console.warn(e); } }
+const mmss = ms => { const s = Math.max(0, Math.floor(ms / 1000)), h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60; return (h ? h + ":" + String(m).padStart(2, "0") : String(m)) + ":" + String(s % 60).padStart(2, "0"); };
+let G = null, versatz = 0, gemeldet = false;
+function malen() {
+  if (!G) return;
+  const ich = String(window.__waName || "").split(/\s+/)[0].toLowerCase();
+  const andere = (G.teilnehmer || []).map(t => String(t.name).split(/\s+/)[0]).filter(n => n.toLowerCase() !== ich);
+  $("t").innerHTML = "💬 <b>" + esc(andere.join(", ") || "Gespräch") + "</b>" + ((G.felder || {}).thema ? " · " + esc(G.felder.thema) : "") + (G.mandant ? " <span>· " + esc(G.mandant.name) + "</span>" : "");
+}
+function tick() { if (!G || !G.start) return; const ende = G.zeitEnde ? Date.parse(G.zeitEnde) : Date.now() + versatz; $("z").textContent = mmss(ende - Date.parse(G.start)); $("z").classList.toggle("stop", !!G.zeitEnde); }
+async function laden() {
+  try { G = await api("/gespraeche/" + encodeURIComponent(ID)); if (G.jetzt) versatz = Date.parse(G.jetzt) - Date.now(); malen(); tick();
+    // von jemand anderem beendet/gespeichert → Leiste weg, Abschlusskarte auf (das Büro-Skript entscheidet)
+    if ((G.zeitEnde || G.status !== "laeuft") && !gemeldet) { gemeldet = true; buero({ was: G.status === "laeuft" ? "zimmerAbschluss" : "zimmerLeisteZu" }); }
+  } catch (e) { $("t").textContent = /nicht gefunden/.test(e.message) ? "Gespräch wurde verworfen" : e.message; if (/nicht gefunden/.test(e.message) && !gemeldet) { gemeldet = true; buero({ was: "zimmerLeisteZu" }); } }
+}
+(async () => {
+  for (let i = 0; i < 30 && typeof WA === "undefined"; i++) await new Promise(r => setTimeout(r, 100));
+  try { await Promise.race([WA.onInit(), new Promise(r => setTimeout(r, 2500))]); window.__waName = WA.player.name || ""; } catch {}
+  document.querySelectorAll("button[data-was]").forEach(b => b.onclick = () => { buero({ was: b.dataset.was, fokus: b.dataset.fokus || "" }); try { b.blur(); window.blur(); } catch {} });
+  // wer erst nach dem Start dazukam, wird so Teilnehmer (der Server prüft, ob man wirklich im Büro steht)
+  if (q.get("raum") && q.get("weiter") !== "1") { try { await api("/gespraeche/laufend?raum=" + encodeURIComponent(q.get("raum"))); } catch {} }
+  if (q.get("weiter") === "1") { try { await api("/gespraeche/" + encodeURIComponent(ID) + "/zeit", { method: "POST", body: JSON.stringify({ stop: false }) }); } catch {} }
+  await laden(); setInterval(tick, 1000); setInterval(laden, 5000);
+})();
+</script>
+</body>
+</html>

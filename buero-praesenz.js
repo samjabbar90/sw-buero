@@ -930,6 +930,167 @@
       });
     }
   }
+  var zimmerLeiste = null;
+  var zimmerId = "";
+  var zimmerRaum = "";
+  var zimmerHinweis = null;
+  var zimmerZurueck = null;
+  var zimmerAndere = /* @__PURE__ */ new Set();
+  var istBueroRaum = (n) => !!n && /^Büro\s+/i.test(n);
+  function zimmerSagen(was, raum, id = "") {
+    try {
+      WA.event.broadcast("sw-zimmer", { was, raum, id, wer: WA.player.name });
+    } catch {
+    }
+  }
+  function zimmerHinweisWeg() {
+    try {
+      zimmerHinweis && zimmerHinweis.remove();
+    } catch {
+    }
+    zimmerHinweis = null;
+  }
+  function zimmerHinweisPruefen() {
+    const raum = aktuellerBereich;
+    if (!istBueroRaum(raum) || zimmerId || !zimmerAndere.size || gesperrt) return zimmerHinweisWeg();
+    if (zimmerHinweis) return;
+    const mit = [...zimmerAndere].map((n) => n.split(/\s+/)[0]).join(", ");
+    try {
+      zimmerHinweis = WA.ui.displayActionMessage({ message: `\u{1F4AC} Leertaste: Gespr\xE4ch mit ${mit} f\xFChren`, callback: () => {
+        zimmerHinweis = null;
+        glasFenster(SEITEN + "gespraech.html?zimmer=1&raum=" + encodeURIComponent(String(raum)) + "&t=" + Date.now());
+        setTimeout(zimmerHinweisPruefen, 1500);
+      } });
+    } catch {
+    }
+  }
+  async function zimmerLeisteAuf(id, raum, weiter = false) {
+    if (zimmerLeiste) {
+      try {
+        zimmerLeiste.close();
+      } catch {
+      }
+    }
+    zimmerId = id;
+    zimmerRaum = raum;
+    zimmerHinweisWeg();
+    try {
+      zimmerLeiste = await WA.ui.website.open({
+        url: SEITEN + "zimmer-leiste.html?id=" + encodeURIComponent(id) + "&raum=" + encodeURIComponent(raum) + (weiter ? "&weiter=1" : "") + "&t=" + Date.now(),
+        allowApi: true,
+        visible: true,
+        position: { vertical: "bottom", horizontal: "middle" },
+        size: { width: HANDY ? Math.round((screen.width || 390) - 20) + "px" : "560px", height: "50px" },
+        margin: { bottom: HANDY ? "150px" : "64px" }
+      });
+    } catch {
+    }
+  }
+  function zimmerLeisteZu() {
+    if (zimmerLeiste) {
+      try {
+        zimmerLeiste.close();
+      } catch {
+      }
+    }
+    zimmerLeiste = null;
+    zimmerId = "";
+    zimmerRaum = "";
+    zimmerHinweisPruefen();
+  }
+  function zimmerAbschluss(id) {
+    glasFenster(SEITEN + "gespraech.html?id=" + encodeURIComponent(id) + "&abschluss=1&t=" + Date.now());
+  }
+  function zimmerBetreten(raum) {
+    zimmerAndere.clear();
+    zimmerHinweisWeg();
+    if (!istBueroRaum(raum)) return;
+    zimmerSagen("rein", raum);
+    if (zimmerZurueck && zimmerZurueck.raum === raum && Date.now() - zimmerZurueck.t < 3 * 60 * 1e3) {
+      const id = zimmerZurueck.id;
+      zimmerZurueck = null;
+      try {
+        glasOffen && glasOffen.handle && glasOffen.handle.close();
+      } catch {
+      }
+      glasOffen = null;
+      zimmerLeisteAuf(id, raum, true);
+      zimmerSagen("start", raum, id);
+    }
+  }
+  function zimmerVerlassen(raum) {
+    if (!istBueroRaum(raum)) return;
+    zimmerSagen("raus", raum);
+    zimmerAndere.clear();
+    zimmerHinweisWeg();
+    if (zimmerId && zimmerRaum === raum) {
+      const id = zimmerId;
+      zimmerLeiste && (() => {
+        try {
+          zimmerLeiste.close();
+        } catch {
+        }
+      })();
+      zimmerLeiste = null;
+      zimmerId = "";
+      zimmerRaum = "";
+      zimmerZurueck = { id, raum, t: Date.now() };
+      zimmerSagen("ende", raum, id);
+      zimmerAbschluss(id);
+    }
+  }
+  var ZIMMER_AKTIONEN = {
+    zimmerLeiste: (v) => {
+      try {
+        glasOffen && glasOffen.handle && glasOffen.handle.close();
+      } catch {
+      }
+      glasOffen = null;
+      const raum = String(v.raum || aktuellerBereich || "");
+      zimmerLeisteAuf(String(v.id), raum);
+      zimmerSagen("start", raum, String(v.id));
+    },
+    zimmerLeisteZu: () => zimmerLeisteZu(),
+    zimmerEnde: (v) => {
+      const id = String(v.id || zimmerId), raum = zimmerRaum;
+      zimmerLeisteZu();
+      if (raum) zimmerSagen("ende", raum, id);
+      zimmerAbschluss(id);
+    },
+    zimmerAbschluss: (v) => {
+      const id = String(v.id || zimmerId);
+      zimmerLeisteZu();
+      zimmerAbschluss(id);
+    },
+    gespraechOeffnen: (v) => glasFenster(SEITEN + "gespraech.html?id=" + encodeURIComponent(String(v.id || zimmerId)) + (v.fokus ? "&fokus=" + encodeURIComponent(v.fokus) : "") + "&t=" + Date.now())
+  };
+  function zimmerGespraeche() {
+    try {
+      WA.event.on("sw-zimmer").subscribe((ev) => {
+        const d = ev && ev.data || {}, wer = String(d.wer || ""), raum = String(d.raum || "");
+        if (!wer || wer === WA.player.name || raum !== aktuellerBereich) return;
+        if (d.was === "rein") {
+          zimmerAndere.add(wer);
+          zimmerSagen("da", raum);
+          if (zimmerId && zimmerRaum === raum) zimmerSagen("start", raum, zimmerId);
+        }
+        if (d.was === "da") zimmerAndere.add(wer);
+        if (d.was === "raus") zimmerAndere.delete(wer);
+        if (d.was === "start" && d.id && !zimmerId) {
+          zimmerAndere.add(wer);
+          zimmerLeisteAuf(String(d.id), raum);
+          kurzMeldung(`\u{1F4AC} ${wer.split(/\s+/)[0]} hat ein Gespr\xE4ch gestartet \u2013 die Zeit l\xE4uft`, 5e3);
+        }
+        if (d.was === "ende" && d.id && zimmerId === String(d.id)) {
+          const id = zimmerId;
+          zimmerLeisteZu();
+          zimmerAbschluss(id);
+        }
+        zimmerHinweisPruefen();
+      });
+    } catch {
+    }
+  }
   var KUECHE_GERAETE = ["kuehlschrank", "herd", "kaffee"];
   function kueche() {
     const aus = /* @__PURE__ */ new Map();
@@ -1106,55 +1267,6 @@
       kurzMeldung(`\u26BD TOOOR! ${wer} trifft ${wo}!`, 6e3);
     }
   }
-  function minaPlatz() {
-    [["leon", "Leon · Recherche", 104], ["mina", "Mina · Social Media", 106], ["sophie", "Sophie · Content", 108]].forEach(([k, t, x]) => {
-      let fenster = null;
-      leertasteBereich(k + "-platz", { x, y: 8, w: 2, h: 2 }, "💬 " + t + " – Leertaste zum Sprechen", async () => {
-        try {
-          fenster = await glasFenster(SEITEN + "mina.html?agent=" + k + "&t=" + Date.now());
-        } catch {
-        }
-      }, () => {
-        try {
-          fenster && fenster.close();
-        } catch {
-        }
-        fenster = null;
-      });
-    });
-  }
-  function jaPlatz() {
-    let fenster = null;
-    leertasteBereich("ja-abschluss-platz", { x: 92, y: 8, w: 2, h: 2 }, "💬 Harvey · Abschluss-Agent – Leertaste", async () => {
-      try {
-        fenster = await glasFenster(SEITEN + "ja-team.html?t=" + Date.now());
-      } catch {
-      }
-    }, () => {
-      try {
-        fenster && fenster.close();
-      } catch {
-      }
-      fenster = null;
-    });
-  }
-  function itPlatz() {
-    [["rengid", "Rengid · IT-Agent", 94], ["olga", "Olga · IT", 96]].forEach(([k, t, x]) => {
-      let fenster = null;
-      leertasteBereich("it-" + k + "-platz", { x, y: 19, w: 2, h: 2 }, "💬 " + t + " – Leertaste", async () => {
-        try {
-          fenster = await glasFenster(SEITEN + "it-status.html?agent=" + k + "&t=" + Date.now());
-        } catch {
-        }
-      }, () => {
-        try {
-          fenster && fenster.close();
-        } catch {
-        }
-        fenster = null;
-      });
-    });
-  }
   function fussball() {
     try {
       WA.event.on("sw-tor").subscribe((ev) => {
@@ -1196,6 +1308,55 @@
       } catch {
       }
       fenster = null;
+    });
+  }
+  function itPlatz() {
+    [["rengid", "Rengid \xB7 IT-Agent", 94], ["olga", "Olga \xB7 IT", 96]].forEach(([k, t, x]) => {
+      let fenster = null;
+      leertasteBereich("it-" + k + "-platz", { x, y: 19, w: 2, h: 2 }, "\u{1F4AC} " + t + " \u2013 Leertaste", async () => {
+        try {
+          fenster = await glasFenster(SEITEN + "it-status.html?agent=" + k + "&t=" + Date.now());
+        } catch {
+        }
+      }, () => {
+        try {
+          fenster && fenster.close();
+        } catch {
+        }
+        fenster = null;
+      });
+    });
+  }
+  function jaPlatz() {
+    let fenster = null;
+    leertasteBereich("ja-abschluss-platz", { x: 92, y: 8, w: 2, h: 2 }, "\u{1F4AC} Harvey \xB7 Abschluss-Agent \u2013 Leertaste", async () => {
+      try {
+        fenster = await glasFenster(SEITEN + "ja-team.html?t=" + Date.now());
+      } catch {
+      }
+    }, () => {
+      try {
+        fenster && fenster.close();
+      } catch {
+      }
+      fenster = null;
+    });
+  }
+  function minaPlatz() {
+    [["leon", "Leon \xB7 Recherche", 104], ["mina", "Mina \xB7 Social Media", 106], ["sophie", "Sophie \xB7 Content", 108]].forEach(([k, t, x]) => {
+      let fenster = null;
+      leertasteBereich(k + "-platz", { x, y: 8, w: 2, h: 2 }, "\u{1F4AC} " + t + " \u2013 Leertaste zum Sprechen", async () => {
+        try {
+          fenster = await glasFenster(SEITEN + "mina.html?agent=" + k + "&t=" + Date.now());
+        } catch {
+        }
+      }, () => {
+        try {
+          fenster && fenster.close();
+        } catch {
+        }
+        fenster = null;
+      });
     });
   }
   var AMPEL_START = Date.now();
@@ -1254,11 +1415,13 @@
       bereit.then(() => melden("betreten"));
       reservierungZeigen(name);
       effekte();
+      bereit.then(() => zimmerBetreten(name));
     });
     api.onLeave(name).subscribe(() => {
       if (aktuellerBereich === name) aktuellerBereich = null;
       bereit.then(() => melden("betreten"));
       effekte();
+      zimmerVerlassen(name);
     });
   }
   function feierabendOeffnen() {
@@ -1269,7 +1432,14 @@
     const pruefen = async () => {
       if (gesperrt || Date.now() - zuletzt < 30 * 60 * 1e3) return;
       try {
-        const r = await fetch(ENDPOINT.replace(/melden$/, "kernzeit/hinweis"), { method: "POST", headers: { "Content-Type": "application/json", "X-Buero-Key": BUERO_KEY }, body: JSON.stringify({ name: WA.player.name }) });
+        const r = await fetch(ENDPOINT.replace(/melden$/, "kernzeit/hinweis"), { method: "POST", headers: { "Content-Type": "application/json", "X-Buero-Key": BUERO_KEY }, body: JSON.stringify({ name: WA.player.name, kurzZuvor: (() => {
+          try {
+            const v = Number(WA.player.state.swSchlossZeit || 0);
+            return v > 0 && Date.now() - v < 5 * 60 * 1e3;
+          } catch {
+            return false;
+          }
+        })() }) });
         const d = await r.json();
         if (d && d.zeigen) {
           zuletzt = Date.now();
@@ -1393,14 +1563,7 @@
   WA.onInit().then(async () => {
     const frisch = async () => {
       try {
-        const r = await fetch(ENDPOINT.replace(/melden$/, "ausweis/frisch"), { method: "POST", headers: { "Content-Type": "application/json", "X-Buero-Key": BUERO_KEY }, body: JSON.stringify({ name: WA.player.name, kurzZuvor: (() => {
-          try {
-            const v = Number(WA.player.state.swSchlossZeit || 0);
-            return v > 0 && Date.now() - v < 5 * 60 * 1e3;
-          } catch {
-            return false;
-          }
-        })() }) });
+        const r = await fetch(ENDPOINT.replace(/melden$/, "ausweis/frisch"), { method: "POST", headers: { "Content-Type": "application/json", "X-Buero-Key": BUERO_KEY }, body: JSON.stringify({ name: WA.player.name }) });
         return !!(await r.json()).frisch;
       } catch {
         return false;
@@ -1464,6 +1627,7 @@
     schaufenster();
     dankeWand();
     gespraechsRaeume();
+    zimmerGespraeche();
     fussball();
     minaPlatz();
     jaPlatz();
@@ -1608,6 +1772,7 @@
         letzteAktion = v.t;
         if (v.was === "menue") return menueUmschalten(String(v.m || ""));
         if (v.was === "handyMenue") return handyMenueUmschalten();
+        if (ZIMMER_AKTIONEN[v.was]) return ZIMMER_AKTIONEN[v.was](v);
         menueZu();
         handyMenueZu();
         const tuer = meineTuer();
