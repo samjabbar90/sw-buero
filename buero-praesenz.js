@@ -65,9 +65,10 @@
         pos: position,
         gespraech: [...gespraech],
         ruhe: Date.now() - letzteAktivitaet,
-        handy: HANDY
+        handy: HANDY,
+        ...start ? { karte: String(WA.room.mapURL || "").slice(0, 300) } : {}
       }),
-      // handy: am Handy bleibt man drin, bis man sich abmeldet (12.10., Sam) // 12.10.: ms seit der letzten Bewegung — der Server rechnet alle Aktivitäten zusammen (10 Min Ruhe → raus)
+      // karte: welche Karten-Datei geladen ist (13.10., Umbau Mandanten-Stockwerk) // handy: am Handy bleibt man drin, bis man sich abmeldet (12.10., Sam) // 12.10.: ms seit der letzten Bewegung — der Server rechnet alle Aktivitäten zusammen (10 Min Ruhe → raus)
       keepalive: true
     }).then((r) => r.json()).then((d) => {
       if (d && typeof d.system === "boolean") mitSystemZeit = d.system;
