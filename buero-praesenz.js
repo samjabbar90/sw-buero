@@ -1468,6 +1468,7 @@
     effekte();
     if (!begruesst) {
       begruesst = true;
+      if (HANDY) return;
       const v = String(WA.player.name || "").split(/\s+/)[0], h = (/* @__PURE__ */ new Date()).getHours();
       const gruss = h < 11 ? "Guten Morgen" : h < 17 ? "Hallo" : "Guten Abend";
       const teile = [];
