@@ -1054,6 +1054,18 @@
       zimmerSagen("start", raum, String(v.id));
     },
     zimmerLeisteZu: () => zimmerLeisteZu(),
+    // Glastür zum Anbau: PIN stimmte (glastuer.html) → für diese Sitzung frei, Tür auf (12.10.)
+    glastuerAuf: () => {
+      anbauFrei = true;
+      glastuerOeffnen();
+      setTimeout(() => {
+        try {
+          glasOffen && glasOffen.handle && glasOffen.handle.close();
+        } catch {
+        }
+        glasOffen = null;
+      }, 1200);
+    },
     zimmerEnde: (v) => {
       const id = String(v.id || zimmerId), raum = zimmerRaum;
       zimmerLeisteZu();
@@ -1093,6 +1105,52 @@
       });
     } catch {
     }
+  }
+  var GLASTUER = [[88, 29], [88, 30]];
+  var anbauFrei = false;
+  var glastuerZu = null;
+  var imAnbau = (px, py) => {
+    const x = Math.floor(px / 32), y = Math.floor(py / 32);
+    return x >= 89 && x <= 113 && y >= 3 && y <= 33;
+  };
+  function glastuer(offen) {
+    try {
+      WA.room.setTiles(GLASTUER.flatMap(([x, y]) => [{ x, y, tile: offen ? null : kollisionGid, layer: "collisions" }, { x, y, tile: offen ? null : 4104, layer: "walls1" }]));
+    } catch {
+    }
+  }
+  function glastuerOeffnen(ms = 15e3) {
+    glastuer(true);
+    clearTimeout(glastuerZu);
+    const zu = async () => {
+      try {
+        const p = await WA.player.getPosition(), fx2 = Math.floor(p.x / 32), fy = Math.floor(p.y / 32);
+        if (fx2 >= 87 && fx2 <= 89 && fy >= 28 && fy <= 31) {
+          glastuerZu = setTimeout(zu, 3e3);
+          return;
+        }
+      } catch {
+      }
+      glastuer(false);
+    };
+    glastuerZu = setTimeout(zu, ms);
+  }
+  function glaswandAgenten() {
+    leertasteBereich(
+      "glastuer-aussen",
+      { x: 85, y: 28, w: 3, h: 4 },
+      () => anbauFrei ? "\u{1F6AA} Leertaste: Glast\xFCr \xF6ffnen" : "\u{1F512} Bereich der KI-Agenten \xB7 Leertaste: PIN eingeben",
+      () => {
+        if (anbauFrei) glastuerOeffnen();
+        else glasFenster(SEITEN + "glastuer.html?t=" + Date.now());
+      }
+    );
+    leertasteBereich("glastuer-innen", { x: 89, y: 28, w: 3, h: 4 }, "\u{1F6AA} Leertaste: Glast\xFCr \xF6ffnen", () => glastuerOeffnen());
+    WA.player.onPlayerMove((e) => {
+      if (anbauFrei || !imAnbau(e.x, e.y)) return;
+      WA.player.teleport(86 * 32 + 16, 29 * 32 + 16);
+      kurzMeldung("\u{1F512} Bereich der KI-Agenten \u2013 bitte an der Glast\xFCr die PIN eingeben", 6e3);
+    });
   }
   var KUECHE_GERAETE = ["kuehlschrank", "herd", "kaffee"];
   function kueche() {
@@ -1631,6 +1689,7 @@
     dankeWand();
     gespraechsRaeume();
     zimmerGespraeche();
+    glaswandAgenten();
     fussball();
     minaPlatz();
     jaPlatz();
