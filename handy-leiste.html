@@ -5,29 +5,32 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark">
 <title>Leiste</title>
-<!-- Handy Layout 1 „Daumen-Leiste“ (12.10.2026, Sam): unten über den WorkAdventure-Knöpfen, 4 Knöpfe Karte · Team · Reise · Mehr.
-     Meldet über die Spieler-Variable „swAktion“ ans Büro-Skript (buero-praesenz.js). -->
+<!-- Handy Layout 1 „Daumen-Leiste“ (12.10.2026, Sam): unten über den WorkAdventure-Knöpfen. Welche Knöpfe drauf sind, sucht jeder selbst aus
+     (Mehr › ✏️ Leiste anpassen → Spieler-Variable „swLeiste“, dauerhaft); „Mehr“ ist immer dabei. Meldet über „swAktion“ ans Büro-Skript. -->
 <script src="https://play.workadventu.re/iframe_api.js"></script>
 <style>
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
   html, body { margin:0; height:100%; background:transparent; overflow:hidden; font-family:system-ui,-apple-system,"Segoe UI",sans-serif; }
-  .l { height:100%; display:grid; grid-template-columns:repeat(4,1fr); gap:6px; padding:6px; background:rgba(20,24,34,.92); border:1px solid rgba(255,255,255,.14); border-radius:20px; }
-  button { border:0; background:transparent; color:#fff; font:600 11px system-ui,sans-serif; border-radius:14px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; cursor:pointer; }
-  button span { font-size:20px; line-height:1; } button:active, button.an { background:rgba(83,74,183,.55); }
+  .l { height:100%; display:flex; gap:4px; padding:5px; background:rgba(20,24,34,.92); border:1px solid rgba(255,255,255,.14); border-radius:20px; }
+  button { flex:1; min-width:0; border:0; background:transparent; color:#fff; font:600 10.5px system-ui,sans-serif; border-radius:14px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; cursor:pointer; white-space:nowrap; overflow:hidden; }
+  button span { font-size:19px; line-height:1; } button:active, button.an { background:rgba(83,74,183,.55); }
 </style>
 </head>
 <body>
-<div class="l">
-  <button data-w="karte"><span>🗺</span>Karte</button>
-  <button data-w="team"><span>👥</span>Team</button>
-  <button data-w="reise"><span>🚀</span>Reise</button>
-  <button data-w="handyMenue"><span>☰</span>Mehr</button>
-</div>
+<div class="l" id="l"></div>
 <script>
-document.querySelectorAll("[data-w]").forEach(b => b.onclick = () => {
-  try { WA.player.state.saveVariable("swAktion", { was: b.dataset.w, t: Date.now() }, { public: false, persist: false }); } catch (e) { console.warn(e); }
-  b.classList.add("an"); setTimeout(() => b.classList.remove("an"), 250);
-});
+const ALLE = { karte: ["🗺", "Karte"], zumir: ["📍", "Zu mir"], team: ["👥", "Team"], reise: ["🚀", "Reise"], news: ["📰", "News"], kalender: ["📅", "Kalender"],
+  ideen: ["💡", "Ideen"], meinProfil: ["👤", "Profil"], tagescheck: ["✅", "Check"], arbeitszeit: ["⏰", "Zeit"], tuer: ["🔁", "Tür"] };
+const STANDARD = ["karte", "team", "reise"];
+function aktion(was) { try { WA.player.state.saveVariable("swAktion", { was, t: Date.now() }, { public: false, persist: false }); } catch (e) { console.warn(e); } }
+function malen(liste) {
+  const k = (Array.isArray(liste) && liste.length ? liste : STANDARD).filter(x => ALLE[x]).slice(0, 4);
+  document.getElementById("l").innerHTML = k.map(x => `<button data-w="${x}"><span>${ALLE[x][0]}</span>${ALLE[x][1]}</button>`).join("") + '<button data-w="handyMenue"><span>☰</span>Mehr</button>';
+  document.querySelectorAll("[data-w]").forEach(b => b.onclick = () => { aktion(b.dataset.w); b.classList.add("an"); setTimeout(() => b.classList.remove("an"), 250); });
+}
+malen(STANDARD);
+(async () => { for (let i = 0; i < 40 && typeof WA === "undefined"; i++) await new Promise(r => setTimeout(r, 100));
+  try { await WA.onInit(); malen(WA.player.state.swLeiste); WA.player.state.onVariableChange("swLeiste").subscribe(malen); } catch {} })();
 </script>
 </body>
 </html>

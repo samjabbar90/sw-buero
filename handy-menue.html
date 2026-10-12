@@ -21,6 +21,10 @@
   .kacheln { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
   .kacheln button { background:#232836; border:0; color:#e5e7eb; border-radius:16px; padding:13px 0 10px; display:flex; flex-direction:column; align-items:center; gap:6px; font:500 11.5px system-ui,sans-serif; cursor:pointer; }
   .kacheln button span { font-size:24px; line-height:1; } .kacheln button:active { background:#3C3489; }
+  .anp { margin-top:12px; width:100%; background:#232836; color:#c4b5fd; border:0; border-radius:14px; padding:12px; font:600 13.5px system-ui,sans-serif; cursor:pointer; }
+  .wahl { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; } .wahl button { position:relative; } .wahl button.an { background:#3C3489; outline:2px solid #7F77DD; }
+  .lage { display:flex; gap:6px; margin-top:10px; } .lage button { flex:1; background:#232836; color:#ddd; border:0; border-radius:12px; padding:10px 4px; font:600 12px system-ui,sans-serif; } .lage button.an { background:#534AB7; color:#fff; }
+  .hin2 { font-size:12px; color:#9ca3af; margin:12px 0 8px; }
   .ab { margin-top:14px; width:100%; background:#2a1d1d; color:#fca5a5; border:0; border-radius:14px; padding:13px; font:600 14px system-ui,sans-serif; cursor:pointer; }
 </style>
 </head>
@@ -41,9 +45,26 @@ if (q.has("knopf")) {
   app.innerHTML = '<div class="blatt"><div class="grip"></div><div class="kopf"><div><b id="name">…</b><div class="seit" id="seit"></div></div><button class="zu" id="zu" aria-label="Schließen">✕</button></div>'
     + '<div class="kacheln">' + P.map(p => `<button data-w="${p[0]}"><span>${p[1]}</span>${p[2]}</button>`).join("") + "</div>"
     // 12.10.2026 (Sam: „auf dem Handy immer bleiben, bis ich mich abmelde“): am Handy bleibt man im Büro, bis man hier abmeldet
+    + '<button class="anp" id="anp">✏️ Leiste unten anpassen</button>'
     + '<button class="ab" data-w="abmelden">🚪 Aus dem Büro abmelden</button></div>';
   app.querySelectorAll("[data-w]").forEach(b => b.onclick = () => aktion(b.dataset.w));
   document.getElementById("zu").onclick = () => aktion("handyMenue");
+  // Leiste anpassen (12.10.2026, Sam: „kann ich selber entscheiden, was ich auf der Startseite haben möchte“ + „die Leiste bewegen“):
+  // bis zu 4 Knöpfe wählen (Mehr ist immer dabei) und die Lage – gespeichert dauerhaft in swLeiste / swLeisteLage
+  const WAHL = P.filter(p => ["karte","zumir","team","reise","news","kalender","ideen","meinProfil","tagescheck","arbeitszeit","tuer"].includes(p[0]));
+  document.getElementById("anp").onclick = () => {
+    let gew = []; let lage = "links"; try { gew = (WA.player.state.swLeiste || ["karte", "team", "reise"]).slice(); lage = WA.player.state.swLeisteLage || "links"; } catch {}
+    const zeichne = () => { document.querySelector(".blatt").innerHTML = '<div class="grip"></div><div class="kopf"><div><b>✏️ Leiste anpassen</b><div class="seit" style="color:#9ca3af">Bis zu 4 Knöpfe – „Mehr“ ist immer dabei</div></div><button class="zu" id="zu2">✕</button></div>'
+      + '<div class="wahl kacheln">' + WAHL.map(p => '<button data-g="' + p[0] + '" class="' + (gew.includes(p[0]) ? "an" : "") + '"><span>' + p[1] + '</span>' + p[2] + '</button>').join("") + '</div>'
+      + '<div class="hin2">Wo soll die Leiste sitzen?</div><div class="lage">' + [["links","Unten links"],["mitte","Unten Mitte"],["oben","Oben"]].map(l => '<button data-l="' + l[0] + '" class="' + (lage === l[0] ? "an" : "") + '">' + l[1] + '</button>').join("") + '</div>'
+      + '<button class="anp" id="fertig" style="background:#534AB7;color:#fff">✓ Fertig</button>';
+      document.querySelectorAll("[data-g]").forEach(b => b.onclick = () => { const k = b.dataset.g; gew = gew.includes(k) ? gew.filter(x => x !== k) : (gew.length >= 4 ? gew : [...gew, k]); zeichne(); });
+      document.querySelectorAll("[data-l]").forEach(b => b.onclick = () => { lage = b.dataset.l; zeichne(); });
+      document.getElementById("zu2").onclick = () => aktion("handyMenue");
+      document.getElementById("fertig").onclick = async () => { try { await WA.player.state.saveVariable("swLeiste", gew, { public: false, persist: true }); await WA.player.state.saveVariable("swLeisteLage", lage, { public: false, persist: true }); } catch (e) { console.warn(e); } aktion("handyMenue"); };
+    };
+    zeichne();
+  };
   (async () => {
     for (let i = 0; i < 50 && typeof WA === "undefined"; i++) await new Promise(r => setTimeout(r, 100));
     try { await WA.onInit(); const n = WA.player.name || ""; document.getElementById("name").textContent = n;

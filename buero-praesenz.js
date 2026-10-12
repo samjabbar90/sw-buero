@@ -1912,14 +1912,28 @@
           }
         }
       } else {
-        await WA.ui.website.open({
-          url: SEITEN + "handy-leiste.html?v=1",
-          allowApi: true,
-          visible: true,
-          position: { vertical: "bottom", horizontal: "middle" },
-          size: { width: Math.round((screen.width || 390) - 24) + "px", height: "62px" },
-          margin: { bottom: "88px" }
-        });
+        let leiste = null;
+        const leisteAuf = async () => {
+          let lage = "links";
+          try {
+            lage = String(WA.player.state.swLeisteLage || "links");
+          } catch {
+          }
+          const sw = Math.round(screen.width || 390), opt = lage === "oben" ? { position: { vertical: "top", horizontal: "middle" }, size: { width: sw - 24 + "px", height: "62px" }, margin: { top: "108px" } } : lage === "mitte" ? { position: { vertical: "bottom", horizontal: "middle" }, size: { width: sw - 24 + "px", height: "62px" }, margin: { bottom: "88px" } } : { position: { vertical: "bottom", horizontal: "left" }, size: { width: sw - 12 - 66 + "px", height: "62px" }, margin: { bottom: "88px", left: "12px" } };
+          try {
+            leiste && leiste.close();
+          } catch {
+          }
+          try {
+            leiste = await WA.ui.website.open({ url: SEITEN + "handy-leiste.html?v=2", allowApi: true, visible: true, ...opt });
+          } catch {
+          }
+        };
+        await leisteAuf();
+        try {
+          WA.player.state.onVariableChange("swLeisteLage").subscribe(() => leisteAuf());
+        } catch {
+        }
       }
     } catch {
     }

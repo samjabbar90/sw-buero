@@ -26,6 +26,8 @@
 if (new URLSearchParams(location.search).get("grund") === "abgemeldet") {
   document.querySelector(".i").textContent = "👋"; document.querySelector("h1").textContent = "Du hast dich aus dem Büro abgemeldet";
   document.querySelector("p").textContent = "Bis später!";
+  // Abmelden (12.10.2026): Ausweis löschen und gemerkte Geräte vergessen → nächstes Mal wieder Code/Passwort
+  try { const a = localStorage.getItem("swBueroAusweis"); if (a) fetch("https://swdigitaltest.de/buero-praesenz/ausweis/abmelden", { method: "POST", headers: { "X-Buero-Key": "a21b2aa2a42fe6189b05773c07bbc9ad78e38b34ba3bb6fe", "X-Buero-Ausweis": a, "Content-Type": "application/json" }, body: "{}", keepalive: true }).catch(() => {}); localStorage.removeItem("swBueroAusweis"); } catch {}
 }
 if (new URLSearchParams(location.search).get("grund") === "gesperrt") {
   document.querySelector("h1").textContent = "Du wurdest aus dem Büro abgemeldet";

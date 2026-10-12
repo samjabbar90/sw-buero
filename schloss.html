@@ -140,6 +140,11 @@ $("v-anlegen").onsubmit = async ev => {
 const bekannt = merk.holen("swSchlossBenutzer");
 $("mail").value = $("vmail").value = merk.holen("swSchlossMail");
 if (bekannt) { $("ben").value = bekannt; zeige("anmelden"); } else zeige("start");
+// Gerät gemerkt (12.10.2026, Sam: „bis ich mich abmelde nicht mehr fragen“): Konto mit „dauerhaft“ + gemerktes Gerät → sofort offen
+(async () => { const a = merk.holen("swBueroAusweis"); if (!a) return; $("ok").textContent = "Verbinde …";
+  try { const r = await fetch(API + "/ausweis/dauerhaft", { method: "POST", headers: { "X-Buero-Key": KEY, "X-Buero-Ausweis": a, "Content-Type": "application/json" }, body: "{}" });
+    const d = await r.json().catch(() => ({})); if (r.ok && d.ok) { ausweis = a; return oeffnen(d.name); } } catch {}
+  $("ok").textContent = ""; })();
 </script>
 </body>
 </html>
