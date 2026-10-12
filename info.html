@@ -42,7 +42,8 @@
 const FOKUS_MIN = 25;
 let meineVar = null, vorFokus = null;
 const $ = id => document.getElementById(id);
-const STATUS = { frei: '🟢 Tür <b>frei</b>', besetzt: '🟡 Tür <b>besetzt</b>', zu: '🔴 Tür <b>zu</b>' };
+// 12.10.2026 (Sam): Farbe am Wort statt Punkt davor — kürzer, bleibt in der Leiste
+const STATUS = { frei: 'Tür <b style="color:#22c55e">frei</b>', besetzt: 'Tür <b style="color:#ef4444">besetzt</b>', zu: 'Tür <b style="color:#ef4444">zu</b>' };
 
 function fokusBis() { try { return Number(localStorage.getItem('swFokusBis') || 0); } catch { return 0; } }
 function zeichnen() {
