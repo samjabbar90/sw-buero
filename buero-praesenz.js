@@ -1683,12 +1683,12 @@
     setInterval(infoLaden, 15e3);
     try {
       await WA.ui.website.open({
-        url: "https://samjabbar90.github.io/sw-buero/info.html?v=4" + (kzAktiv ? "&kz=1" : ""),
+        url: "https://samjabbar90.github.io/sw-buero/info.html?v=5" + (kzAktiv ? "&kz=1" : ""),
         allowApi: true,
         visible: true,
         // genau so groß wie die Leiste (kein weißer Rand): mit eigener Tür breiter (Tür + Fokus), sonst nur Uhrzeit + Kollegen
         position: { vertical: HANDY ? "top" : "bottom", horizontal: "middle" },
-        size: { width: HANDY ? Math.min(330, (screen.width || 390) - 20) + "px" : 400 + (meineTuer() ? 150 : 0) + (kzAktiv ? 130 : 0) + "px", height: "40px" },
+        size: { width: HANDY ? Math.max(300, (screen.width || 390) - 16) + "px" : 400 + (meineTuer() ? 150 : 0) + (kzAktiv ? 130 : 0) + "px", height: "40px" },
         margin: HANDY ? { top: "64px" } : { bottom: "14px" }
       });
     } catch {

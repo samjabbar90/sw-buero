@@ -44,8 +44,8 @@
 const FOKUS_MIN = 25;
 let meineVar = null, vorFokus = null;
 const $ = id => document.getElementById(id);
-// 12.10.2026 (Sam): Farbe am Wort statt Punkt davor — kürzer, bleibt in der Leiste
-const STATUS = { frei: 'Tür <b style="color:#22c55e">frei</b>', besetzt: 'Tür <b style="color:#ef4444">besetzt</b>', zu: 'Tür <b style="color:#ef4444">zu</b>' };
+// 12.10.2026 (Sam): nur „Tür“ + Punkt (grün frei, rot besetzt, ⛔ zu) — kurz, passt in die Leiste; Wort steht im Tooltip
+const STATUS = { frei: 'Tür 🟢', besetzt: 'Tür 🔴', zu: 'Tür ⛔' };
 
 function fokusBis() { try { return Number(localStorage.getItem('swFokusBis') || 0); } catch { return 0; } }
 function zeichnen() {
@@ -53,6 +53,7 @@ function zeichnen() {
   try { $('leute').textContent = String([...WA.players.list()].length + 1); } catch { $('leute').textContent = '–'; }
   if (!meineVar) return;
   $('tuer').innerHTML = STATUS[WA.state[meineVar] || 'frei'] || STATUS.frei;
+  $('tuer').title = 'Tür ' + (WA.state[meineVar] || 'frei') + ' · tippen: frei → besetzt → zu';
   const bis = fokusBis(), b = $('fokus');
   if (bis > Date.now()) { b.className = 'teil an'; b.textContent = '🎯 noch ' + Math.ceil((bis - Date.now()) / 60000) + ' Min ✕'; }
   else { b.className = 'teil'; b.textContent = '🎯'; if (bis) fokusEnde(true); }
