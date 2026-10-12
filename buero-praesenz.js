@@ -4,6 +4,7 @@
   var BUERO_KEY = "a21b2aa2a42fe6189b05773c07bbc9ad78e38b34ba3bb6fe";
   var DASHBOARD = "https://swdigitaltest.de";
   var SITZUNG = Math.random().toString(36).slice(2) + Date.now().toString(36);
+  var DY = 12;
   var HANDY = (screen.width || 1200) < 768 || /Android|iPhone|iPod|Mobile/i.test(navigator.userAgent);
   var aktuellerBereich = null;
   var beendet = false;
@@ -428,7 +429,7 @@
     } catch {
       return;
     }
-    const KORB = { x: 400, y: 80 }, ECKE = { x: 80, y: 80 }, UNTEN = { x: 80, y: 272 }, TEMPO = 32;
+    const KORB = { x: 400, y: 80 + DY * 32 }, ECKE = { x: 80, y: 80 + DY * 32 }, UNTEN = { x: 80, y: 272 + DY * 32 }, TEMPO = 32;
     const d1 = (KORB.x - ECKE.x) / TEMPO, d2 = (UNTEN.y - ECKE.y) / TEMPO;
     const PHASEN = [["lieg", 40], ["wedelK", 4], ["links", d1], ["runter", d2], ["sitz", 12], ["hoch", d2], ["rechts", d1], ["sitzK", 6]];
     const ZYKLUS = PHASEN.reduce((s, p) => s + p[1], 0);
@@ -594,7 +595,8 @@
     } catch {
     }
   }
-  var NEWS_BEREICH = { x: 41 * 32, y: 33 * 32, w: 8 * 32, h: 3 * 32 };
+  var NEWS_SCHIRM = { x: 1325, y: 962 + DY * 32, w: 214, h: 70 };
+  var NEWS_BEREICH = { x: 41 * 32, y: (33 + DY) * 32, w: 8 * 32, h: 3 * 32 };
   var newsFenster = null;
   var newsHinweis = null;
   async function newsOeffnen() {
@@ -607,7 +609,7 @@
     } catch {
     }
   }
-  var HELPCENTER = [{ x: 40, y: 23 }];
+  var HELPCENTER = [{ x: 40, y: 23 + DY }];
   var hcFenster = null;
   var hcHinweis = null;
   function helpcenterRoboter() {
@@ -692,7 +694,7 @@
     } catch {
     }
   }
-  var FITNESS = { x: 78, y: 6 };
+  var FITNESS = { x: 78, y: 6 + DY };
   function fitnessEmpfang() {
     const b = { x: (FITNESS.x - 1) * 32, y: (FITNESS.y + 3) * 32, w: 8 * 32, h: 3 * 32 };
     let fenster = null, hinweis2 = null;
@@ -743,10 +745,10 @@
   }
   function ranglistenTafel() {
     try {
-      WA.room.website.create({ name: "rangliste", url: SEITEN + "rangliste-bildschirm.html", visible: true, allowApi: false, origin: "map", scale: 1, position: { x: 2284, y: 128, width: 184, height: 54 } });
+      WA.room.website.create({ name: "rangliste", url: SEITEN + "rangliste-bildschirm.html", visible: true, allowApi: false, origin: "map", scale: 1, position: { x: 2284, y: 128 + DY * 32, width: 184, height: 54 } });
     } catch {
     }
-    const b = { x: 71 * 32, y: 6 * 32, w: 7 * 32, h: 2 * 32 };
+    const b = { x: 71 * 32, y: (6 + DY) * 32, w: 7 * 32, h: 2 * 32 };
     let fenster = null, hinweis2 = null;
     const rein = () => {
       try {
@@ -789,7 +791,7 @@
       });
     }
   }
-  var OFFENE_RAEUME = [14, 19, 24, 29, 52, 57, 62, 67].flatMap((x) => [17, 27].map((y) => ({ x, y, w: 5, h: 6 })));
+  var OFFENE_RAEUME = [14, 19, 24, 29, 52, 57, 62, 67].flatMap((x) => [17 + DY, 27 + DY].map((y) => ({ x, y, w: 5, h: 6 })));
   var ideenFenster = null;
   var ideenHinweis = null;
   async function ideenOeffnen() {
@@ -960,7 +962,7 @@
   }
   function zitatTafel() {
     let fenster = null;
-    leertasteBereich("zitat-tafel", { x: 45, y: 50, w: 4, h: 4 }, "\u{1F4DC} Leertaste: Zitat des Tages sehen", async () => {
+    leertasteBereich("zitat-tafel", { x: 45, y: 50 + DY, w: 4, h: 4 }, "\u{1F4DC} Leertaste: Zitat des Tages sehen", async () => {
       try {
         fenster = await glasFenster(SEITEN + "zitat.html?t=" + Date.now());
       } catch {
@@ -975,7 +977,7 @@
   }
   function dankeWand() {
     let fenster = null;
-    leertasteBereich("danke-wand", { x: 64, y: 36, w: 2, h: 1 }, "\u{1F49B} Leertaste: Danke-Wand", async () => {
+    leertasteBereich("danke-wand", { x: 64, y: 36 + DY, w: 2, h: 1 }, "\u{1F49B} Leertaste: Danke-Wand", async () => {
       try {
         fenster = await glasFenster(SEITEN + "danke.html?t=" + Date.now());
       } catch {
@@ -990,7 +992,7 @@
   }
   function schaufenster() {
     let fenster = null;
-    leertasteBereich("schaufenster", { x: 65, y: 37, w: 2, h: 1 }, "\u{1F6CD}\uFE0F Leertaste: Mitarbeiter-Rabatte", async () => {
+    leertasteBereich("schaufenster", { x: 65, y: 37 + DY, w: 2, h: 1 }, "\u{1F6CD}\uFE0F Leertaste: Mitarbeiter-Rabatte", async () => {
       try {
         fenster = await glasFenster(SEITEN + "rabatte.html?t=" + Date.now());
       } catch {
@@ -1003,7 +1005,7 @@
       fenster = null;
     });
   }
-  var GESPRAECHS_RAEUME = [{ raum: "Besprechung 10", x: 14, y: 39, w: 10, h: 5 }, { raum: "Besprechung 11", x: 25, y: 39, w: 7, h: 5 }, { raum: "Besprechung Glas", x: 40, y: 6, w: 8, h: 8 }];
+  var GESPRAECHS_RAEUME = [{ raum: "Besprechung 10", x: 14, y: 39 + DY, w: 10, h: 5 }, { raum: "Besprechung 11", x: 25, y: 39 + DY, w: 7, h: 5 }, { raum: "Besprechung Glas", x: 40, y: 6 + DY, w: 8, h: 8 }];
   function gespraechsRaeume() {
     for (const r of GESPRAECHS_RAEUME) {
       let fenster = null;
@@ -1202,14 +1204,14 @@
     } catch {
     }
   }
-  var GLASTUER = [[88, 29], [88, 30]];
+  var GLASTUER = [[88, 29 + DY], [88, 30 + DY]];
   var anbauFrei = false;
   var glastuerZu = null;
   var anbauZiel = null;
   var anbauPinZuletzt = 0;
   var imAnbau = (px, py) => {
     const x = Math.floor(px / 32), y = Math.floor(py / 32);
-    return x >= 89 && x <= 113 && y >= 3 && y <= 33;
+    return x >= 89 && x <= 113 && y >= 3 + DY && y <= 33 + DY;
   };
   function glastuer(offen) {
     try {
@@ -1223,7 +1225,7 @@
     const zu = async () => {
       try {
         const p = await WA.player.getPosition(), fx2 = Math.floor(p.x / 32), fy = Math.floor(p.y / 32);
-        if (fx2 >= 87 && fx2 <= 89 && fy >= 28 && fy <= 31) {
+        if (fx2 >= 87 && fx2 <= 89 && fy >= 28 + DY && fy <= 31 + DY) {
           glastuerZu = setTimeout(zu, 3e3);
           return;
         }
@@ -1236,18 +1238,18 @@
   function glaswandAgenten() {
     leertasteBereich(
       "glastuer-aussen",
-      { x: 85, y: 28, w: 3, h: 4 },
+      { x: 85, y: 28 + DY, w: 3, h: 4 },
       () => anbauFrei ? "\u{1F6AA} Leertaste: Glast\xFCr \xF6ffnen" : "\u{1F512} Bereich der KI-Agenten \xB7 Leertaste: PIN eingeben",
       () => {
         if (anbauFrei) glastuerOeffnen();
         else glasFenster(SEITEN + "glastuer.html?t=" + Date.now());
       }
     );
-    leertasteBereich("glastuer-innen", { x: 89, y: 28, w: 3, h: 4 }, "\u{1F6AA} Leertaste: Glast\xFCr \xF6ffnen", () => glastuerOeffnen());
+    leertasteBereich("glastuer-innen", { x: 89, y: 28 + DY, w: 3, h: 4 }, "\u{1F6AA} Leertaste: Glast\xFCr \xF6ffnen", () => glastuerOeffnen());
     WA.player.onPlayerMove((e) => {
       if (anbauFrei || !imAnbau(e.x, e.y)) return;
       anbauZiel = { x: e.x, y: e.y };
-      WA.player.teleport(86 * 32 + 16, 29 * 32 + 16);
+      WA.player.teleport(86 * 32 + 16, (29 + DY) * 32 + 16);
       if (Date.now() - anbauPinZuletzt > 5e3) {
         anbauPinZuletzt = Date.now();
         glasFenster(SEITEN + "glastuer.html?t=" + Date.now());
@@ -1291,9 +1293,9 @@
       } catch {
       }
     };
-    leertasteBereich("kueche-kuehlschrank", { x: 67, y: 37, w: 4, h: 1 }, "\u{1F9CA} K\xFChlschrank \xF6ffnen \xB7 Leertaste", () => los("kuehlschrank"));
-    leertasteBereich("kueche-herd", { x: 75, y: 37, w: 3, h: 1 }, "\u{1F373} Spiegelei braten \xB7 Leertaste", () => los("herd"));
-    leertasteBereich("kueche-kaffee", { x: 81, y: 36, w: 2, h: 4 }, "\u2615 Kaffee holen \xB7 Leertaste", () => {
+    leertasteBereich("kueche-kuehlschrank", { x: 67, y: 37 + DY, w: 4, h: 1 }, "\u{1F9CA} K\xFChlschrank \xF6ffnen \xB7 Leertaste", () => los("kuehlschrank"));
+    leertasteBereich("kueche-herd", { x: 75, y: 37 + DY, w: 3, h: 1 }, "\u{1F373} Spiegelei braten \xB7 Leertaste", () => los("herd"));
+    leertasteBereich("kueche-kaffee", { x: 81, y: 36 + DY, w: 2, h: 4 }, "\u2615 Kaffee holen \xB7 Leertaste", () => {
       los("kaffee");
       kurzMeldung("\u2615 Kaffee l\xE4uft durch \u2026", 3800);
       setTimeout(() => {
@@ -1317,7 +1319,7 @@
     } catch {
     }
     try {
-      WA.room.area.create({ name: "eingang-klingel", x: 43 * 32, y: 52 * 32, width: 4 * 32, height: 2 * 32 });
+      WA.room.area.create({ name: "eingang-klingel", x: 43 * 32, y: (52 + DY) * 32, width: 4 * 32, height: 2 * 32 });
       WA.room.area.onEnter("eingang-klingel").subscribe(() => {
         if (richtung !== "up" || Date.now() - zuletzt < 2e4) return;
         zuletzt = Date.now();
@@ -1417,12 +1419,12 @@
   }
   var FUSSBALL = {
     tore: [
-      { name: "platz-tor-oben", x: 172, y: 5, w: 13, h: 6 },
-      { name: "platz-tor-unten", x: 172, y: 34, w: 13, h: 6 },
-      { name: "bolzplatz-tor-oben", x: 198, y: 5, w: 7, h: 4 },
-      { name: "bolzplatz-tor-unten", x: 198, y: 23, w: 7, h: 4 }
+      { name: "platz-tor-oben", x: 172, y: 5 + DY, w: 13, h: 6 },
+      { name: "platz-tor-unten", x: 172, y: 34 + DY, w: 13, h: 6 },
+      { name: "bolzplatz-tor-oben", x: 198, y: 5 + DY, w: 7, h: 4 },
+      { name: "bolzplatz-tor-unten", x: 198, y: 23 + DY, w: 7, h: 4 }
     ],
-    vereinsheim: { x: 194, y: 38, w: 14, h: 2 }
+    vereinsheim: { x: 194, y: 38 + DY, w: 14, h: 2 }
   };
   function torGeschossen(wer, wo) {
     try {
@@ -1477,7 +1479,7 @@
   function itPlatz() {
     [["rengid", "Rengid \xB7 IT-Agent", 94], ["olga", "Olga \xB7 IT", 96]].forEach(([k, t, x]) => {
       let fenster = null;
-      leertasteBereich("it-" + k + "-platz", { x, y: 19, w: 2, h: 2 }, "\u{1F4AC} " + t + " \u2013 Leertaste", async () => {
+      leertasteBereich("it-" + k + "-platz", { x, y: 19 + DY, w: 2, h: 2 }, "\u{1F4AC} " + t + " \u2013 Leertaste", async () => {
         try {
           fenster = await glasFenster(SEITEN + "it-status.html?agent=" + k + "&t=" + Date.now());
         } catch {
@@ -1493,7 +1495,7 @@
   }
   function jaPlatz() {
     let fenster = null;
-    leertasteBereich("ja-abschluss-platz", { x: 92, y: 8, w: 2, h: 2 }, "\u{1F4AC} Harvey \xB7 Abschluss-Agent \u2013 Leertaste", async () => {
+    leertasteBereich("ja-abschluss-platz", { x: 92, y: 8 + DY, w: 2, h: 2 }, "\u{1F4AC} Harvey \xB7 Abschluss-Agent \u2013 Leertaste", async () => {
       try {
         fenster = await glasFenster(SEITEN + "ja-team.html?t=" + Date.now());
       } catch {
@@ -1509,7 +1511,7 @@
   function minaPlatz() {
     [["leon", "Leon \xB7 Recherche", 104], ["mina", "Mina \xB7 Social Media", 106], ["sophie", "Sophie \xB7 Content", 108]].forEach(([k, t, x]) => {
       let fenster = null;
-      leertasteBereich(k + "-platz", { x, y: 8, w: 2, h: 2 }, "\u{1F4AC} " + t + " \u2013 Leertaste zum Sprechen", async () => {
+      leertasteBereich(k + "-platz", { x, y: 8 + DY, w: 2, h: 2 }, "\u{1F4AC} " + t + " \u2013 Leertaste zum Sprechen", async () => {
         try {
           fenster = await glasFenster(SEITEN + "mina.html?agent=" + k + "&t=" + Date.now());
         } catch {
@@ -1524,7 +1526,7 @@
     });
   }
   var AMPEL_START = Date.now();
-  var AMPEL_KREUZUNGEN = [{ x: 115, y: 67, sv: 4, sh: 6 }, { x: 115, y: 84, sv: 4, sh: 4 }];
+  var AMPEL_KREUZUNGEN = [{ x: 115, y: 67 + DY, sv: 4, sh: 6 }, { x: 115, y: 84 + DY, sv: 4, sh: 4 }];
   function ampelText() {
     const ZYK = 128 * 120, t = (Date.now() - AMPEL_START) % ZYK, f = Math.floor(t / 120);
     const status = (von, bis) => {
@@ -1834,7 +1836,7 @@
     hundStarten();
     profilKarten();
     kernzeitStarten();
-    const breite = 116 * 32, hoehe = 62 * 32;
+    const breite = 116 * 32, hoehe = (62 + DY) * 32;
     void karte;
     let blick = 0, uebersichtAn = false;
     const uebersicht = () => {
@@ -1867,7 +1869,7 @@
     try {
       const w = WA.ui.website;
       if (!HANDY) await w.open({
-        url: SEITEN + "blick.html?teil=stick&v=2",
+        url: SEITEN + "blick.html?teil=stick&v=3",
         allowApi: true,
         visible: true,
         position: { vertical: "bottom", horizontal: "left" },
@@ -1875,11 +1877,11 @@
         margin: { bottom: HANDY ? "96px" : "20px", left: HANDY ? "8px" : "20px" }
       });
       await w.open({
-        url: SEITEN + "blick.html?teil=karte&v=2",
+        url: SEITEN + "blick.html?teil=karte&v=3",
         allowApi: true,
         visible: true,
         position: { vertical: "bottom", horizontal: "right" },
-        size: { width: HANDY ? "130px" : "232px", height: HANDY ? "70px" : "124px" },
+        size: { width: HANDY ? "130px" : "232px", height: HANDY ? "83px" : "148px" },
         margin: { bottom: HANDY ? "158px" : "20px", right: HANDY ? "14px" : "20px" }
       });
     } catch {
