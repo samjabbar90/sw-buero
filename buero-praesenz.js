@@ -1064,6 +1064,10 @@
         } catch {
         }
         glasOffen = null;
+        const z = anbauZiel;
+        anbauZiel = null;
+        if (z) WA.player.moveTo(z.x, z.y, 10).catch(() => {
+        });
       }, 1200);
     },
     zimmerEnde: (v) => {
@@ -1109,6 +1113,8 @@
   var GLASTUER = [[88, 29], [88, 30]];
   var anbauFrei = false;
   var glastuerZu = null;
+  var anbauZiel = null;
+  var anbauPinZuletzt = 0;
   var imAnbau = (px, py) => {
     const x = Math.floor(px / 32), y = Math.floor(py / 32);
     return x >= 89 && x <= 113 && y >= 3 && y <= 33;
@@ -1148,8 +1154,13 @@
     leertasteBereich("glastuer-innen", { x: 89, y: 28, w: 3, h: 4 }, "\u{1F6AA} Leertaste: Glast\xFCr \xF6ffnen", () => glastuerOeffnen());
     WA.player.onPlayerMove((e) => {
       if (anbauFrei || !imAnbau(e.x, e.y)) return;
+      anbauZiel = { x: e.x, y: e.y };
       WA.player.teleport(86 * 32 + 16, 29 * 32 + 16);
-      kurzMeldung("\u{1F512} Bereich der KI-Agenten \u2013 bitte an der Glast\xFCr die PIN eingeben", 6e3);
+      if (Date.now() - anbauPinZuletzt > 5e3) {
+        anbauPinZuletzt = Date.now();
+        glasFenster(SEITEN + "glastuer.html?t=" + Date.now());
+      }
+      kurzMeldung("\u{1F512} Bereich der KI-Agenten \u2013 bitte die PIN eingeben", 6e3);
     });
   }
   var KUECHE_GERAETE = ["kuehlschrank", "herd", "kaffee"];
