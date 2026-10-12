@@ -533,7 +533,7 @@
     const SW = screen.availWidth || 1600, SH = screen.availHeight || 900, zw = (v, a, z) => Math.min(z, Math.max(a, v));
     const b = Math.round(zw(Number(e.b) || Math.min(780, SW * 0.44), 340, SW - 40)), hv = Math.round(zw(Number(e.hv) || 78, 30, 88));
     e = { ...e, r: zw(Number(e.r ?? 14) || 0, 0, Math.max(0, SW - b - 20)), o: zw(Number(e.o ?? 70) || 0, 0, 160) };
-    if (HANDY) return { position: { vertical: "bottom", horizontal: "middle" }, size: { width: Math.round((screen.width || 390) - 20) + "px", height: "58vh" }, margin: { bottom: "96px" } };
+    if (HANDY) return { position: { vertical: "bottom", horizontal: "middle" }, size: { width: Math.round((screen.width || 390) - 20) + "px", height: "50vh" }, margin: { bottom: "256px" } };
     if (e.voll) return { position: { vertical: "top", horizontal: "middle" }, size: { width: Math.round(screen.availWidth * 0.94) + "px", height: "90vh" }, margin: { top: "40px" } };
     return { position: { vertical: "top", horizontal: "right" }, size: { width: b + "px", height: hv + "vh" }, margin: { top: Math.round(Number(e.o) || 70) + "px", right: Math.round(Number(e.r ?? 14)) + "px" } };
   }
@@ -984,7 +984,7 @@
         visible: true,
         position: { vertical: "bottom", horizontal: "middle" },
         size: { width: HANDY ? Math.round((screen.width || 390) - 20) + "px" : "560px", height: "50px" },
-        margin: { bottom: HANDY ? "150px" : "64px" }
+        margin: { bottom: HANDY ? "200px" : "64px" }
       });
     } catch {
     }
@@ -1721,7 +1721,9 @@
     const uebersicht = () => {
       uebersichtAn = true;
       try {
-        WA.camera.set(breite / 2, hoehe / 2, breite, hoehe, false, true);
+        const sw = screen.width || 390, sh = screen.height || 800;
+        if (HANDY && sh > sw) WA.camera.set(breite / 2, hoehe / 2, Math.round(hoehe * 0.8 * sw / sh), Math.round(hoehe * 0.8), true, true);
+        else WA.camera.set(breite / 2, hoehe / 2, breite, hoehe, false, true);
       } catch {
       }
     };
@@ -1757,7 +1759,7 @@
         visible: true,
         position: { vertical: "bottom", horizontal: "right" },
         size: { width: HANDY ? "174px" : "232px", height: HANDY ? "93px" : "124px" },
-        margin: { bottom: HANDY ? "96px" : "20px", right: HANDY ? "8px" : "20px" }
+        margin: { bottom: HANDY ? "96px" : "20px", right: HANDY ? "58px" : "20px" }
       });
     } catch {
     }
@@ -1849,9 +1851,10 @@
           url: SEITEN + "handy-menue.html?v=1" + (tcAktiv ? "&tc=1" : "") + (kzAktiv ? "&kz=1" : "") + (meineTuer() ? "&tuer=1" : ""),
           allowApi: true,
           visible: true,
-          position: { vertical: "middle", horizontal: "left" },
-          size: { width: Math.min(290, Math.round((screen.width || 390) * 0.78)) + "px", height: "100vh" },
-          margin: { left: "0px" }
+          // 12.10.2026: unter der Info-Leiste (oben 108 px) und über der WorkAdventure-Leiste — sonst waren Name und ✕ oben abgeschnitten
+          position: { vertical: "top", horizontal: "left" },
+          size: { width: Math.min(290, Math.round((screen.width || 390) * 0.78)) + "px", height: Math.max(320, (screen.height || 800) - 108 - 92) + "px" },
+          margin: { top: "108px", left: "0px" }
         });
       } catch {
         handyMenue = null;

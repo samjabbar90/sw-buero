@@ -20,7 +20,8 @@
 </style>
 </head>
 <body>
-<input id="suche" placeholder="Raum oder Kollege suchen …" autocomplete="off">
+<div style="display:flex;gap:8px;align-items:flex-start;padding-right:44px"><input id="suche" placeholder="Raum oder Kollege suchen …" autocomplete="off" style="flex:1">
+<button id="schliessen" type="button" aria-label="Schließen" style="flex:none;width:42px;height:42px;border-radius:10px;border:1px solid #64748b;background:#334155;color:#fff;font-size:20px;cursor:pointer">✕</button></div>
 <h2>Kollegen im Büro</h2>
 <div class="liste" id="leute"><div class="leer">Lädt …</div></div>
 <h2>Räume <span style="font-weight:400;font-size:12px;opacity:.7">· 👁 = nur ansehen (Kamera zoomt hin, du bleibst stehen; „Zu mir“ oben holt dich zurück)</span></h2>
@@ -101,6 +102,8 @@ WA.onInit().then(async () => {
   WA.players.onPlayerEnters.subscribe(zeichnen); WA.players.onPlayerLeaves.subscribe(zeichnen);
   document.getElementById('suche').focus();
 });
+// eigener Schließen-Knopf (12.10.2026): das ✕ von WorkAdventure ist am Handy blass und schwer zu treffen
+document.getElementById("schliessen").onclick = () => { try { WA.ui.modal.closeModal(); } catch (e) { /* ältere Version */ } };
 </script>
 </body>
 </html>
