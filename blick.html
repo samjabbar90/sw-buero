@@ -6,7 +6,7 @@
 <title>Blick</title>
 <!-- Blick durchs Büro (12.10.2026, Sam: Layout 4 „Joystick + Mini-Karte“, ersetzt Hoch/Runter).
      ?teil=stick → runder Joystick unten links: ziehen = Blick wandert, loslassen = bleibt stehen, Mitte antippen = zurück zu mir.
-     ?teil=karte → Mini-Karte unten rechts (mini-karte.png, 4 px je Kachel, Felder 0–115 × 0–61): Klick = Blick springt dorthin,
+     ?teil=karte → Mini-Karte unten rechts (mini-karte.png, 4 px je Kachel, Felder 0–115 × 0–73): Klick = Blick springt dorthin,
      Rahmen = was man gerade sieht, Punkt = eigene Figur. Beide Teile steuern direkt WA.camera. -->
 <style>
   html, body { margin:0; height:100%; background:transparent; overflow:hidden; color-scheme:dark; user-select:none; -webkit-user-select:none; touch-action:none; font-family:system-ui,sans-serif; }
@@ -30,7 +30,7 @@
 <script src="https://play.workadventu.re/iframe_api.js"></script>
 <script>
 const teil = new URLSearchParams(location.search).get("teil") === "karte" ? "karte" : "stick";
-const BREITE = 116 * 32, HOEHE = 62 * 32, // 13.10.: Stockwerk zurückgenommen
+const BREITE = 116 * 32, HOEHE = 74 * 32, // 13.10.: +12 Felder (Mandanten-Stockwerk)
   $ = id => document.getElementById(id);
 let blick = null; // aktuelle Mitte des Blicks in Pixeln der Karte
 const klemmen = (v, max) => Math.max(0, Math.min(max, v));
