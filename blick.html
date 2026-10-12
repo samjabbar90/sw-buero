@@ -17,6 +17,8 @@
   .pfeil { position:absolute; color:rgba(238,237,254,.8); font-size:11px; pointer-events:none; }
   #karte { position:absolute; inset:0; border-radius:8px; border:2px solid rgba(255,255,255,.55); background:#1b1b1b url(mini-karte.png) 0 0 / 100% 100% no-repeat; cursor:crosshair; overflow:hidden; image-rendering:pixelated; }
   #rahmen { position:absolute; border:2px solid #5DCAA5; border-radius:2px; pointer-events:none; box-shadow:0 0 0 1px rgba(0,0,0,.5); }
+  /* Mini-Karte A „ganz blass“ (12.10.2026, Sam): normal 25 % sichtbar, Maus drauf = voll; am Handy Antippen = voll, nach 4 s wieder blass */
+  #karte { opacity:.25; transition:opacity .25s ease, border-color .25s ease; } #karte:hover, #karte.an { opacity:1; border-color:#fff; }
   #ich { position:absolute; width:8px; height:8px; margin:-4px 0 0 -4px; border-radius:50%; background:#FAC775; border:1.5px solid #412402; pointer-events:none; }
 </style>
 </head>
@@ -61,8 +63,9 @@ function miniKarte() {
   WA.player.getPosition().then(figur).catch(() => {});
   let ziehen = false;
   const hin = (e, weich) => { const r = k.getBoundingClientRect(); kameraSetzen((e.clientX - r.left) / r.width * BREITE, (e.clientY - r.top) / r.height * HOEHE, weich); };
-  k.addEventListener("pointerdown", e => { e.preventDefault(); k.setPointerCapture(e.pointerId); ziehen = true; hin(e, true); });
-  k.addEventListener("pointermove", e => { if (ziehen) hin(e, false); });
+  let blassTimer = null; const deutlich = () => { k.classList.add("an"); clearTimeout(blassTimer); blassTimer = setTimeout(() => k.classList.remove("an"), 4000); };
+  k.addEventListener("pointerdown", e => { e.preventDefault(); k.setPointerCapture(e.pointerId); ziehen = true; deutlich(); hin(e, true); });
+  k.addEventListener("pointermove", e => { if (ziehen) { deutlich(); hin(e, false); } });
   k.addEventListener("pointerup", () => { ziehen = false; }); k.addEventListener("pointercancel", () => { ziehen = false; });
   k.addEventListener("dblclick", zuMir); // Doppelklick = zurück zu mir
 }
