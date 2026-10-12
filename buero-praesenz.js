@@ -1739,7 +1739,7 @@
     try {
       const w = WA.ui.website;
       await w.open({
-        url: SEITEN + "blick.html?teil=stick&v=1",
+        url: SEITEN + "blick.html?teil=stick&v=2",
         allowApi: true,
         visible: true,
         position: { vertical: "bottom", horizontal: "left" },
@@ -1747,7 +1747,7 @@
         margin: { bottom: HANDY ? "96px" : "20px", left: HANDY ? "8px" : "20px" }
       });
       await w.open({
-        url: SEITEN + "blick.html?teil=karte&v=1",
+        url: SEITEN + "blick.html?teil=karte&v=2",
         allowApi: true,
         visible: true,
         position: { vertical: "bottom", horizontal: "right" },
