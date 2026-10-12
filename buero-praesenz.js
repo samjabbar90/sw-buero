@@ -4,7 +4,7 @@
   var BUERO_KEY = "a21b2aa2a42fe6189b05773c07bbc9ad78e38b34ba3bb6fe";
   var DASHBOARD = "https://swdigitaltest.de";
   var SITZUNG = Math.random().toString(36).slice(2) + Date.now().toString(36);
-  var DY = 12;
+  var DY = 0;
   var HANDY = (screen.width || 1200) < 768 || /Android|iPhone|iPod|Mobile/i.test(navigator.userAgent);
   var aktuellerBereich = null;
   var beendet = false;
@@ -1881,7 +1881,7 @@
         allowApi: true,
         visible: true,
         position: { vertical: "bottom", horizontal: "right" },
-        size: { width: HANDY ? "130px" : "232px", height: HANDY ? "83px" : "148px" },
+        size: { width: HANDY ? "130px" : "232px", height: HANDY ? "70px" : "124px" },
         margin: { bottom: HANDY ? "158px" : "20px", right: HANDY ? "14px" : "20px" }
       });
     } catch {
