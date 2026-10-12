@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Leiste</title>
+<!-- Handy Layout 1 „Daumen-Leiste“ (12.10.2026, Sam): unten über den WorkAdventure-Knöpfen, 4 Knöpfe Karte · Team · Reise · Mehr.
+     Meldet über die Spieler-Variable „swAktion“ ans Büro-Skript (buero-praesenz.js). -->
+<script src="https://play.workadventu.re/iframe_api.js"></script>
+<style>
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { margin:0; height:100%; background:transparent; overflow:hidden; font-family:system-ui,-apple-system,"Segoe UI",sans-serif; }
+  .l { height:100%; display:grid; grid-template-columns:repeat(4,1fr); gap:6px; padding:6px; background:rgba(20,24,34,.92); border:1px solid rgba(255,255,255,.14); border-radius:20px; }
+  button { border:0; background:transparent; color:#fff; font:600 11px system-ui,sans-serif; border-radius:14px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; cursor:pointer; }
+  button span { font-size:20px; line-height:1; } button:active, button.an { background:rgba(83,74,183,.55); }
+</style>
+</head>
+<body>
+<div class="l">
+  <button data-w="karte"><span>🗺</span>Karte</button>
+  <button data-w="team"><span>👥</span>Team</button>
+  <button data-w="reise"><span>🚀</span>Reise</button>
+  <button data-w="handyMenue"><span>☰</span>Mehr</button>
+</div>
+<script>
+document.querySelectorAll("[data-w]").forEach(b => b.onclick = () => {
+  try { WA.player.state.saveVariable("swAktion", { was: b.dataset.w, t: Date.now() }, { public: false, persist: false }); } catch (e) { console.warn(e); }
+  b.classList.add("an"); setTimeout(() => b.classList.remove("an"), 250);
+});
+</script>
+</body>
+</html>

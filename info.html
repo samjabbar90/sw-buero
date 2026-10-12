@@ -26,13 +26,17 @@
   #news .zahl { position:absolute; top:-5px; right:-4px; min-width:16px; height:16px; padding:0 4px; border-radius:8px; background:#ef4444; color:#fff; font-size:10px; line-height:16px; text-align:center; }
   /* Handy (12.10.2026, Sam: alles muss in der Leiste bleiben): kompakter, ohne Uhr (zeigt das Handy selbst) */
   @media (max-width: 400px) { .pille { font-size:12px; padding:0 2px; } .teil { padding:0 7px; gap:4px; } .teil:has(#uhr) { display:none; } .teil:has(#uhr) + .teil { border-left:0; } }
+  /* Handy Layout 1 (12.10.2026, Sam): statt der breiten Leiste zwei kleine Chips oben – ?teil=status (Online-Dauer + Kollegen, Tippen = Team) und ?teil=tuer */
+  body.teil-status .teil:has(#uhr), body.teil-status #tuer, body.teil-status #fokus, body.teil-status #feierabend, body.teil-status #news, body.teil-status .lang { display:none !important; }
+  body.teil-tuer .teil:not(#tuer) { display:none !important; } body.teil-tuer #tuer { border-left:0 !important; }
+  body.teil-status .pille, body.teil-tuer .pille { font-size:13px; padding:0 2px; background:rgba(20,24,34,.88); border:1px solid rgba(255,255,255,.14); } body.teil-status .teil { padding:0 8px; } body.teil-status { cursor:pointer; }
 </style>
 </head>
 <body>
 <div class="pille">
   <span class="teil">🕐 <b id="uhr">–</b></span>
   <button class="teil" id="tuer" style="display:none" title="Tippen: frei → besetzt → zu">–</button>
-  <span class="teil" id="online" style="display:none" title="Heute zum ersten Mal im Büro">🟢 online seit <b id="seit">–</b>&nbsp;·&nbsp;<span id="dauer"></span></span>
+  <span class="teil" id="online" style="display:none" title="Heute zum ersten Mal im Büro">🟢 <span class="lang">online seit <b id="seit">–</b>&nbsp;·&nbsp;</span><b id="dauer"></b></span>
   <span class="teil" title="Kollegen im Büro">👥 <b id="leute">–</b></span>
   <button class="teil" id="fokus" style="display:none" title="Fokus: 25 Min Tür auf „besetzt“">🎯</button>
   <button class="teil" id="feierabend" style="display:none" title="Arbeitszeit prüfen und Feierabend machen">🚪 Feierabend</button>
@@ -102,6 +106,11 @@ function onlineDauer() { if (seitMin == null) return; const j = new Date(), m = 
 setInterval(onlineDauer, 30000);
 if (new URLSearchParams(location.search).has('kz')) { $('feierabend').style.display = '';
   $('feierabend').addEventListener('click', () => { try { WA.player.state.saveVariable('swAktion', { was: 'feierabend', t: Date.now() }, { public: false, persist: false }); } catch { /* ältere Version */ } }); }
+
+// Handy-Chips: Teil wählen; der Status-Chip öffnet beim Tippen das Team
+const TEIL = new URLSearchParams(location.search).get("teil") || "";
+if (TEIL) document.body.classList.add("teil-" + TEIL);
+if (TEIL === "status") document.body.addEventListener("click", () => { try { WA.player.state.saveVariable("swAktion", { was: "team", t: Date.now() }, { public: false, persist: false }); } catch { /* ältere Version */ } });
 
 WA.onInit().then(async () => {
   try { await WA.players.configureTracking({ players: true, movement: false }); } catch { /* egal */ }

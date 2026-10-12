@@ -30,12 +30,27 @@
   html.glas .r:hover { background:rgba(255,255,255,.06) !important; } html.glas .k { background:rgba(255,255,255,.08) !important; border-color:rgba(255,255,255,.2) !important; color:#fff !important; }
   html.glas .live { background:rgba(239,68,68,.2) !important; color:#fca5a5 !important; } html.glas .weg .n { color:rgba(255,255,255,.55) !important; }
   html.glas .msg input { background:rgba(255,255,255,.08) !important; border-color:rgba(255,255,255,.2) !important; color:#fff !important; } html.glas .ok { color:#6ee7b7 !important; }
+  /* Handy Layout 1 „Team“ (12.10.2026, Sam): ?sheet=1 = dunkles Blatt von unten mit Suche und Reitern Alle / Da / Offline */
+  html.sheet, html.sheet body { background:transparent; height:100%; } html.sheet body { overflow:hidden; }
+  html.sheet .wrap { height:100%; display:flex; flex-direction:column; background:#171a22; color:#fff; border-radius:26px 26px 0 0; box-shadow:0 -10px 30px rgba(0,0,0,.35); }
+  html.sheet header { position:static; background:transparent; padding:10px 16px 6px; flex-direction:column; align-items:stretch; }
+  html.sheet .grip { width:40px; height:5px; border-radius:3px; background:#555; margin:0 auto 10px; }
+  html.sheet .kz { display:flex; align-items:center; } html.sheet .kz h1 { flex:1; font-size:17px; }
+  html.sheet .zu { background:#2a2f3a; border:0; color:#fff; border-radius:11px; width:36px; height:36px; font-size:16px; cursor:pointer; }
+  html.sheet .such { margin-top:10px; width:100%; font:inherit; font-size:15px; padding:10px 12px; border:0; border-radius:12px; background:#232836; color:#fff; }
+  html.sheet .tabs { display:flex; gap:6px; margin-top:8px; } html.sheet .tabs button { font:600 12.5px system-ui,sans-serif; padding:6px 12px; border-radius:10px; border:0; background:#232836; color:#ccc; cursor:pointer; }
+  html.sheet .tabs button.an { background:#534AB7; color:#fff; }
+  html.sheet main { flex:1; overflow-y:auto; padding:0 10px 24px; }
+  html.sheet .r { padding:10px 6px; border-bottom:1px solid #262b36; border-radius:0; } html.sheet .av { width:40px; height:40px; background-color:#3C3489; }
+  html.sheet .n { color:#fff; } html.sheet .s, html.sheet .zul, html.sheet h2 { color:#9ca3af; } html.sheet .was { color:#5eead4; }
+  html.sheet .k { background:#2a2550; border:0; color:#c4b5fd; padding:7px 9px; } html.sheet .weg .n { color:#cbd5e1; }
+  html.sheet .msg input { background:#232836; border-color:#333a48; color:#fff; } html.sheet .leer { color:#9ca3af; } html.sheet .ok { color:#6ee7b7; }
 </style>
 <script src="glas.js?v=1791559958"></script>
 </head>
 <body>
-<header><h1 id="kopf">👥 Wer ist da</h1></header>
-<main id="liste"><div class="leer">Lade …</div></main>
+<div class="wrap"><header id="hd"><h1 id="kopf">👥 Wer ist da</h1></header>
+<main id="liste"><div class="leer">Lade …</div></main></div>
 <script src="https://play.workadventu.re/iframe_api.js"></script>
 <script>
 const KEY = "a21b2aa2a42fe6189b05773c07bbc9ad78e38b34ba3bb6fe", API = "https://swdigitaltest.de/buero-praesenz";
@@ -43,7 +58,13 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const ausweis = () => { try { return localStorage.getItem("swBueroAusweis") || ""; } catch { return ""; } };
 const q = new URLSearchParams(location.search), glas = q.has("glas") ? "&glas=1" : "";
-let offen = q.get("an") || "", gesendet = {};
+let offen = q.get("an") || "", gesendet = {}, reiter = "alle", suche = "";
+const SHEET = q.has("sheet");
+if (SHEET) { document.documentElement.classList.add("sheet");
+  document.getElementById("hd").innerHTML = '<div class="grip"></div><div class="kz"><h1 id="kopf">👥 Team</h1><button class="zu" id="zu" aria-label="Schließen">✕</button></div>'
+    + '<input class="such" id="such" placeholder="🔍 Kollegen suchen …" autocomplete="off"><div class="tabs" id="tabs"></div>';
+  document.getElementById("zu").onclick = () => { try { WA.player.state.saveVariable("swAktion", { was: "team", t: Date.now() }, { public: false, persist: false }); } catch {} };
+  document.getElementById("such").oninput = e => { suche = e.target.value.trim().toLowerCase(); zeichnen(); }; }
 const minSeit = ms => { const m = Math.max(0, Math.round((Date.now() - ms) / 60000)); return m < 60 ? m + " Min" : Math.floor(m / 60) + " Std"; };
 const kopf = h => ({ "X-Buero-Key": KEY, "X-Buero-Ausweis": ausweis(), "X-Buero-Name": encodeURIComponent(window.__waName || ""), ...h });
 const initialen = n => String(n).split(/\s+/).map(t => t[0] || "").join("").slice(0, 2).toUpperCase();
@@ -67,7 +88,9 @@ function zeileDa(p) {
     <div style="flex:1;min-width:0"><div class="n">${esc(p.name)}${status}</div><div class="s">${esc(p.bereich)}${extra}</div>${was}</div>${knoepfe(p, true)}</div>${unterZeile(p)}`;
 }
 function zeileWeg(p) {
-  const wann = p.zuletzt ? "heute bis " + new Date(p.zuletzt).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" }) + " im Büro" : "heute nicht da";
+  const d = p.zuletzt ? new Date(p.zuletzt) : null, heute = d && d.toDateString() === new Date().toDateString(), uhr = d && d.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
+  const gestern = d && new Date(Date.now() - 86400000).toDateString() === d.toDateString();
+  const wann = !d ? "länger nicht im Büro" : heute ? "heute bis " + uhr + " im Büro" : gestern ? "zuletzt gestern " + uhr : "zuletzt " + d.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" }) + " " + uhr;
   return `<div class="r weg" data-p="${esc(p.name)}"><div class="av">${esc(initialen(p.name))}</div><div style="flex:1;min-width:0"><div class="n">${esc(p.name)}</div><div class="s">${wann}</div></div>${knoepfe(p, false)}</div>${unterZeile(p)}`;
 }
 async function senden(an, knopf) {
@@ -83,9 +106,14 @@ async function senden(an, knopf) {
 let DATEN = null;
 function zeichnen() {
   if (!DATEN) return;
-  const da = DATEN.da || [], weg = DATEN.weg || [];
-  $("kopf").textContent = "👥 Wer ist da · " + da.length;
-  $("liste").innerHTML = (da.length ? da.map(zeileDa).join("") : '<div class="leer">Gerade ist niemand im Büro.</div>')
+  const passt = p => !suche || String(p.name).toLowerCase().includes(suche);
+  const daAlle = DATEN.da || [], wegAlle = DATEN.weg || [];
+  const da = reiter === "weg" ? [] : daAlle.filter(passt), weg = reiter === "da" ? [] : wegAlle.filter(passt);
+  $("kopf").textContent = SHEET ? "👥 Team · " + daAlle.length + " da" : "👥 Wer ist da · " + daAlle.length;
+  if (SHEET) { const t = $("tabs"); t.innerHTML = [["alle", "Alle " + (daAlle.length + wegAlle.length)], ["da", "Da " + daAlle.length], ["weg", "Offline " + wegAlle.length]]
+      .map(([k, l]) => `<button data-tab="${k}" class="${reiter === k ? "an" : ""}">${l}</button>`).join("");
+    t.querySelectorAll("[data-tab]").forEach(b => b.onclick = () => { reiter = b.dataset.tab; zeichnen(); }); }
+  $("liste").innerHTML = (reiter === "weg" ? "" : (SHEET ? "<h2>Im Büro</h2>" : "") + (da.length ? da.map(zeileDa).join("") : '<div class="leer">' + (suche ? "Niemand gefunden." : "Gerade ist niemand im Büro.") + "</div>"))
     + (weg.length ? "<h2>Nicht im Büro · " + weg.length + "</h2>" + weg.map(zeileWeg).join("") : "");
   document.querySelectorAll("[data-p]").forEach(el => el.onclick = ev => { if (ev.target.closest(".k")) return; location.href = "profil.html?name=" + encodeURIComponent(el.dataset.p) + glas + "&t=" + Date.now(); });
   document.querySelectorAll("[data-hin]").forEach(b => b.onclick = () => { try { WA.player.state.saveVariable("swAktion", { was: "zuPerson", name: b.dataset.hin, t: Date.now() }, { public: false, persist: false }); } catch {} });

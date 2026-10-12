@@ -152,7 +152,7 @@
   }
   function tuerKnopf() {
     const t = meineTuer();
-    if (!t || !HANDY) return;
+    if (!t || !HANDY || true) return;
     try {
       WA.ui.actionBar.removeButton("sw-tuer");
     } catch {
@@ -533,7 +533,7 @@
     const SW = screen.availWidth || 1600, SH = screen.availHeight || 900, zw = (v, a, z) => Math.min(z, Math.max(a, v));
     const b = Math.round(zw(Number(e.b) || Math.min(780, SW * 0.44), 340, SW - 40)), hv = Math.round(zw(Number(e.hv) || 78, 30, 88));
     e = { ...e, r: zw(Number(e.r ?? 14) || 0, 0, Math.max(0, SW - b - 20)), o: zw(Number(e.o ?? 70) || 0, 0, 160) };
-    if (HANDY) return { position: { vertical: "bottom", horizontal: "middle" }, size: { width: Math.round((screen.width || 390) - 20) + "px", height: "50vh" }, margin: { bottom: "256px" } };
+    if (HANDY) return { position: { vertical: "bottom", horizontal: "middle" }, size: { width: Math.round(screen.width || 390) + "px", height: "76vh" }, margin: { bottom: "0px" } };
     if (e.voll) return { position: { vertical: "top", horizontal: "middle" }, size: { width: Math.round(screen.availWidth * 0.94) + "px", height: "90vh" }, margin: { top: "40px" } };
     return { position: { vertical: "top", horizontal: "right" }, size: { width: b + "px", height: hv + "vh" }, margin: { top: Math.round(Number(e.o) || 70) + "px", right: Math.round(Number(e.r ?? 14)) + "px" } };
   }
@@ -546,6 +546,7 @@
       glasOffen && glasOffen.handle && glasOffen.handle.close();
     } catch {
     }
+    if (HANDY) handyBlattZu();
     try {
       glasOffen = { url: u, handle: await glasOeffnen(u) };
     } catch (e) {
@@ -836,6 +837,92 @@
       }
     });
   }
+  var BW = () => Math.round(screen.width || 390) + "px";
+  var handyBlatt = null;
+  function handyBlattZu() {
+    if (handyBlatt) {
+      try {
+        handyBlatt.h.close();
+      } catch {
+      }
+    }
+    handyBlatt = null;
+  }
+  async function handyBlattUmschalten(name, url, hoehe) {
+    const war = handyBlatt && handyBlatt.name;
+    handyBlattZu();
+    if (war === name) return;
+    try {
+      glasOffen && glasOffen.handle && glasOffen.handle.close();
+    } catch {
+    }
+    glasOffen = null;
+    try {
+      const h = await WA.ui.website.open({ url, allowApi: true, visible: true, position: { vertical: "bottom", horizontal: "middle" }, size: { width: BW(), height: hoehe }, margin: { bottom: "0px" } });
+      handyBlatt = { name, h };
+    } catch {
+      handyBlatt = null;
+    }
+  }
+  var hinweisWeb = null;
+  var hinweisNr = 0;
+  var hinweisAkt = null;
+  function hinweisText(t) {
+    return String(t || "").replace(/\s*[·–-]?\s*Leertaste\s*=\s*/gi, " \u2192 ").replace(/\s*[·–-]?\s*Leertaste\s*(zum Sprechen|zum|:)?\s*/gi, " ").replace(/\s+/g, " ").replace(/\s*[·:–-]\s*$/, "").trim();
+  }
+  function handyHinweis(o) {
+    const nr = ++hinweisNr, cb = o && o.callback || (() => {
+    }), knopf = String(cb).replace(/\s/g, "") !== "()=>{}";
+    hinweisAkt = { nr, cb };
+    const url = SEITEN + "hinweis.html?nr=" + nr + (knopf ? "&knopf=1" : "") + "&text=" + encodeURIComponent(hinweisText(o && o.message));
+    const alt = hinweisWeb;
+    hinweisWeb = null;
+    WA.ui.website.open({
+      url,
+      allowApi: true,
+      visible: true,
+      position: { vertical: "bottom", horizontal: "middle" },
+      size: { width: Math.round((screen.width || 390) - 28) + "px", height: "56px" },
+      margin: { bottom: "232px" }
+    }).then((h) => {
+      try {
+        alt && alt.close();
+      } catch {
+      }
+      if (hinweisAkt && hinweisAkt.nr === nr) hinweisWeb = h;
+      else {
+        try {
+          h.close();
+        } catch {
+        }
+      }
+    }).catch(() => {
+      try {
+        alt && alt.close();
+      } catch {
+      }
+    });
+    return { remove: () => {
+      if (hinweisAkt && hinweisAkt.nr === nr) {
+        hinweisAkt = null;
+        try {
+          hinweisWeb && hinweisWeb.close();
+        } catch {
+        }
+        hinweisWeb = null;
+      }
+    } };
+  }
+  function hinweisGetippt(nr) {
+    if (hinweisAkt && hinweisAkt.nr === nr) {
+      const cb = hinweisAkt.cb;
+      try {
+        cb();
+      } catch (e) {
+        console.warn(e);
+      }
+    }
+  }
   function leertasteBereich(name, b, text, aktion, raus) {
     let hinweis2 = null;
     const zeigen = () => {
@@ -985,7 +1072,7 @@
         visible: true,
         position: { vertical: "bottom", horizontal: "middle" },
         size: { width: HANDY ? Math.round((screen.width || 390) - 20) + "px" : "560px", height: hoch ? "200px" : "50px" },
-        margin: { bottom: HANDY ? "200px" : "64px" }
+        margin: { bottom: HANDY ? "160px" : "64px" }
       });
     } catch {
     }
@@ -1642,6 +1729,10 @@
       if (WA.room.hashParameters && WA.room.hashParameters.handy) HANDY = true;
     } catch {
     }
+    if (HANDY) try {
+      WA.ui.displayActionMessage = handyHinweis;
+    } catch {
+    }
     const frisch = async () => {
       try {
         const r = await fetch(ENDPOINT.replace(/melden$/, "ausweis/frisch"), { method: "POST", headers: { "Content-Type": "application/json", "X-Buero-Key": BUERO_KEY }, body: JSON.stringify({ name: WA.player.name }) });
@@ -1685,7 +1776,30 @@
     wetterTakt();
     infoLaden();
     setInterval(infoLaden, 15e3);
-    try {
+    if (HANDY) {
+      try {
+        await WA.ui.website.open({
+          url: SEITEN + "info.html?v=6&teil=status" + (kzAktiv ? "&kz=1" : ""),
+          allowApi: true,
+          visible: true,
+          position: { vertical: "top", horizontal: "left" },
+          size: { width: "150px", height: "36px" },
+          margin: { top: "64px", left: "12px" }
+        });
+      } catch {
+      }
+      if (meineTuer()) try {
+        await WA.ui.website.open({
+          url: SEITEN + "info.html?v=6&teil=tuer",
+          allowApi: true,
+          visible: true,
+          position: { vertical: "top", horizontal: "right" },
+          size: { width: "92px", height: "36px" },
+          margin: { top: "64px", right: "12px" }
+        });
+      } catch {
+      }
+    } else try {
       await WA.ui.website.open({
         url: "https://samjabbar90.github.io/sw-buero/info.html?v=5" + (kzAktiv ? "&kz=1" : ""),
         allowApi: true,
@@ -1764,8 +1878,8 @@
         allowApi: true,
         visible: true,
         position: { vertical: "bottom", horizontal: "right" },
-        size: { width: HANDY ? "174px" : "232px", height: HANDY ? "93px" : "124px" },
-        margin: { bottom: HANDY ? "96px" : "20px", right: HANDY ? "58px" : "20px" }
+        size: { width: HANDY ? "130px" : "232px", height: HANDY ? "70px" : "124px" },
+        margin: { bottom: HANDY ? "158px" : "20px", right: HANDY ? "14px" : "20px" }
       });
     } catch {
     }
@@ -1799,12 +1913,12 @@
         }
       } else {
         await WA.ui.website.open({
-          url: SEITEN + "handy-menue.html?knopf=1",
+          url: SEITEN + "handy-leiste.html?v=1",
           allowApi: true,
           visible: true,
-          position: { vertical: "top", horizontal: "left" },
-          size: { width: "48px", height: "48px" },
-          margin: { top: "112px", left: "10px" }
+          position: { vertical: "bottom", horizontal: "middle" },
+          size: { width: Math.round((screen.width || 390) - 24) + "px", height: "62px" },
+          margin: { bottom: "88px" }
         });
       }
     } catch {
@@ -1849,8 +1963,10 @@
         }
       }
       handyMenue = null;
+      if (handyBlatt && handyBlatt.name === "mehr") handyBlattZu();
     };
     const handyMenueUmschalten = async () => {
+      return handyBlattUmschalten("mehr", SEITEN + "handy-menue.html?v=2" + (tcAktiv ? "&tc=1" : "") + (kzAktiv ? "&kz=1" : "") + (meineTuer() ? "&tuer=1" : ""), Math.min(520, Math.round((screen.height || 800) * 0.7)) + "px");
       if (handyMenue) return handyMenueZu();
       try {
         handyMenue = await WA.ui.website.open({
@@ -1877,6 +1993,8 @@
         letzteAktion = v.t;
         if (v.was === "menue") return menueUmschalten(String(v.m || ""));
         if (v.was === "handyMenue") return handyMenueUmschalten();
+        if (v.was === "hinweisTipp") return hinweisGetippt(Number(v.nr) || 0);
+        if (v.was === "team") return HANDY ? handyBlattUmschalten("team", SEITEN + "wer.html?sheet=1&t=" + Date.now(), "78vh") : glasFenster(SEITEN + "wer.html?t=" + Date.now());
         if (ZIMMER_AKTIONEN[v.was]) return ZIMMER_AKTIONEN[v.was](v);
         if (v.was === "abmelden") {
           return melden("verlassen").then(() => {
@@ -1886,6 +2004,7 @@
         }
         menueZu();
         handyMenueZu();
+        if (HANDY) handyBlattZu();
         const tuer = meineTuer();
         ({
           ideen: () => ideenOeffnen(),

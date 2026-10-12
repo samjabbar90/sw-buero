@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>Hinweis</title>
+<!-- Handy Layout 1 (12.10.2026, Sam: „die Leertaste kommt hässlich rein“): kleiner heller Hinweis statt der großen WorkAdventure-Meldung.
+     ?text=…&nr=…&knopf=1 – Tippen meldet swAktion „hinweisTipp“ mit nr, das Büro-Skript führt dann die Aktion aus. -->
+<script src="https://play.workadventu.re/iframe_api.js"></script>
+<style>
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { margin:0; height:100%; background:transparent; overflow:hidden; font-family:system-ui,-apple-system,"Segoe UI",sans-serif; }
+  .h { height:100%; display:flex; align-items:center; gap:10px; padding:0 8px 0 14px; background:#EEEDFE; color:#26215C; border-radius:16px;
+    box-shadow:0 6px 18px rgba(0,0,0,.3); font-size:14px; cursor:pointer; }
+  .t { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; line-height:1.25; }
+  b { flex:none; background:#534AB7; color:#fff; border-radius:11px; padding:8px 14px; font-size:13px; }
+</style>
+</head>
+<body>
+<div class="h" id="h"><div class="t" id="t"></div><b id="k">Tippen</b></div>
+<script>
+const q = new URLSearchParams(location.search);
+document.getElementById("t").textContent = q.get("text") || "";
+if (q.get("knopf") !== "1") document.getElementById("k").remove();
+document.getElementById("h").onclick = () => { if (q.get("knopf") !== "1") return;
+  try { WA.player.state.saveVariable("swAktion", { was: "hinweisTipp", nr: Number(q.get("nr")) || 0, t: Date.now() }, { public: false, persist: false }); } catch (e) { console.warn(e); } };
+</script>
+</body>
+</html>
