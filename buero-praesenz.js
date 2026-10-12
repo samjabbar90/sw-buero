@@ -967,7 +967,7 @@
     } catch {
     }
   }
-  async function zimmerLeisteAuf(id, raum, weiter = false) {
+  async function zimmerLeisteAuf(id, raum, weiter = false, hoch = false) {
     if (zimmerLeiste) {
       try {
         zimmerLeiste.close();
@@ -979,11 +979,12 @@
     zimmerHinweisWeg();
     try {
       zimmerLeiste = await WA.ui.website.open({
-        url: SEITEN + "zimmer-leiste.html?id=" + encodeURIComponent(id) + "&raum=" + encodeURIComponent(raum) + (weiter ? "&weiter=1" : "") + "&t=" + Date.now(),
+        url: SEITEN + "zimmer-leiste.html?id=" + encodeURIComponent(id) + "&raum=" + encodeURIComponent(raum) + (weiter ? "&weiter=1" : "") + (hoch ? "&hoch=1" : "") + "&t=" + Date.now(),
         allowApi: true,
+        allowPolicy: "microphone",
         visible: true,
         position: { vertical: "bottom", horizontal: "middle" },
-        size: { width: HANDY ? Math.round((screen.width || 390) - 20) + "px" : "560px", height: "50px" },
+        size: { width: HANDY ? Math.round((screen.width || 390) - 20) + "px" : "560px", height: hoch ? "200px" : "50px" },
         margin: { bottom: HANDY ? "200px" : "64px" }
       });
     } catch {
@@ -1054,6 +1055,9 @@
       zimmerSagen("start", raum, String(v.id));
     },
     zimmerLeisteZu: () => zimmerLeisteZu(),
+    zimmerLeisteGroesse: (v) => {
+      if (zimmerId) zimmerLeisteAuf(zimmerId, zimmerRaum, false, !!v.hoch);
+    },
     // Glastür zum Anbau: PIN stimmte (glastuer.html) → für diese Sitzung frei, Tür auf (12.10.)
     glastuerAuf: () => {
       anbauFrei = true;

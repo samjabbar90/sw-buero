@@ -155,6 +155,7 @@ function zeichnen() {
     ${darf && !g.istLeitung ? `<select id="plus" style="width:auto;font-size:12px;padding:3px 6px"><option value="">+ hinzufügen</option>${PERSONEN.filter(p => !g.teilnehmer.some(t => t.id === p.id)).map(p => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join("")}</select>` : ""}</div>`;
   if (a.mandant) h += `<label>${g.art === "mandant" ? "Mandant" : "Mandant (optional – dann steht es beim Mandanten unter „Gespräche intern“)"}</label>${g.mandant ? `<div class="chips"><span class="chip">${esc(g.mandant.nr ? g.mandant.nr + " · " : "")}${esc(g.mandant.name)}</span>${darf ? '<a href="#" id="mWeg" style="font-size:12px">ändern</a>' : ""}</div>` : (darf ? '<input id="mSuche" placeholder="Name oder Mandantennummer …"><div id="mTreffer"></div>' : '<div class="leer">–</div>')}`;
   h += a.felder.map(f => feldHtml(f, (g.felder || {})[f.k], darf)).join("") + "</div>";
+  h += kiHtml(g, darf);
   if (a.aufgaben) {
     h += `<div class="box"><b>Aufgaben</b> <span class="hin">→ landen beim Abschließen in der Aufgaben Box</span><div id="aufL" style="margin-top:8px">` + (g.aufgaben || []).map((x, i) => `<div class="auf"><input data-a="${i}" data-ak="text" value="${esc(x.text)}"${darf && !x.ticketNr ? "" : " disabled"}>
       <select data-a="${i}" data-ak="bearbeiterId"${darf && !x.ticketNr ? "" : " disabled"}><option value="">wer?</option>${g.teilnehmer.concat(PERSONEN.filter(p => !g.teilnehmer.some(t => t.id === p.id))).map(p => `<option value="${esc(p.id)}"${p.id === x.bearbeiterId ? " selected" : ""}>${esc(p.name)}</option>`).join("")}</select>
@@ -164,9 +165,38 @@ function zeichnen() {
   if (g.status === "laeuft" && g.darfBearbeiten) h += `<div style="display:flex;gap:6px;flex-wrap:wrap"><button class="k" id="fertig">${zeit ? "✓ Speichern" : "✓ Gespräch abschließen"}</button>${zeit && !gestoppt ? '<button class="k leicht" id="zStop">■ Beenden (Zeit stoppen)</button>' : ""}<span style="flex:1"></span>${g.gestartetVon.id === g.ich ? '<button class="k rot" id="weg">Verwerfen</button>' : ""}</div>`;
   else if (g.status === "fertig") h += `<div class="box"><span class="ok">✓ Abgeschlossen</span> – alle Teilnehmer haben eine Meldung bekommen und finden es im Profil unter „Gespräche“.${g.istLeitung && g.darfBearbeiten ? " Du kannst die Angaben weiter ändern." : ""}<div style="margin-top:8px"><button class="k leicht" id="neu">Neues Gespräch</button></div></div>`;
   h += '<div class="fehler" id="fe"></div><div class="hin" id="stand"></div>';
-  $("inhalt").innerHTML = h; verdrahten(darf); zeigtStand = g.version || 0;
+  $("inhalt").innerHTML = h; verdrahten(darf); kiVerdrahten(); zeigtStand = g.version || 0;
   if (g.jetzt) uhrVersatz = Date.parse(g.jetzt) - Date.now();
   uhrStellen();
+}
+// ---------- Mitschrift + Zusammenfassung (12.10.2026, Sam: Layout A) ----------
+// Ist eine Mitschrift da: am Ende fasst Claude zusammen (Zusammenfassung, Beschlüsse, erkannte Aufgaben). „Übernehmen“ schreibt es ins
+// Protokoll und legt die angehakten Aufgaben in die Aufgaben-Liste — beim Speichern gehen sie wie gewohnt in die Aufgaben Box.
+let kiLaeuft = false, kiAutoVersucht = false, kiFehler = "";
+function kiHtml(g, darf) {
+  const m = g.mitschrift || {}, k = g.ki; if (!m.anzahl && !k) return "";
+  const mitschrift = m.anzahl ? `<details style="margin-top:8px"><summary class="hin" style="cursor:pointer">Mitschrift ansehen (${m.anzahl} Sätze${m.anzahl > (m.zeilen || []).length ? ", die letzten " + m.zeilen.length : ""})</summary><div style="max-height:220px;overflow:auto;font-size:12.5px;line-height:1.5;margin-top:6px">${(m.zeilen || []).map(z => `<div><b>${esc(z.name)}:</b> ${esc(z.text)}</div>`).join("")}</div></details>` : "";
+  if (!k) return `<div class="box"><b>🧠 Zusammenfassung</b><div class="hin">${kiLaeuft ? "Claude fasst das Gespräch zusammen …" : kiFehler ? esc(kiFehler) : "Aus der Mitschrift Zusammenfassung, Beschlüsse und Aufgaben machen (kostet ein paar Cent)."}</div>${darf && !kiLaeuft ? '<button class="k" id="kiMach" style="margin-top:8px">🧠 Zusammenfassen</button>' : ""}${mitschrift}</div>`;
+  const auf = (k.aufgaben || []).map((a, i) => `<label style="display:flex;gap:8px;align-items:flex-start;font-weight:400;margin:4px 0"><input type="checkbox" data-kia="${i}" checked${k.uebernommen || !darf ? " disabled" : ""} style="width:auto;margin-top:3px"><span>${esc(a.text)}<span class="hin"> · ${esc(a.bearbeiterName || "wer?")}${a.frist ? " · bis " + esc(dDE(a.frist)) : ""}</span></span></label>`).join("");
+  return `<div class="box" style="border-color:#1d9e75"><b>🧠 Zusammenfassung</b>${k.uebernommen ? ' <span class="ok">✓ übernommen</span>' : ""}<div style="margin-top:6px;line-height:1.5">${esc(k.zusammenfassung)}</div>`
+    + ((k.beschluesse || []).length ? `<div style="margin-top:8px"><b style="font-size:12.5px">Beschlüsse</b><ul style="margin:4px 0 0 18px;padding:0">${k.beschluesse.map(b => `<li>${esc(b)}</li>`).join("")}</ul></div>` : "")
+    + ((k.aufgaben || []).length ? `<div style="margin-top:8px"><b style="font-size:12.5px">${k.aufgaben.length} Aufgabe${k.aufgaben.length === 1 ? "" : "n"} erkannt</b>${auf}</div>` : '<div class="hin" style="margin-top:6px">Keine Aufgaben erkannt.</div>')
+    + (k.mandant && !g.mandant ? `<div class="hin" style="margin-top:6px">Genannter Mandant: ${esc(k.mandant)} – oben unter „Mandant“ eintragen.</div>` : "")
+    + (darf && !k.uebernommen ? '<div style="display:flex;gap:6px;margin-top:8px"><button class="k" id="kiNimm">✓ Übernehmen</button><button class="k leicht" id="kiNeu">↻ Neu zusammenfassen</button></div>' : "")
+    + (kiFehler ? `<div class="fehler">${esc(kiFehler)}</div>` : "") + mitschrift + "</div>";
+}
+async function kiMachen(neu) {
+  if (kiLaeuft) return; kiLaeuft = true; kiFehler = ""; zeichnen();
+  try { G = await api("/gespraeche/" + G.id + "/zusammenfassung", { method: "POST", body: JSON.stringify({ neu: !!neu }) }); } catch (e) { kiFehler = e.message; }
+  kiLaeuft = false; zeichnen();
+}
+function kiVerdrahten() {
+  if ($("kiMach")) $("kiMach").onclick = () => kiMachen(false);
+  if ($("kiNeu")) $("kiNeu").onclick = () => kiMachen(true);
+  if ($("kiNimm")) $("kiNimm").onclick = async () => { const auswahl = [...document.querySelectorAll("[data-kia]:checked")].map(x => +x.dataset.kia);
+    try { G = await api("/gespraeche/" + G.id + "/ki-uebernehmen", { method: "POST", body: JSON.stringify({ auswahl }) }); zeichnen(); } catch (e) { kiFehler = e.message; zeichnen(); } };
+  // Abschlusskarte: Gespräch beendet, Mitschrift da, noch keine Zusammenfassung → einmal automatisch anstoßen
+  const m = G && G.mitschrift; if (G && G.darfBearbeiten && G.zeitEnde && m && m.anzahl && !G.ki && !kiAutoVersucht) { kiAutoVersucht = true; setTimeout(() => kiMachen(false), 50); }
 }
 function speichern(teil, sofort) {
   Object.assign(warteSpeichern, teil); clearTimeout(speichern.t);

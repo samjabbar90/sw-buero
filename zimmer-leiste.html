@@ -7,27 +7,44 @@
 <title>Gespräch läuft</title>
 <!-- Live-Leiste fürs Kurzgespräch im Büro (12.10.2026, Sam: Layout A): schwebt unten über dem Büro, zeigt mit wem, Thema, Mandant und
      die laufende Zeit. Knöpfe melden über die Spieler-Variable „swAktion“ ans Büro-Skript (buero-praesenz.js), das die Fenster öffnet.
-     ?weiter=1: wer binnen 3 Min ins Büro zurückkommt, dessen Zeit läuft weiter. Server: routes/gespraeche.js (Art „zimmer“). -->
+     ?weiter=1: wer binnen 3 Min ins Büro zurückkommt, dessen Zeit läuft weiter. Server: routes/gespraeche.js (Art „zimmer“).
+     Mitschreiben (12.10.2026, Sam: Layout A „Live-Text“): 🎙 fragt alle Teilnehmer, erst wenn alle „Ja“ sagen, läuft es. Jeder Rechner
+     erkennt nur das EIGENE Mikrofon (Spracherkennung von Chrome/Edge) und schickt fertige Sätze an den Server; gespeichert wird nur Text.
+     Solange Mitschreiben aktiv ist, öffnet das Büro-Skript die Leiste höher (?hoch=1), der Text läuft über der Leiste mit. -->
 <script src="https://play.workadventu.re/iframe_api.js"></script>
 <style>
   html, body { margin:0; height:100%; background:transparent; color-scheme:dark; font-family:system-ui,-apple-system,"Segoe UI",sans-serif; overflow:hidden; }
-  .l { height:100%; box-sizing:border-box; display:flex; align-items:center; gap:10px; padding:0 8px 0 14px; background:rgba(20,24,34,.92);
+  body { display:flex; flex-direction:column; gap:6px; }
+  .l { flex:0 0 50px; height:50px; box-sizing:border-box; display:flex; align-items:center; gap:10px; padding:0 8px 0 14px; background:rgba(20,24,34,.92);
     border:1px solid rgba(255,255,255,.18); border-radius:16px; color:#f1f5f9; }
   .t { flex:1; min-width:0; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; } .t b { font-weight:700; } .t span { color:rgba(255,255,255,.65); }
   .z { font:700 15px system-ui,sans-serif; font-variant-numeric:tabular-nums; color:#6ee7b7; } .z.stop { color:#fcd34d; }
   button { border:1px solid rgba(255,255,255,.22); background:rgba(255,255,255,.08); color:#f1f5f9; font:600 12px system-ui,sans-serif; border-radius:9px; padding:6px 9px; cursor:pointer; white-space:nowrap; }
   button:hover { background:rgba(255,255,255,.16); } button.rot { border-color:rgba(248,113,113,.6); color:#fecaca; }
+  button.gruen { background:#0f6e56; border-color:#1d9e75; color:#e1f5ee; } button.an { border-color:rgba(248,113,113,.8); background:rgba(226,75,74,.25); }
+  .mit { flex:1; min-height:0; box-sizing:border-box; background:rgba(20,24,34,.92); border:1px solid rgba(255,255,255,.18); border-radius:14px; color:#f1f5f9;
+    padding:8px 12px; display:flex; flex-direction:column; gap:4px; font-size:13px; }
+  .mit[hidden] { display:none; }
+  .kopf { display:flex; align-items:center; gap:8px; font-size:12px; color:rgba(255,255,255,.75); }
+  .kopf .p { width:8px; height:8px; border-radius:50%; background:#e24b4a; animation:puls 1.4s infinite; } .kopf .sp { flex:1; }
+  @keyframes puls { 50% { opacity:.3; } }
+  .kopf button { padding:3px 8px; font-size:11px; }
+  .zeilen { flex:1; min-height:0; overflow-y:auto; line-height:1.45; }
+  .zeilen div b { color:#9fe1cb; font-weight:600; } .zeilen .ich b { color:#fac775; } .zeilen .grau { color:rgba(255,255,255,.5); font-style:italic; }
+  .frage { flex:1; display:flex; align-items:center; gap:10px; } .frage div { flex:1; } .hin { font-size:11.5px; color:rgba(255,255,255,.6); }
 </style>
 </head>
 <body>
+<div class="mit" id="mit" hidden></div>
 <div class="l"><div class="t" id="t">💬 Gespräch …</div><div class="z" id="z">0:00</div>
+  <button id="mic" title="Gespräch mitschreiben (alle müssen zustimmen)">🎙</button>
   <button data-was="gespraechOeffnen" data-fokus="protokoll" title="Protokoll schreiben">📝 Notiz</button>
   <button data-was="gespraechOeffnen" data-fokus="aufgabe" title="Aufgabe für die Aufgaben Box">＋ Aufgabe</button>
   <button data-was="gespraechOeffnen" data-fokus="" title="Großes Fenster">⤢</button>
   <button data-was="zimmerEnde" class="rot" title="Gespräch beenden – Zeit stoppen">■</button></div>
 <script>
 const KEY = "a21b2aa2a42fe6189b05773c07bbc9ad78e38b34ba3bb6fe", API = "https://swdigitaltest.de/buero-praesenz/gesp";
-const q = new URLSearchParams(location.search), ID = q.get("id") || "", $ = id => document.getElementById(id);
+const q = new URLSearchParams(location.search), ID = q.get("id") || "", HOCH = q.get("hoch") === "1", $ = id => document.getElementById(id);
 const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const ausweis = () => { try { return localStorage.getItem("swBueroAusweis") || ""; } catch { return ""; } };
 async function api(pfad, opt = {}) {
@@ -36,28 +53,81 @@ async function api(pfad, opt = {}) {
 }
 function buero(aktion) { try { WA.player.state.saveVariable("swAktion", { ...aktion, id: ID, t: Date.now() }, { public: false, persist: false }); } catch (e) { console.warn(e); } }
 const mmss = ms => { const s = Math.max(0, Math.floor(ms / 1000)), h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60; return (h ? h + ":" + String(m).padStart(2, "0") : String(m)) + ":" + String(s % 60).padStart(2, "0"); };
-let G = null, versatz = 0, gemeldet = false;
+let G = null, versatz = 0, gemeldet = false, groesseGemeldet = false;
 function malen() {
   if (!G) return;
   const ich = String(window.__waName || "").split(/\s+/)[0].toLowerCase();
   const andere = (G.teilnehmer || []).map(t => String(t.name).split(/\s+/)[0]).filter(n => n.toLowerCase() !== ich);
   $("t").innerHTML = "💬 <b>" + esc(andere.join(", ") || "Gespräch") + "</b>" + ((G.felder || {}).thema ? " · " + esc(G.felder.thema) : "") + (G.mandant ? " <span>· " + esc(G.mandant.name) + "</span>" : "");
+  mitMalen();
 }
 function tick() { if (!G || !G.start) return; const ende = G.zeitEnde ? Date.parse(G.zeitEnde) : Date.now() + versatz; $("z").textContent = mmss(ende - Date.parse(G.start)); $("z").classList.toggle("stop", !!G.zeitEnde); }
+
+// ---------- Mitschreiben ----------
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let rec = null, recSoll = false, zwischen = "", micFehler = "";
+const M = () => (G && G.mitschrift) || { status: "aus", zustimmung: {}, zeilen: [] };
+const ichZugestimmt = () => !!(M().zustimmung || {})[G && G.ich];
+async function mitAktion(aktion) { try { G = await api("/gespraeche/" + encodeURIComponent(ID) + "/mitschrift", { method: "POST", body: JSON.stringify({ aktion }) }); malen(); steuern(); } catch (e) { micFehler = e.message; mitMalen(); } }
+function mitMalen() {
+  const m = M(), box = $("mit"), aktiv = m.status !== "aus";
+  $("mic").textContent = m.status === "laeuft" ? "🔴" : "🎙"; $("mic").classList.toggle("an", m.status === "laeuft");
+  $("mic").title = m.status === "aus" ? "Gespräch mitschreiben (alle müssen zustimmen)" : "Mitschreiben beenden";
+  // Größe: aktiv → hohe Leiste (Text über der Leiste), sonst wieder schmal — das Büro-Skript öffnet sie dafür neu
+  if (aktiv !== HOCH && !groesseGemeldet) { groesseGemeldet = true; buero({ was: "zimmerLeisteGroesse", hoch: aktiv }); }
+  box.hidden = !HOCH || !aktiv; if (box.hidden) return;
+  if (m.status === "frage") {
+    const fehlt = (G.teilnehmer || []).filter(t => !(m.zustimmung || {})[t.id]).map(t => String(t.name).split(/\s+/)[0]);
+    box.innerHTML = ichZugestimmt()
+      ? `<div class="frage"><div>🎙 Warte auf Zustimmung von <b>${esc(fehlt.join(", ") || "…")}</b><div class="hin">Gespeichert wird nur Text, kein Ton.</div></div><button id="mAus">Abbrechen</button></div>`
+      : `<div class="frage"><div>🎙 <b>${esc(m.gefragtVon || "Jemand")}</b> möchte das Gespräch mitschreiben.<div class="hin">Gespeichert wird nur Text, kein Ton. Jeder Rechner schreibt nur sein eigenes Mikrofon mit.</div></div><button class="gruen" id="mJa">Ja</button><button id="mNein">Nein</button></div>`;
+  } else {
+    const zeilen = (m.zeilen || []).slice(-25).map(z => `<div class="${z.id === G.ich ? "ich" : ""}"><b>${esc(z.name)}:</b> ${esc(z.text)}</div>`).join("")
+      + (zwischen ? `<div class="ich grau"><b>${esc(String(window.__waName || "Ich").split(/\s+/)[0])}:</b> ${esc(zwischen)} …</div>` : "");
+    const ok = SR ? (micFehler ? "⚠️ " + esc(micFehler) : ichZugestimmt() ? "" : "⚠️ Du hast noch nicht zugestimmt – du wirst nicht mitgeschrieben. <button id=\"mJa\" class=\"gruen\">Ja</button>")
+      : "⚠️ Dein Browser kann nicht mitschreiben (nur Chrome/Edge) – die anderen schreiben weiter.";
+    box.innerHTML = `<div class="kopf">${m.status === "laeuft" ? '<span class="p"></span> Mitschreiben läuft' : "⏸ Mitschreiben pausiert"} · ${m.anzahl || 0} Sätze<span class="sp"></span>`
+      + (m.status === "laeuft" ? '<button id="mPause">⏸ Pause</button>' : '<button id="mWeiter">▶ Weiter</button>') + '<button id="mAus">✕ Beenden</button></div>'
+      + (ok ? `<div class="hin">${ok}</div>` : "") + `<div class="zeilen" id="zeilen">${zeilen || '<div class="grau">Noch nichts gesagt …</div>'}</div>`;
+    const zl = $("zeilen"); if (zl) zl.scrollTop = zl.scrollHeight;
+  }
+  const an = (id, f) => { if ($(id)) $(id).onclick = f; };
+  an("mJa", () => mitAktion("ja")); an("mNein", () => mitAktion("nein")); an("mAus", () => mitAktion("stop"));
+  an("mPause", () => mitAktion("pause")); an("mWeiter", () => mitAktion("weiter"));
+}
+// Spracherkennung an/aus je nach Status: läuft + ich habe zugestimmt + Leiste ist die hohe (nur EINE Leiste hört zu)
+function steuern() {
+  const soll = !!(SR && HOCH && G && G.status === "laeuft" && !G.zeitEnde && M().status === "laeuft" && ichZugestimmt());
+  if (soll === recSoll) return; recSoll = soll;
+  if (!soll) { try { rec && rec.stop(); } catch {} zwischen = ""; return; }
+  rec = new SR(); rec.lang = "de-DE"; rec.continuous = true; rec.interimResults = true;
+  rec.onresult = ev => { let z = "";
+    for (let i = ev.resultIndex; i < ev.results.length; i++) { const r = ev.results[i], t = r[0].transcript.trim(); if (!t) continue;
+      if (r.isFinal) api("/gespraeche/" + encodeURIComponent(ID) + "/mitschrift/zeile", { method: "POST", body: JSON.stringify({ text: t }) }).then(laden).catch(() => {}); else z += t + " "; }
+    zwischen = z.trim(); micFehler = ""; mitMalen(); };
+  rec.onerror = ev => { if (ev.error === "not-allowed" || ev.error === "service-not-allowed") { micFehler = "Mikrofon ist hier nicht erlaubt – im Browser das Mikrofon für das Büro freigeben."; recSoll = false; mitMalen(); } };
+  // Chrome beendet die Erkennung nach Stille von selbst → neu starten, solange sie laufen soll
+  rec.onend = () => { if (recSoll) setTimeout(() => { try { recSoll && rec.start(); } catch {} }, 300); };
+  try { rec.start(); } catch (e) { micFehler = e.message; }
+}
+
 async function laden() {
-  try { G = await api("/gespraeche/" + encodeURIComponent(ID)); if (G.jetzt) versatz = Date.parse(G.jetzt) - Date.now(); malen(); tick();
+  try { G = await api("/gespraeche/" + encodeURIComponent(ID)); if (G.jetzt) versatz = Date.parse(G.jetzt) - Date.now(); malen(); tick(); steuern();
     // von jemand anderem beendet/gespeichert → Leiste weg, Abschlusskarte auf (das Büro-Skript entscheidet)
-    if ((G.zeitEnde || G.status !== "laeuft") && !gemeldet) { gemeldet = true; buero({ was: G.status === "laeuft" ? "zimmerAbschluss" : "zimmerLeisteZu" }); }
+    if ((G.zeitEnde || G.status !== "laeuft") && !gemeldet) { gemeldet = true; recSoll = false; try { rec && rec.stop(); } catch {} buero({ was: G.status === "laeuft" ? "zimmerAbschluss" : "zimmerLeisteZu" }); }
   } catch (e) { $("t").textContent = /nicht gefunden/.test(e.message) ? "Gespräch wurde verworfen" : e.message; if (/nicht gefunden/.test(e.message) && !gemeldet) { gemeldet = true; buero({ was: "zimmerLeisteZu" }); } }
 }
 (async () => {
   for (let i = 0; i < 30 && typeof WA === "undefined"; i++) await new Promise(r => setTimeout(r, 100));
   try { await Promise.race([WA.onInit(), new Promise(r => setTimeout(r, 2500))]); window.__waName = WA.player.name || ""; } catch {}
   document.querySelectorAll("button[data-was]").forEach(b => b.onclick = () => { buero({ was: b.dataset.was, fokus: b.dataset.fokus || "" }); try { b.blur(); window.blur(); } catch {} });
+  $("mic").onclick = () => mitAktion(M().status === "aus" ? "start" : "stop");
   // wer erst nach dem Start dazukam, wird so Teilnehmer (der Server prüft, ob man wirklich im Büro steht)
   if (q.get("raum") && q.get("weiter") !== "1") { try { await api("/gespraeche/laufend?raum=" + encodeURIComponent(q.get("raum"))); } catch {} }
   if (q.get("weiter") === "1") { try { await api("/gespraeche/" + encodeURIComponent(ID) + "/zeit", { method: "POST", body: JSON.stringify({ stop: false }) }); } catch {} }
-  await laden(); setInterval(tick, 1000); setInterval(laden, 5000);
+  await laden(); setInterval(tick, 1000);
+  // während des Mitschreibens öfter abgleichen, damit die Sätze der anderen zügig erscheinen
+  (function takt() { setTimeout(async () => { await laden(); takt(); }, M().status === "aus" ? 5000 : 2000); })();
 })();
 </script>
 </body>
