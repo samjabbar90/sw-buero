@@ -82,7 +82,9 @@ async function newsZaehlen() {
   } catch { /* nächster Versuch */ }
 }
 $('news').addEventListener('click', async () => {
-  try { await WA.nav.openCoWebSite('https://samjabbar90.github.io/sw-buero/news.html?t=' + Date.now()); } catch { /* ältere Version */ }
+  // 12.10.2026 (Sam: „News auch so wie die anderen – durchsichtig, beim Drüberfahren dunkel“): als Glas-Fenster über das Büro-Skript
+  try { WA.player.state.saveVariable('swAktion', { was: 'news', t: Date.now() }, { public: false, persist: false }); }
+  catch { try { await WA.nav.openCoWebSite('https://samjabbar90.github.io/sw-buero/news.html?t=' + Date.now()); } catch { /* ältere Version */ } }
   setTimeout(newsZaehlen, 4000);
 });
 newsZaehlen(); setInterval(newsZaehlen, 60000);
