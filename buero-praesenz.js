@@ -1633,6 +1633,10 @@
     }, 6e4);
   }
   WA.onInit().then(async () => {
+    try {
+      if (WA.room.hashParameters && WA.room.hashParameters.handy) HANDY = true;
+    } catch {
+    }
     const frisch = async () => {
       try {
         const r = await fetch(ENDPOINT.replace(/melden$/, "ausweis/frisch"), { method: "POST", headers: { "Content-Type": "application/json", "X-Buero-Key": BUERO_KEY }, body: JSON.stringify({ name: WA.player.name }) });
