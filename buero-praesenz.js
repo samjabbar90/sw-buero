@@ -1683,7 +1683,7 @@
     setInterval(infoLaden, 15e3);
     try {
       await WA.ui.website.open({
-        url: "https://samjabbar90.github.io/sw-buero/info.html?v=3" + (kzAktiv ? "&kz=1" : ""),
+        url: "https://samjabbar90.github.io/sw-buero/info.html?v=4" + (kzAktiv ? "&kz=1" : ""),
         allowApi: true,
         visible: true,
         // genau so groß wie die Leiste (kein weißer Rand): mit eigener Tür breiter (Tür + Fokus), sonst nur Uhrzeit + Kollegen

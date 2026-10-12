@@ -24,6 +24,8 @@
   #feierabend { background:#334155; color:#fff; font-weight:700; border-radius:999px; margin-left:4px; border-left:0 !important; }
   #feierabend:hover { background:#475569; }
   #news .zahl { position:absolute; top:-5px; right:-4px; min-width:16px; height:16px; padding:0 4px; border-radius:8px; background:#ef4444; color:#fff; font-size:10px; line-height:16px; text-align:center; }
+  /* Handy (12.10.2026, Sam: alles muss in der Leiste bleiben): kompakter, ohne Uhr (zeigt das Handy selbst) */
+  @media (max-width: 400px) { .pille { font-size:12px; padding:0 2px; } .teil { padding:0 7px; gap:4px; } .teil:has(#uhr) { display:none; } .teil:has(#uhr) + .teil { border-left:0; } }
 </style>
 </head>
 <body>
