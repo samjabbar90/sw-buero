@@ -1722,8 +1722,10 @@
       uebersichtAn = true;
       try {
         const sw = screen.width || 390, sh = screen.height || 800;
-        if (HANDY && sh > sw) WA.camera.set(breite / 2, hoehe / 2, Math.round(hoehe * 0.8 * sw / sh), Math.round(hoehe * 0.8), true, true);
-        else WA.camera.set(breite / 2, hoehe / 2, breite, hoehe, false, true);
+        if (HANDY) {
+          const q = sh > sw ? sw / sh : 9 / 19.5;
+          WA.camera.set(breite / 2, hoehe / 2, Math.round(hoehe * 0.8 * q), Math.round(hoehe * 0.8), true, true);
+        } else WA.camera.set(breite / 2, hoehe / 2, breite, hoehe, false, true);
       } catch {
       }
     };
