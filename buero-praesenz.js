@@ -2060,6 +2060,11 @@
         handyMenue = null;
       }
     };
+    // Tippen/Klicken in einem Büro-Fenster (glas.js meldet „swAktiv“) zählt wie Laufen (13.10.2026, Sam: ganze PC-Aktivität)
+    try {
+      WA.player.state.onVariableChange("swAktiv").subscribe(() => { letzteAktivitaet = Date.now(); });
+    } catch {
+    }
     let letzteAktion = 0;
     try {
       letzteAktion = Number((WA.player.state.swAktion || {}).t) || 0;

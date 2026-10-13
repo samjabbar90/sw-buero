@@ -4,6 +4,14 @@
 // Während des Ziehens zeigt das Fenster die neue Größe an und versucht live mitzuwachsen; beim Loslassen wird die Lage in der
 // Spieler-Variable „swFenster“ gespeichert — das Büro-Skript öffnet das Fenster dann in genau dieser Lage neu (klappt sicher).
 // Leiste oben rechts: ◐ = Durchsicht (viel/mittel/wenig) · A = Schriftfarbe (Weiß / Gelb / Mint) · ⛶ = Vollbild an/aus · × = schließen.
+// Aktivität im Fenster (13.10.2026, Sam: „auf die gesamte Aktivität achten“): Tippen, Klicken, Scrollen hier zählt fürs Büro wie Laufen —
+// höchstens alle 20 s über die Spieler-Variable „swAktiv“ ans Büro-Skript (10-Min-Ruhe-Regel, routes/buero.js).
+(function () {
+  let zuletzt = 0;
+  const aktiv = () => { const j = Date.now(); if (j - zuletzt < 20000 || typeof WA === "undefined") return; zuletzt = j;
+    try { WA.player.state.saveVariable("swAktiv", j, { public: false, persist: false }); } catch { /* ohne API */ } };
+  ["keydown", "mousedown", "wheel", "touchstart", "input"].forEach(ev => document.addEventListener(ev, aktiv, { passive: true, capture: true }));
+})();
 (function () {
   if (!new URLSearchParams(location.search).has("glas")) return;
   const html = document.documentElement; html.classList.add("glas");
