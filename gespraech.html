@@ -32,7 +32,14 @@
   .fehler { color:#b91c1c; font-size:13px; font-weight:600; margin-top:6px; } .leer { color:#64748b; font-size:13px; }
   .hin { font-size:11.5px; color:#64748b; margin-top:4px; } .ok { color:#047857; font-weight:700; }
   .themen { display:flex; flex-wrap:wrap; gap:6px; } .themen button { font:inherit; font-size:13px; padding:6px 11px; border-radius:999px; border:1.5px solid #cbd5e1; background:#fff; color:#334155; cursor:pointer; }
-  .themen button.an { background:#0d9488; border-color:#0d9488; color:#fff; } .themen button:disabled { cursor:default; }
+  /* Layout A (13.10.2026, Sam): Gewähltes mit dickem Rahmen + Haken, darunter „Gewählt: …“, Start-Knopf nennt das Thema */
+  .themen button.an { background:#e1f5ee; border:2.5px solid #0f766e; color:#085041; font-weight:700; padding:5px 10px; } .themen button.an::before { content:"✓ "; }
+  .themen button:disabled { cursor:default; }
+  .gewaehlt { margin-top:12px; font-size:13px; padding:8px 10px; border-radius:8px; background:#e1f5ee; color:#085041; } .gewaehlt.leer { background:#f1f5f9; color:#64748b; }
+  .chip.mdt { display:inline-flex; gap:6px; align-items:center; border:1.5px solid #0d9488; padding:4px 10px; font-size:13px; font-weight:600; }
+  button.k:disabled { background:#e2e8f0; border-color:#e2e8f0; color:#64748b; cursor:default; }
+  html.glas .themen button.an { background:rgba(45,212,191,.22) !important; border-color:#5eead4 !important; color:#fff !important; }
+  html.glas .gewaehlt { background:rgba(45,212,191,.16); color:#ccfbf1; } html.glas .gewaehlt.leer { background:rgba(255,255,255,.07); color:rgba(255,255,255,.65); }
   .zeit { font-variant-numeric:tabular-nums; font-weight:700; color:#047857; font-size:14px; } .zeit.stop { color:#b45309; }
   html.glas .themen button:not(.an) { background:rgba(255,255,255,.07); border-color:rgba(255,255,255,.2); color:#f1f5f9; } html.glas .zeit { color:#6ee7b7; } html.glas .zeit.stop { color:#fcd34d; }
   html.glas .box, html.glas .arten button { background:rgba(255,255,255,.07) !important; border-color:rgba(255,255,255,.15) !important; color:#f1f5f9 !important; }
@@ -81,8 +88,9 @@ function zimmerStart() {
   let thema = "", mandant = null;
   const malen = () => {
     $("inhalt").innerHTML = `<div class="box"><label style="margin-top:0">Worum geht es?</label><div class="themen">${themen.map(t => `<button data-th="${esc(t)}" class="${t === thema ? "an" : ""}">${esc(t)}</button>`).join("")}</div>
-      <label>Mandant (optional)</label>${mandant ? `<div class="chips"><span class="chip">${esc(mandant.nr ? mandant.nr + " · " : "")}${esc(mandant.name)}</span><a href="#" id="mWeg" style="font-size:12px">ändern</a></div>` : '<input id="mSuche" placeholder="Name oder Mandantennummer …"><div id="mTreffer"></div>'}
-      <div class="fehler" id="sFe"></div><div style="display:flex;gap:6px;margin-top:12px;align-items:center"><button class="k" id="sOk">▶ Start · Zeit läuft</button><span style="flex:1"></span><a href="#" id="anders" style="font-size:12px">anderes Gespräch …</a></div></div>`;
+      <label>Mandant (optional)</label>${mandant ? `<div class="chips"><span class="chip mdt">✓ ${esc(mandant.nr ? mandant.nr + " · " : "")}${esc(mandant.name)}</span><a href="#" id="mWeg" style="font-size:12px">ändern</a></div>` : '<input id="mSuche" placeholder="Name oder Mandantennummer …"><div id="mTreffer"></div>'}
+      <div class="gewaehlt${thema ? "" : " leer"}">${thema ? `Gewählt: <b>${esc(thema)}</b>${mandant ? " · " + esc(mandant.name) : " · ohne Mandant"}` : "Noch nichts gewählt – bitte oben antippen, worum es geht."}</div>
+      <div class="fehler" id="sFe"></div><div style="display:flex;gap:6px;margin-top:12px;align-items:center"><button class="k" id="sOk"${thema ? "" : " disabled"}>${thema ? "▶ " + esc(thema) + "-Gespräch starten · Zeit läuft" : "Erst auswählen, worum es geht"}</button><span style="flex:1"></span><a href="#" id="anders" style="font-size:12px">anderes Gespräch …</a></div></div>`;
     document.querySelectorAll("[data-th]").forEach(b => b.onclick = () => { thema = b.dataset.th; malen(); });
     if ($("mWeg")) $("mWeg").onclick = ev => { ev.preventDefault(); mandant = null; malen(); };
     if ($("mSuche")) $("mSuche").oninput = async () => { const s = $("mSuche").value; if (s.length < 2) return $("mTreffer").innerHTML = "";
