@@ -12,7 +12,16 @@
   body { margin: 0; background: #eef2f5; color: #111827; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; font-size: 14px; }
   header { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: rgba(255, 255, 255, .55); }
   header h1 { margin: 0; font-size: 15px; flex: 1; } header .u { font-size: 11.5px; color: #4b5563; font-weight: 400; display: block; }
-  .av { width: 38px; height: 38px; border-radius: 50%; background: #fde7ef; display: flex; align-items: center; justify-content: center; font-size: 20px; flex: none; }
+  /* Porträt (13.10.2026, Sam: Porträt 1 aus Canva, „leicht lebendig“): atmet leicht, beim Nachdenken pulsiert ein blauer Ring */
+  .av { width: 64px; height: 64px; border-radius: 50%; flex: none; position: relative; animation: atmen 4.5s ease-in-out infinite; }
+  .av img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block; box-shadow: 0 0 0 3px #fff, 0 0 0 5px #0f766e; }
+  .av::after { content: ""; position: absolute; inset: -6px; border-radius: 50%; border: 3px solid rgba(56, 189, 248, 0); }
+  .av.denkt::after { animation: denken 1.2s ease-in-out infinite; }
+  .av.denkt img { animation: schimmer 1.2s ease-in-out infinite; }
+  @keyframes atmen { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-1px) scale(1.025); } }
+  @keyframes denken { 0%, 100% { border-color: rgba(56, 189, 248, .15); transform: scale(1); } 50% { border-color: rgba(56, 189, 248, .9); transform: scale(1.06); } }
+  @keyframes schimmer { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.08) saturate(1.1); } }
+  @media (prefers-reduced-motion: reduce) { .av, .av.denkt::after, .av.denkt img { animation: none; } }
   main { padding: 10px 14px 14px; display: flex; flex-direction: column; gap: 10px; }
   .karte { background: rgba(255, 255, 255, .6); border: 1px solid rgba(255, 255, 255, .7); border-radius: 12px; padding: 10px 12px; }
   .karte h2 { margin: 0 0 6px; font-size: 13px; }
@@ -42,7 +51,7 @@
 <script src="glas.js?v=1791559958"></script>
 </head>
 <body>
-<header><div class="av">🗓</div><h1>Donna · Terminassistentin<span class="u">findet freie Zeiten, bucht Termine und Meeting-Räume</span></h1></header>
+<header><div class="av" id="av"><img src="donna.jpg" alt="Donna"></div><h1>Donna · Terminassistentin<span class="u">findet freie Zeiten, bucht Termine und Meeting-Räume</span></h1></header>
 <main>
   <div id="entscheiden"></div>
   <div class="karte">
@@ -90,10 +99,10 @@ function zeichnen() {
 async function laden() { try { S = await api(""); $("fe").textContent = ""; zeichnen(); } catch (e) { $("verlauf").innerHTML = `<div class="fehler">${esc(e.message)}</div>`; } }
 async function senden() {
   const t = $("text").value.trim(); if (!t || sendet) return; sendet = true; $("los").disabled = true; $("fe").textContent = "";
-  S.chat = [...(S.chat || []), { rolle: "du", text: t }, { rolle: "ute", text: "… Donna schaut nach …" }]; zeichnen(); $("text").value = "";
+  S.chat = [...(S.chat || []), { rolle: "du", text: t }, { rolle: "ute", text: "… Donna schaut nach …" }]; zeichnen(); $("text").value = ""; $("av").classList.add("denkt");
   try { const r = await api("/chat", { text: t }); if (r.usd) $("kosten").textContent = "letzte Antwort ≈ " + (r.usd * 100).toFixed(2).replace(".", ",") + " Cent"; }
   catch (e) { $("fe").textContent = e.message; }
-  sendet = false; $("los").disabled = false; laden();
+  sendet = false; $("los").disabled = false; $("av").classList.remove("denkt"); laden();
 }
 $("los").onclick = senden;
 $("text").onkeydown = e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); senden(); } };
