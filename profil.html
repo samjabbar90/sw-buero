@@ -38,6 +38,35 @@
   label { display: block; font-size: 12px; font-weight: 700; color: rgba(255, 255, 255, .8); margin: 8px 0 4px; }
   input { width: 100%; font: inherit; font-size: 14px; padding: 8px 10px; border: 1.5px solid rgba(255, 255, 255, .3); border-radius: 8px; background: rgba(0, 0, 0, .3); color: #fff; }
   .fehler { color: #fca5a5; font-size: 13px; font-weight: 600; min-height: 18px; margin-top: 6px; }
+  /* Reiter „⏱ Zeit“ hell (13.10.2026, Sam: G4): Rahmen 15 % weiß, Karten 45 % weiß, dunkle Schrift; :root.… schlägt glas.css */
+  :root.hell body { background: #eef2f5 !important; color: #111827 !important; text-shadow: none !important; }
+  :root.glas.hell body, :root.glas.hell body:hover, :root.glas.hell body:focus-within { background: rgba(255, 255, 255, .15) !important; }
+  :root.hell header { background: rgba(255, 255, 255, .35) !important; color: #111827 !important; }
+  :root.hell .name { color: #111827; } :root.hell .rolle { color: #374151; } :root.hell .abz span { background: rgba(255, 255, 255, .45); color: #1f2937; }
+  :root.hell .reiter button { color: #374151; } :root.hell .reiter button.an { background: #0f766e; color: #fff; }
+  :root.hell .z { background: rgba(255, 255, 255, .45) !important; color: #111827 !important; border-color: rgba(255, 255, 255, .6) !important; } :root.hell .z b { color: #374151 !important; }
+  :root.hell .leer { color: #374151 !important; } :root.hell a { color: #0f766e !important; }
+  :root.hell .zk { background: rgba(255, 255, 255, .5); color: #1f2937; border: 1px solid rgba(17, 24, 39, .15); } :root.hell .zk.an { background: #0f766e; color: #fff; border-color: #0f766e; }
+  :root.hell input, :root.hell select, :root.hell .zh-sel { background: rgba(255, 255, 255, .6) !important; color: #111827 !important; border-color: rgba(17, 24, 39, .2) !important; color-scheme: light; }
+  .zh-karte { background: rgba(255, 255, 255, .45); border: 1px solid rgba(255, 255, 255, .6); border-radius: 12px; padding: 9px 10px; margin-bottom: 7px; font-size: 12.5px; color: #111827; }
+  .zh-m { font-size: 11.5px; color: #4b5563; } .zh-l { font-size: 10.5px; opacity: .85; } .zh-z { font-size: 16px; font-weight: 800; }
+  .zh-mini { background: rgba(255, 255, 255, .55); border-radius: 9px; padding: 6px 9px; color: #111827; }
+  .zh-bal { height: 6px; border-radius: 3px; background: rgba(17, 24, 39, .12); overflow: hidden; margin-top: 4px; } .zh-bal div { height: 100%; }
+  .zh-q-k { cursor: pointer; border-radius: 10px; padding: 7px 9px; color: #fff; outline-offset: 1px; }
+  .zh-tab { width: 100%; border-collapse: collapse; font-size: 12px; color: #111827; } .zh-tab th { text-align: left; font-size: 10.5px; font-weight: 600; color: #4b5563; padding: 4px 3px; }
+  .zh-tab td { padding: 5px 3px; border-top: 1px solid rgba(17, 24, 39, .1); vertical-align: top; font-variant-numeric: tabular-nums; }
+  .zh-chip { font-size: 10.5px; font-weight: 700; padding: 2px 7px; border-radius: 999px; display: inline-block; line-height: 1.3; }
+  .zh-wo { cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; padding: 3px 9px; border-radius: 999px; border: 1px solid rgba(17, 24, 39, .2); background: rgba(255, 255, 255, .4); color: #1f2937; }
+  .zh-wo.an { border: 2px solid #0f766e; background: #e1f5ee; color: #085041; font-weight: 800; padding: 2px 8px; } .zh-wo i { width: 9px; height: 9px; border-radius: 2px; display: inline-block; } .zh-wo small { opacity: .75; }
+  .zh-sel { width: auto !important; font-size: 12px !important; padding: 3px 6px !important; margin-left: auto; }
+  .zh-band { display: flex; height: 22px; border-radius: 6px; overflow: hidden; } .zh-band div { display: flex; align-items: center; justify-content: center; font-size: 10px; white-space: nowrap; overflow: hidden; }
+  .zh-achse { display: flex; justify-content: space-between; font-size: 10px; color: #4b5563; margin: 2px 0 6px; }
+  .zh-q { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 5px; }
+  .zh-nb { cursor: pointer; white-space: nowrap; font-size: 10.5px; padding: 1px 7px; border-radius: 999px; background: #eeedfe; color: #3c3489; margin-left: 5px; }
+  .zh-notiz { background: rgba(255, 255, 255, .7); border-radius: 8px; padding: 8px 10px; font-size: 12px; line-height: 1.5; color: #111827; } .zh-notiz b { display: block; font-size: 11.5px; margin-top: 4px; }
+  :root.hell small { color: #4b5563 !important; } :root.hell .zh-wo.an small { color: #085041 !important; } :root.hell .zh-q-k, :root.hell .zh-q-k * { color: #fff !important; }
+  #zeitBox table.zh-tab { table-layout: auto; } #zeitBox .zh-tab td:first-child, #zeitBox .zh-tab th:first-child { width: auto; }
+  .zh-notiz ul { margin: 2px 0 0 16px; padding: 0; } .zh-link { cursor: pointer; color: #0f766e; text-decoration: underline; font-size: 11.5px; }
 </style>
 <script src="glas.js?v=1791559958"></script>
 </head>
@@ -98,6 +127,7 @@ function zeigen() {
     <div class="reiter">${REITER.map(([k, t]) => `<button data-r="${k}" class="${k === reiter ? "an" : ""}">${t}</button>`).join("")}</div>
     <div class="inhalt">${inhalt}</div>
     ${p.ich ? "" : `<div class="knoepfe">${p.durchwahl ? `<a class="haupt" href="tel:${esc(p.durchwahl)}">📞 Anrufen</a>` : ""}<button id="hin">🚶 Zu ${esc(v)} gehen</button></div>`}`;
+  document.documentElement.classList.toggle("hell", reiter === "zeit"); // 13.10.2026: Zeit-Reiter in hellem Glas (G4)
   document.querySelectorAll("[data-r]").forEach(b => b.onclick = () => { reiter = b.dataset.r; zeigen(); });
   liveLaden();
   if (reiter === "zeit") zeitLaden();
@@ -168,60 +198,121 @@ async function gespraecheLaden() {
   });
 }
 // Reiter „⏱ Zeit“ (09.10.2026, Sam): Kachel antippen = nur diese Quelle (nochmal = alle), Tag / Woche / Monat + Datum, Zeile antippen = Tagesansicht
-const Z = { art: "woche", basis: new Date(), quelle: "alle" };
+// 13.10.2026 (Sam: G4 „helles Glas“): wie Profil › Zeiterfassung im SW-internen Portal — oben Guthaben/Woche/Resturlaub, Tabelle mit Soll/±/Status,
+// Tag: Einzelheiten der angetippten Kachel, Büro mit Zeitband + Wo-Filter + Gesprächs-Notizen. Solange der Reiter offen ist: html.hell
+// (Rahmen 15 % weiß, Karten 45 % weiß, dunkle Schrift — CSS oben unter „:root.glas.hell“).
+const Z = { art: "woche", basis: new Date(), quelle: "alle", wo: "alle", raum: "", notiz: "", cache: null };
 const iso = d => d.toLocaleDateString("sv-SE"), std = v => v == null ? "–" : (Math.round(v * 100) / 100).toFixed(2).replace(".", ",");
+const zhm = min => { min = Math.round(min || 0); return Math.floor(min / 60) + ":" + String(min % 60).padStart(2, "0"); }, shm = s => s == null ? "–" : zhm(s * 60);
+const uhr = i => i ? new Date(i).toLocaleTimeString("de-DE", { timeZone: "Europe/Berlin", hour: "2-digit", minute: "2-digit" }) : "";
+const WO = { eigen: ["Eigenes Büro", "#0f6e56", "#fff"], kollegen: ["Bei Kollegen", "#5dcaa5", "#04342c"], bespr: ["Besprechung", "#7f77dd", "#fff"], sonst: ["Flur & andere", "#85b7eb", "#042c53"], pause: ["Pause", "#b4b2a9", "#2c2c2a"] };
+const woArt = (b, vn) => { b = String(b || ""); if (/pause|küche|kueche|lounge/i.test(b)) return "pause"; if (/^büro\s/i.test(b)) return b.replace(/^büro\s+/i, "").toLowerCase() === String(vn || "").toLowerCase() ? "eigen" : "kollegen"; if (/besprech|townhall|meeting|konferenz/i.test(b)) return "bespr"; return "sonst"; };
+const statusChip = s => { const c = { abwesend: ["#e0f2fe", "#075985"], offen: ["#fef3c7", "#92400e"], erklaert: ["#dcfce7", "#166534"], ok: ["#dcfce7", "#166534"] }[s.art] || ["#f1f5f9", "#334155"]; return `<span class="zh-chip" style="background:${c[0]};color:${c[1]}">${esc(s.text)}</span>`; };
+function notizHtml(g) {
+  let h = `<div class="zh-notiz"><div class="zh-m" style="margin-bottom:4px">${esc(g.icon + " " + g.art)}${g.titel ? " · " + esc(g.titel) : ""}${g.mandant && g.mandant !== g.titel ? " · " + esc(g.mandant) : ""} · ${esc(g.teilnehmer.join(", "))}</div>`, leer = true;
+  if (g.zusammenfassung) { leer = false; h += `<b>Zusammenfassung</b><div>${esc(g.zusammenfassung)}</div>`; }
+  else g.protokoll.forEach(p => { leer = false; h += `<b>${esc(p.label)}</b><div style="white-space:pre-wrap">${esc(p.text)}</div>`; });
+  if (g.beschluesse.length) { leer = false; h += `<b>Beschlüsse</b><ul>${g.beschluesse.map(x => "<li>" + esc(x) + "</li>").join("")}</ul>`; }
+  if (g.aufgaben.length) { leer = false; h += `<b>Aufgaben</b><ul>${g.aufgaben.map(a => "<li>" + (a.nr ? esc(a.nr) + " " : "") + esc(a.text) + (a.wer ? " · " + esc(a.wer) : "") + (a.frist ? " · bis " + esc(a.frist.split("-").reverse().join(".")) : "") + "</li>").join("")}</ul>`; }
+  if (leer) h += '<div class="zh-m">Keine Notiz eingetragen.</div>';
+  return h + `<div style="margin-top:5px"><span class="zh-link" data-goeffnen="${esc(g.id)}">Ganzes Gespräch öffnen ›</span></div></div>`;
+}
+function bueroHtml(d, t) {
+  const be = d.buero && d.buero[t];
+  if (!be || !(be.raeume || []).length) return '<div class="zh-karte"><b style="color:#0f6e56">Virtuelles Büro</b><div class="zh-m">An diesem Tag nicht im Büro.</div></div>';
+  const S = be.raeume.map(r => ({ von: r.von, bis: r.bis, min: r.min, raum: r.bereich, art: woArt(r.bereich, d.vorname), gs: [] })), weitere = [];
+  (d.gespraeche || []).filter(g => g.datum === t).forEach(g => { const gv = uhr(g.start), gb = uhr(g.ende) || "23:59"; const z = gv && S.find(s => (!g.raum || g.raum === s.raum) && s.von < gb && gv < s.bis); if (z) z.gs.push(g); else weitere.push(g); });
+  const passt = s => (Z.wo === "alle" || s.art === Z.wo) && (!Z.raum || s.raum === Z.raum), summe = k => S.filter(s => k === "alle" || s.art === k).reduce((a, s) => a + s.min, 0);
+  const raeume = [...new Set(S.filter(s => s.art !== "pause").map(s => s.raum))], arten = Object.keys(WO).filter(k => S.some(s => s.art === k));
+  let h = `<div class="zh-karte"><div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;margin-bottom:7px"><b style="color:#0f6e56;font-size:13.5px">Virtuelles Büro</b><span class="zh-m">${be.von}–${be.bis} · ${shm(be.std)} Std im Büro${be.pause ? ", davon " + shm(be.pause) + " Pause" : ""}</span></div>`;
+  h += '<div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;margin-bottom:8px"><span class="zh-m">Wo:</span>' + ["alle", ...arten].map(k => { const an = Z.wo === k;
+    return `<span class="zh-wo${an ? " an" : ""}" data-wo="${k}">${k !== "alle" ? `<i style="background:${WO[k][1]}"></i>` : ""}${an ? "✓ " : ""}${k === "alle" ? "Alle" : WO[k][0]} <small>${zhm(summe(k))}</small></span>`; }).join("")
+    + `<select id="zRaum" class="zh-sel"><option value="">Alle Räume</option>${raeume.map(r => `<option${r === Z.raum ? " selected" : ""}>${esc(r)}</option>`).join("")}</select></div>`;
+  h += '<div class="zh-band">' + S.map(s => `<div title="${esc(s.raum + " " + s.von + "–" + s.bis)}" style="flex:${Math.max(1, s.min)};background:${WO[s.art][1]};color:${WO[s.art][2]};opacity:${passt(s) ? 1 : .15}">${s.min >= 45 ? esc(s.raum) : ""}</div>`).join("") + `</div><div class="zh-achse"><span>${be.von}</span><span>${be.bis}</span></div>`;
+  const z = S.filter(passt);
+  h += '<table class="zh-tab"><tr><th>Von</th><th>Bis</th><th>Wo</th><th>Dauer</th></tr>' + (z.length ? "" : '<tr><td colspan="4" class="zh-m">Nichts für diesen Filter.</td></tr>');
+  z.forEach(s => { const grau = s.art === "pause" ? ' class="zh-m"' : "", offen = s.gs.some(g => g.id === Z.notiz);
+    h += `<tr${offen ? ' style="background:rgba(238,237,254,.75)"' : ""}><td${grau}>${s.von}</td><td${grau}>${s.bis}</td><td${grau}><i class="zh-q" style="background:${WO[s.art][1]}"></i>${esc(s.raum)}`
+      + s.gs.map(g => `<span class="zh-nb" data-notiz="${esc(g.id)}">${g.id === Z.notiz ? "▾" : "▸"} ${esc(g.titel || g.art)} · Notiz</span>`).join("") + `</td><td${grau}>${zhm(s.min)}</td></tr>`;
+    s.gs.forEach(g => { if (g.id === Z.notiz) h += `<tr><td colspan="4" style="padding:0 4px 8px">${notizHtml(g)}</td></tr>`; }); });
+  h += `<tr style="font-weight:800"><td colspan="3">Summe${Z.wo !== "alle" || Z.raum ? " (gefiltert)" : ""}</td><td>${zhm(z.reduce((a, s) => a + s.min, 0))}</td></tr></table>`;
+  if (weitere.length && Z.wo === "alle" && !Z.raum) h += '<div style="font-weight:800;font-size:12.5px;margin:10px 0 5px">Weitere Gespräche an diesem Tag</div>' + weitere.map(g => `<div style="margin-bottom:6px">${notizHtml(g)}</div>`).join("");
+  return h + "</div>";
+}
 async function zeitLaden() {
   const box = $("zeitBox"); if (!box) return; const b = new Date(Z.basis); let von, bis;
   if (Z.art === "monat") { von = new Date(b.getFullYear(), b.getMonth(), 1); bis = new Date(b.getFullYear(), b.getMonth() + 1, 0); }
   else if (Z.art === "tag") { von = new Date(b); bis = new Date(b); }
   else { von = new Date(b); von.setDate(b.getDate() - ((b.getDay() + 6) % 7)); bis = new Date(von); bis.setDate(von.getDate() + 6); }
-  let d; try { d = await api("/zeiterfassung?" + (ICH ? "ich=1" : "name=" + encodeURIComponent(NAME)) + "&von=" + iso(von) + "&bis=" + iso(bis) + (Z.art === "tag" ? "&tag=" + iso(von) : "")); }
-  catch (e) { box.innerHTML = '<div class="leer">' + esc(e.message) + "</div>"; return; }
-  const ALLE = [["datev", "DATEV", "#1e40af", "#93c5fd"], ["buero", "Büro", "#0f766e", "#5eead4"], ["system", "System", "#7c3aed", "#c4b5fd"]].filter(q => d.quellen.includes(q[0]));
+  const schl = iso(von) + "|" + iso(bis) + "|" + Z.art; let d = Z.cache && Z.cache.schl === schl && Date.now() - Z.cache.zeit < 60000 ? Z.cache.d : null;
+  if (!d) { try { d = await api("/zeiterfassung?" + (ICH ? "ich=1" : "name=" + encodeURIComponent(NAME)) + "&von=" + iso(von) + "&bis=" + iso(bis) + (Z.art === "tag" ? "&tag=" + iso(von) : "")); }
+    catch (e) { box.innerHTML = '<div class="zh-karte zh-m">' + esc(e.message) + "</div>"; return; } Z.cache = { schl, zeit: Date.now(), d }; }
+  const ALLE = [["system", "System", "#534ab7", "aktiv am Rechner"], ["datev", "DATEV", "#185fa5", "gebuchte Leistung"], ["buero", "Büro", "#0f6e56", "aktiv im Büro"]].filter(q => d.quellen.includes(q[0]));
   if (Z.quelle !== "alle" && !d.quellen.includes(Z.quelle)) Z.quelle = "alle";
   const Q = Z.quelle === "alle" ? ALLE : ALLE.filter(q => q[0] === Z.quelle), hat = k => Q.some(q => q[0] === k);
   const wert = (q, t) => q === "datev" ? d.datev && d.datev.tage[t] : q === "buero" ? d.buero && d.buero[t] && d.buero[t].std : d.system && d.system.tage[t];
+  const soll = t => d.tage && d.tage[t] ? d.tage[t].soll : null, heute = iso(new Date());
   const tage = []; for (let t = new Date(von); t <= bis; t.setDate(t.getDate() + 1)) tage.push(new Date(t));
   const summe = {}; ALLE.forEach(q => { summe[q[0]] = tage.reduce((a, t) => a + (wert(q[0], iso(t)) || 0), 0); });
+  let pause = 0; tage.forEach(t => { const e = d.buero && d.buero[iso(t)]; if (e) pause += e.pause; });
+  let istBis = 0, sollBis = 0; tage.forEach(t => { const i = iso(t); if (i > heute) return; sollBis += soll(i) || 0; istBis += wert("system", i) || 0; });
   const titel = Z.art === "monat" ? von.toLocaleDateString("de-DE", { month: "long", year: "numeric" }) : Z.art === "tag" ? von.toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric" })
     : von.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" }) + "–" + bis.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" });
   let h = `<div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin-bottom:8px">${["tag", "woche", "monat"].map(a => `<button class="zk${Z.art === a ? " an" : ""}" data-za="${a}">${{ tag: "Tag", woche: "Woche", monat: "Monat" }[a]}</button>`).join("")}
-    <input type="date" id="zDatum" value="${iso(Z.art === "tag" ? von : new Date(Z.basis))}" style="width:auto;font-size:12px;padding:4px 6px"><span style="flex:1"></span><button class="zk" data-zs="-1">‹</button><b style="font-size:12.5px">${titel}</b><button class="zk" data-zs="1">›</button></div>`;
-  // Guthaben / Minusstunden (10.10.2026): System-Zeit minus Soll seit 30.07. bis gestern — wie beim Überstunden-Antrag
-  if (d.saldo) {
-    const hm = ms => { const m = Math.round(Math.abs(ms) / 60000); return Math.floor(m / 60) + ":" + String(m % 60).padStart(2, "0"); };
-    if (d.saldo.verfuegbar) { const plus = d.saldo.saldoMs >= 0;
-      h += `<div style="border-radius:10px;padding:9px 12px;margin-bottom:8px;background:${plus ? "rgba(22,163,74,.22)" : "rgba(220,38,38,.22)"};border:1px solid ${plus ? "rgba(74,222,128,.45)" : "rgba(248,113,113,.45)"}">
-        <div style="font-size:11px;opacity:.8">${plus ? "Überstunden-Guthaben" : "Minusstunden"}</div>
-        <div style="font-size:20px;font-weight:800;color:${plus ? "#86efac" : "#fca5a5"}">${plus ? "+" : "−"}${hm(d.saldo.saldoMs)} Std</div>
-        <div style="font-size:11px;opacity:.75">${d.saldo.stichtag ? "Startwert " + (d.saldo.uebertragMs < 0 ? "−" : "+") + hm(d.saldo.uebertragMs) + " am " + d.saldo.stichtag.split("-").reverse().join(".") + " · " : ""}Ist ${hm(d.saldo.istMs)} · Soll ${hm(d.saldo.sollMs)} · seit ${d.saldo.seit.split("-").reverse().join(".")} bis gestern${d.saldo.geplantMs ? ` · davon ${hm(d.saldo.geplantMs)} Std schon zum Abfeiern beantragt` : ""}</div></div>`; }
-    else h += `<div style="font-size:11.5px;opacity:.7;margin-bottom:8px">Guthaben: ${esc(d.saldo.hinweis || "nicht verfügbar")}</div>`;
+    <input type="date" id="zDatum" class="zh-sel" value="${iso(Z.art === "tag" ? von : new Date(Z.basis))}"><span style="flex:1"></span><button class="zk" data-zs="-1">‹</button><b style="font-size:12.5px">${titel}</b><button class="zk" data-zs="1">›</button></div>`;
+  const mini = (l, z, bg, fg) => `<div class="zh-mini" style="${bg ? "background:" + bg + ";" : ""}${fg ? "color:" + fg : ""}"><div class="zh-l">${l}</div><div class="zh-z">${z}</div></div>`;
+  const balken = (i, s, c) => `<div class="zh-bal"><div style="width:${s > 0 ? Math.min(100, Math.round(i / s * 100)) : 0}%;background:${c}"></div></div>`;
+  const oben = [];
+  if (Z.art === "tag") { const t = iso(von), i0 = wert("system", t) || 0, s0 = soll(t), st0 = d.tage && d.tage[t] && d.tage[t].status;
+    if (d.quellen.includes("system")) oben.push(mini("Arbeitszeit (System)", shm(i0) + (s0 != null ? " / " + shm(s0) : "") + " Std" + (s0 ? balken(i0, s0, i0 >= s0 ? "#1d9e75" : "#ef9f27") : "")));
+    if (s0 != null && t < heute) { const df = i0 - s0; oben.push(mini("Differenz", (df >= 0 ? "+" : "−") + shm(Math.abs(df)), df >= 0 ? "rgba(220,252,231,.85)" : "rgba(254,226,226,.85)", df >= 0 ? "#166534" : "#991b1b")); }
+    if (st0) oben.push(mini("Kernarbeitszeit", statusChip(st0)));
+  } else {
+    if (d.saldo && d.saldo.verfuegbar) { const plus = d.saldo.saldoMs >= 0; oben.push(mini(plus ? "Überstunden-Guthaben" : "Minusstunden", (plus ? "+" : "−") + zhm(Math.abs(d.saldo.saldoMs) / 60000) + " Std", plus ? "rgba(220,252,231,.85)" : "rgba(254,226,226,.85)", plus ? "#166534" : "#991b1b")); }
+    if (d.tage && d.quellen.includes("system")) oben.push(mini((Z.art === "monat" ? "Monat" : "Woche") + " bis heute", shm(istBis) + " / " + shm(sollBis) + balken(istBis, sollBis, istBis >= sollBis ? "#1d9e75" : "#ef9f27")));
+    if (d.urlaub) oben.push(mini("Resturlaub " + d.urlaub.jahr, String(d.urlaub.rest).replace(".", ",") + " Tage"));
   }
-  h += `<div style="display:grid;grid-template-columns:repeat(${ALLE.length},minmax(0,1fr));gap:6px;margin-bottom:4px">` + ALLE.map(q => { const an = Z.quelle === q[0], aus = Z.quelle !== "alle" && !an;
-    return `<div data-zq="${an ? "alle" : q[0]}" style="cursor:pointer;background:${q[2]};border-radius:10px;padding:8px 10px;opacity:${aus ? .35 : 1};outline:${an ? "2px solid #fbbf24" : "none"}"><div style="font-size:11px;opacity:.85">${q[1]}</div><div style="font-size:18px;font-weight:800">${std(summe[q[0]])} Std</div></div>`; }).join("") + "</div>";
-  h += `<div style="font-size:11px;opacity:.65;margin-bottom:6px">${Z.quelle === "alle" ? "Kachel antippen = nur diese Quelle · Tag antippen = Einzelheiten" : "Nur " + Q[0][1] + " · Kachel nochmal antippen = alle"}</div>`;
+  h += '<div class="zh-karte">';
+  if (oben.length) h += `<div style="display:grid;grid-template-columns:${oben.length === 1 ? "minmax(0,1fr)" : "minmax(0,1.3fr) repeat(" + (oben.length - 1) + ",minmax(0,1fr))"};gap:6px;margin-bottom:6px">${oben.join("")}</div>`;
+  h += `<div style="display:grid;grid-template-columns:repeat(${ALLE.length},minmax(0,1fr));gap:6px">` + ALLE.map(q => { const an = Z.quelle === q[0], aus = Z.quelle !== "alle" && !an;
+    let u = q[3]; if (Z.art === "tag") { const t = iso(von); if (q[0] === "datev" && d.datev && d.datev.buchungen) u = d.datev.buchungen.length + " Buchung" + (d.datev.buchungen.length === 1 ? "" : "en"); if (q[0] === "buero" && d.buero && d.buero[t]) u = d.buero[t].von + "–" + d.buero[t].bis; }
+    else if (q[0] === "buero" && pause) u += ", " + shm(pause) + " Pause";
+    return `<div data-zq="${an ? "alle" : q[0]}" class="zh-q-k" style="background:${q[2]};opacity:${aus ? .4 : 1};outline:${an ? "3px solid #fbbf24" : "none"}"><div class="zh-l">${q[1]}</div><div class="zh-z">${std(summe[q[0]])} Std</div><div class="zh-l">${u}</div></div>`; }).join("") + "</div>";
+  h += `<div class="zh-m" style="margin-top:5px">${Z.quelle === "alle" ? (Z.art === "tag" ? "Kachel antippen = Einzelheiten dieser Quelle" : "Kachel antippen = nur diese Quelle · Tag antippen = Einzelheiten") : (Z.art === "tag" ? "Kachel nochmal antippen = zu" : "Nur " + Q[0][1] + " · Kachel nochmal antippen = alle")}</div></div>`;
   if (Z.art === "tag") {
     const t = iso(von);
-    if (hat("datev")) { const bu = (d.datev && d.datev.buchungen) || [];
-      h += `<div style="font-weight:800;color:#93c5fd;margin:6px 0 4px">DATEV · ${bu.length} Buchung${bu.length === 1 ? "" : "en"}</div>` + (bu.length ? bu.map(x => `<div class="z" style="padding:7px 10px"><b style="text-transform:none;letter-spacing:0;font-size:12px;color:#fff">${std(x.std)} Std · ${esc(x.mandant || "ohne Mandant")}</b>${esc(x.auftrag)}${x.kommentar ? `<div style="font-size:12px;opacity:.75;margin-top:2px">${esc(x.kommentar)}</div>` : ""}</div>`).join("") : '<div class="leer" style="padding:6px">Keine DATEV-Buchung an diesem Tag.</div>'); }
-    if (hat("buero")) { const be = d.buero && d.buero[t];
-      h += `<div style="font-weight:800;color:#5eead4;margin:10px 0 4px">Virtuelles Büro</div>` + (be ? `<div style="font-size:12.5px;margin-bottom:4px">${be.von} – ${be.bis} · ${std(be.std)} Std, davon ${std(be.pause)} Std Pause</div><div style="display:flex;flex-wrap:wrap;gap:4px">${(be.raeume || []).map(r => `<span style="font-size:11px;padding:3px 7px;border-radius:7px;background:rgba(255,255,255,.08)">${r.von}–${r.bis} ${esc(r.bereich)} (${r.min} Min)</span>`).join("")}</div>` : '<div class="leer" style="padding:6px">An diesem Tag nicht im Büro.</div>'); }
-    if (hat("system")) { const sv = wert("system", t); h += `<div style="font-weight:800;color:#c4b5fd;margin:10px 0 4px">System-Zeiterfassung</div><div style="font-size:12.5px">${sv ? std(sv) + " Std aktiv am Rechner" : "Keine System-Zeit an diesem Tag."}</div>`; }
+    if (Z.quelle === "system") { const sv = wert("system", t); h += `<div class="zh-karte"><b style="color:#534ab7">System-Zeiterfassung</b><div>${sv ? shm(sv) + " Std aktiv am Rechner" : "Keine System-Zeit an diesem Tag."}</div></div>`; }
+    if (Z.quelle === "datev") { const bu = (d.datev && d.datev.buchungen) || [];
+      h += `<div class="zh-karte"><b style="color:#185fa5">DATEV · ${bu.length} Buchung${bu.length === 1 ? "" : "en"}</b>` + (bu.length ? '<table class="zh-tab"><tr><th>Std</th><th>Mandant</th><th>Auftrag</th><th>Kommentar</th></tr>' + bu.map(x => `<tr><td>${std(x.std)}</td><td>${esc(x.mandant || "–")}</td><td>${esc(x.auftrag)}</td><td>${esc(x.kommentar)}</td></tr>`).join("")
+        + `<tr style="font-weight:800"><td>${std(bu.reduce((a, x) => a + (x.std || 0), 0))}</td><td colspan="3">Summe</td></tr></table>` : '<div class="zh-m">Keine DATEV-Buchung an diesem Tag.</div>') + "</div>"; }
+    if (Z.quelle === "buero") h += bueroHtml(d, t);
+    const ts = d.tage && d.tage[t] && d.tage[t].status, s0 = soll(t), i0 = wert("system", t) || 0;
+    if (s0 && t < heute && i0 < s0 - .01 && ts && ts.art === "offen") h += `<div class="zh-karte" style="background:rgba(254,243,199,.85)!important;color:#92400e">${shm(s0 - i0)} Std unter Soll – die Frage dazu ist noch offen.</div>`;
   } else {
-    h += '<table style="width:100%;border-collapse:collapse;font-size:12.5px"><tr><th style="text-align:left;opacity:.7;font-size:11px;padding:4px">Tag</th>' + Q.map(q => `<th style="text-align:right;font-size:11px;padding:4px;color:${q[3]}">${q[1]}</th>`).join("") + "</tr>";
-    tage.forEach(t => { const v = Q.map(q => wert(q[0], iso(t))); if ((t.getDay() === 0 || t.getDay() === 6) && !v.some(Boolean)) return;
-      const dv = Z.quelle === "alle" && d.quellen.includes("datev") ? (wert("datev", iso(t)) || 0) : null, max = Math.max(...ALLE.map(q => wert(q[0], iso(t)) || 0)), rot = dv !== null && ALLE.length > 1 && max - dv >= 1;
-      h += `<tr data-zt="${iso(t)}" style="cursor:pointer;border-top:1px solid rgba(255,255,255,.08)"><td style="padding:5px 4px">${t.toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit" })}${rot ? ' <span style="color:#fca5a5" title="DATEV deutlich weniger">⚠</span>' : ""}</td>` + v.map(x => `<td style="text-align:right;padding:5px 4px;font-variant-numeric:tabular-nums">${x ? std(x) : "–"}</td>`).join("") + "</tr>"; });
-    h += "</table>";
+    const mitSoll = !!d.tage, mitBuero = hat("buero");
+    h += '<div class="zh-karte" style="padding:6px 8px"><table class="zh-tab"><tr><th>Tag</th>' + Q.map(q => `<th><i class="zh-q" style="background:${q[2]};border-radius:50%"></i>${q[1]}</th>`).join("") + (mitBuero ? "<th>Büro von–bis</th>" : "") + (mitSoll ? "<th>Soll</th><th>±</th><th>Status</th>" : "") + "</tr>";
+    let sSoll = 0, sDiff = 0;
+    tage.forEach(t => { const i = iso(t), v = Q.map(q => wert(q[0], i)), we = t.getDay() === 0 || t.getDay() === 6; if (we && !v.some(Boolean)) return;
+      const s = soll(i), ts = d.tage && d.tage[i] && d.tage[i].status, be = d.buero && d.buero[i], df = mitSoll && s != null && i < heute && d.system ? (wert("system", i) || 0) - s : null;
+      if (s != null) sSoll += s; if (df != null) sDiff += df;
+      const auff = (df != null && df <= -.5) || (ts && ts.art === "offen");
+      h += `<tr data-zt="${i}" style="cursor:pointer${auff ? ";background:rgba(255,255,255,.55)" : ""}${we ? ";opacity:.6" : ""}"><td>${t.toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit" })}</td>` + v.map(x => `<td>${x ? std(x) : "–"}</td>`).join("")
+        + (mitBuero ? `<td>${be ? be.von + "–" + be.bis : "–"}</td>` : "")
+        + (mitSoll ? `<td>${s != null ? shm(s) : "–"}</td><td style="font-weight:800;color:${df == null ? "inherit" : df < 0 ? "#b91c1c" : "#047857"}">${df == null ? "–" : (df < 0 ? "−" : "+") + shm(Math.abs(df))}</td><td>${ts ? statusChip(ts) : df != null && s ? statusChip({ art: "ok", text: "ok" }) : ""}</td>` : "") + "</tr>"; });
+    h += '<tr style="font-weight:800"><td>Summe</td>' + Q.map(q => `<td>${std(summe[q[0]])}</td>`).join("") + (mitBuero ? "<td></td>" : "") + (mitSoll ? `<td>${shm(sSoll)}</td><td style="color:${sDiff < 0 ? "#b91c1c" : "#047857"}">${sDiff < 0 ? "−" : "+"}${shm(Math.abs(sDiff))}</td><td></td>` : "") + "</tr></table></div>";
   }
-  const hin = []; if (d.datev) hin.push(d.datev.quelle === "datev" ? "DATEV tagesaktuell" : "DATEV aus Excel-Upload"); if (d.buero) hin.push("Büro: letzte 30 Tage");
-  h += `<div style="font-size:11px;opacity:.65;margin-top:6px">${esc(hin.join(" · "))}</div>`;
+  const hin = []; if (d.tage) hin.push("Soll und ± mit System-Zeit, bis gestern"); if (d.datev) hin.push(d.datev.quelle === "datev" ? "DATEV tagesaktuell" : "DATEV aus Excel-Upload"); if (d.buero) hin.push("Büro: letzte 30 Tage");
+  h += `<div class="zh-m" style="margin-top:2px;padding:4px 8px;border-radius:8px;background:rgba(255,255,255,.45)">${esc(hin.join(" · "))}</div>`;
   box.innerHTML = h;
-  box.querySelectorAll("[data-za]").forEach(x => x.onclick = () => { Z.art = x.dataset.za; zeitLaden(); });
+  box.querySelectorAll("[data-za]").forEach(x => x.onclick = () => { Z.art = x.dataset.za; Z.notiz = ""; if (Z.art !== "tag") Z.quelle = "alle"; zeitLaden(); });
   box.querySelectorAll("[data-zq]").forEach(x => x.onclick = () => { Z.quelle = x.dataset.zq; zeitLaden(); });
-  box.querySelectorAll("[data-zt]").forEach(x => x.onclick = () => { Z.art = "tag"; Z.basis = new Date(x.dataset.zt + "T12:00:00"); zeitLaden(); });
-  $("zDatum").onchange = e => { if (e.target.value) { Z.art = "tag"; Z.basis = new Date(e.target.value + "T12:00:00"); zeitLaden(); } };
-  box.querySelectorAll("[data-zs]").forEach(x => x.onclick = () => { const n = +x.dataset.zs, nb = new Date(Z.basis); if (Z.art === "monat") nb.setMonth(nb.getMonth() + n); else if (Z.art === "tag") nb.setDate(nb.getDate() + n); else nb.setDate(nb.getDate() + 7 * n); Z.basis = nb; zeitLaden(); });
+  box.querySelectorAll("[data-zt]").forEach(x => x.onclick = () => { Z.art = "tag"; Z.basis = new Date(x.dataset.zt + "T12:00:00"); Z.wo = "alle"; Z.raum = ""; Z.notiz = ""; zeitLaden(); });
+  box.querySelectorAll("[data-wo]").forEach(x => x.onclick = () => { Z.wo = x.dataset.wo; Z.raum = ""; zeitLaden(); });
+  box.querySelectorAll("[data-notiz]").forEach(x => x.onclick = () => { Z.notiz = Z.notiz === x.dataset.notiz ? "" : x.dataset.notiz; zeitLaden(); });
+  box.querySelectorAll("[data-goeffnen]").forEach(x => x.onclick = () => { try { WA.player.state.saveVariable("swAktion", { was: "gespraechOeffnen", id: x.dataset.goeffnen, t: Date.now() }, { public: false, persist: false }); } catch (e) { console.warn(e); } });
+  if ($("zRaum")) $("zRaum").onchange = e => { Z.raum = e.target.value; zeitLaden(); };
+  $("zDatum").onchange = e => { if (e.target.value) { Z.art = "tag"; Z.basis = new Date(e.target.value + "T12:00:00"); Z.wo = "alle"; Z.raum = ""; Z.notiz = ""; zeitLaden(); } };
+  box.querySelectorAll("[data-zs]").forEach(x => x.onclick = () => { const n = +x.dataset.zs, nb = new Date(Z.basis); if (Z.art === "monat") nb.setMonth(nb.getMonth() + n); else if (Z.art === "tag") nb.setDate(nb.getDate() + n); else nb.setDate(nb.getDate() + 7 * n); Z.basis = nb; Z.wo = "alle"; Z.raum = ""; Z.notiz = ""; zeitLaden(); });
 }
 async function laden() {
   if (!ausweis.holen()) return ausweisFormular();
