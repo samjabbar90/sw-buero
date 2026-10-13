@@ -68,7 +68,11 @@ function malen() {
 function tick() { if (!G || !G.start) return; const ende = G.zeitEnde ? Date.parse(G.zeitEnde) : Date.now() + versatz; $("z").textContent = mmss(ende - Date.parse(G.start)); $("z").classList.toggle("stop", !!G.zeitEnde); }
 
 // ---------- Mitschreiben ----------
-const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+// Brave (13.10.2026, Sam): gibt sich als Chrome aus, hat aber keinen Google-Sprachdienst → Erkennung meldet nur „network“. Gleich klar sagen.
+const BRAVE = !!navigator.brave;
+const BRAVE_TEXT = "In Brave geht Mitschreiben nicht – bitte das Büro in Chrome oder Edge öffnen (Edge: … › Apps › Diese Website als App installieren). Die anderen werden weiter mitgeschrieben.";
+let braveGemeldet = false;
+const SR = BRAVE ? null : (window.SpeechRecognition || window.webkitSpeechRecognition);
 let rec = null, recSoll = false, zwischen = "", micFehler = "";
 const M = () => (G && G.mitschrift) || { status: "aus", zustimmung: {}, zeilen: [] };
 const ichZugestimmt = () => !!(M().zustimmung || {})[G && G.ich];
@@ -84,12 +88,13 @@ function mitMalen() {
     const fehlt = (G.teilnehmer || []).filter(t => !(m.zustimmung || {})[t.id]).map(t => String(t.name).split(/\s+/)[0]);
     box.innerHTML = ichZugestimmt()
       ? `<div class="frage"><div>🎙 Warte auf Zustimmung von <b>${esc(fehlt.join(", ") || "…")}</b><div class="hin">Gespeichert wird nur Text, kein Ton.</div></div><button id="mAus">Abbrechen</button></div>`
-      : `<div class="frage"><div>🎙 <b>${esc(m.gefragtVon || "Jemand")}</b> möchte das Gespräch mitschreiben.<div class="hin">Gespeichert wird nur Text, kein Ton. Jeder Rechner schreibt nur sein eigenes Mikrofon mit.</div></div><button class="gruen" id="mJa">Ja</button><button id="mNein">Nein</button></div>`;
+      : `<div class="frage"><div>🎙 <b>${esc(m.gefragtVon || "Jemand")}</b> möchte das Gespräch mitschreiben.<div class="hin">Gespeichert wird nur Text, kein Ton. Jeder Rechner schreibt nur sein eigenes Mikrofon mit.</div>${BRAVE ? '<div class="hin warn">⚠️ ' + BRAVE_TEXT + "</div>" : ""}</div><button class="gruen" id="mJa">Ja</button><button id="mNein">Nein</button></div>`;
   } else {
     const zeilen = (m.zeilen || []).slice(-25).map(z => `<div class="${z.id === G.ich ? "ich" : ""}"><b>${esc(z.name)}:</b> ${esc(z.text)}</div>`).join("")
       + (zwischen ? `<div class="ich grau"><b>${esc(String(window.__waName || "Ich").split(/\s+/)[0])}:</b> ${esc(zwischen)} …</div>` : "");
     const ok = SR ? (micFehler ? '<span class="warn">⚠️ ' + esc(micFehler) + "</span>" : ichZugestimmt() ? (m.status === "laeuft" && recSoll ? (recLaeuft ? '<span class="hoert"></span> Dein Mikrofon wird mitgeschrieben' : '<span class="hoert nein"></span> Spracherkennung startet neu …') : "") :"⚠️ Du hast noch nicht zugestimmt – du wirst nicht mitgeschrieben. <button id=\"mJa\" class=\"gruen\">Ja</button>")
-      : "⚠️ Dein Browser kann nicht mitschreiben (nur Chrome/Edge) – die anderen schreiben weiter.";
+      : '<span class="warn">⚠️ ' + (BRAVE ? BRAVE_TEXT : "Dein Browser kann nicht mitschreiben (nur Chrome/Edge) – die anderen schreiben weiter.") + "</span>";
+    if (BRAVE && !braveGemeldet && ichZugestimmt()) { braveGemeldet = true; api("/gespraeche/" + encodeURIComponent(ID) + "/mitschrift/stoerung", { method: "POST", body: JSON.stringify({ art: "brave", text: BRAVE_TEXT }) }).catch(() => {}); }
     box.innerHTML = `<div class="kopf">${m.status === "laeuft" ? '<span class="p"></span> Mitschreiben läuft' : "⏸ Mitschreiben pausiert"} · ${m.anzahl || 0} Sätze<span class="sp"></span>`
       + (m.status === "laeuft" ? '<button id="mPause">⏸ Pause</button>' : '<button id="mWeiter">▶ Weiter</button>') + '<button id="mAus">✕ Beenden</button></div>'
       + (ok ? `<div class="hin">${ok}</div>` : "") + `<div class="zeilen" id="zeilen">${zeilen || '<div class="grau">Noch nichts gesagt …</div>'}</div>`;
