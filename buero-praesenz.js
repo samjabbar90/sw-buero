@@ -1553,7 +1553,7 @@
   }
   function utePlatz() {
     let fenster = null;
-    leertasteBereich("ute-platz", { x: 53, y: 8, w: 6, h: 1 }, "🗓 Ute · Termine – Leertaste: freie Zeiten finden und buchen", async () => {
+    leertasteBereich("ute-platz", { x: 53, y: 8, w: 6, h: 1 }, "🗓 Donna · Termine – Leertaste: freie Zeiten finden und buchen", async () => {
       try {
         fenster = await glasFenster(SEITEN + "ute.html?t=" + Date.now());
       } catch {

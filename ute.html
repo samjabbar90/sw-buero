@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Ute · Termine</title>
+<title>Donna · Termine</title>
 <!-- Ute (13.10.2026, Sam): KI-Terminassistentin. Im Büro (Wartebereich oben, Leertaste) als Glas-Fenster, im SW-internen Portal unter
-     „Ute · Termine“. Dieselbe Datei liegt in app/frontend/public/ute.html (dort Anmeldung übers Portal statt Büro-Ausweis).
+     „Donna · Termine“. Dieselbe Datei liegt in app/frontend/public/ute.html (dort Anmeldung übers Portal statt Büro-Ausweis).
      Oben: Vorschläge, über die ich entscheiden muss (eine Zeit antippen = Termin wird eingetragen). Darunter der Chat mit Ute. Server: services/ute.js -->
 <style>
   * { box-sizing: border-box; }
@@ -42,7 +42,7 @@
 <script src="glas.js?v=1791559958"></script>
 </head>
 <body>
-<header><div class="av">🗓</div><h1>Ute · Terminassistentin<span class="u">findet freie Zeiten, bucht Termine und Meeting-Räume</span></h1></header>
+<header><div class="av">🗓</div><h1>Donna · Terminassistentin<span class="u">findet freie Zeiten, bucht Termine und Meeting-Räume</span></h1></header>
 <main>
   <div id="entscheiden"></div>
   <div class="karte">
@@ -78,7 +78,7 @@ function zeichnen() {
   $("vonmir").innerHTML = vm.length ? `<div class="karte"><h2>⏳ Warten auf Antwort</h2>` + vm.map(v => `<div class="m" style="margin-top:4px">„${esc(v.titel)}“ an <b>${esc(v.an)}</b> · ${v.optionen.map(o => tagDE(o.datum) + " " + o.von).join(", ")}</div>`).join("") + "</div>" : "";
   const c = S.chat || [];
   $("verlauf").innerHTML = c.length ? c.map(m => `<div class="b ${m.rolle === "ute" ? "ute" : "du"}">${esc(m.text)}</div>`).join("")
-    : `<div class="b ute">Hallo ${esc(String(S.ich || "").split(/\s+/)[0])}! Ich bin Ute 🙂 Ich finde freie Zeiten, trage Termine ein und buche die Meeting-Räume oben. Wobei kann ich helfen?</div>`;
+    : `<div class="b ute">Hallo ${esc(String(S.ich || "").split(/\s+/)[0])}! Ich bin Donna 🙂 Ich finde freie Zeiten, trage Termine ein und buche die Meeting-Räume oben. Wobei kann ich helfen?</div>`;
   $("verlauf").scrollTop = $("verlauf").scrollHeight;
   $("chips").innerHTML = c.length ? "" : ["Wann habe ich nächste Woche 1 Stunde frei?", "Termin mit einem Kollegen finden", "Mandanten-Termin per Zoom für einen Kollegen"].map(t => `<button data-t="${esc(t)}">${esc(t)}</button>`).join("");
   document.querySelectorAll("[data-w]").forEach(b => b.onclick = async () => { if (!confirm("Diesen Termin eintragen: " + b.textContent + "?")) return;
@@ -90,14 +90,14 @@ function zeichnen() {
 async function laden() { try { S = await api(""); $("fe").textContent = ""; zeichnen(); } catch (e) { $("verlauf").innerHTML = `<div class="fehler">${esc(e.message)}</div>`; } }
 async function senden() {
   const t = $("text").value.trim(); if (!t || sendet) return; sendet = true; $("los").disabled = true; $("fe").textContent = "";
-  S.chat = [...(S.chat || []), { rolle: "du", text: t }, { rolle: "ute", text: "… Ute schaut nach …" }]; zeichnen(); $("text").value = "";
+  S.chat = [...(S.chat || []), { rolle: "du", text: t }, { rolle: "ute", text: "… Donna schaut nach …" }]; zeichnen(); $("text").value = "";
   try { const r = await api("/chat", { text: t }); if (r.usd) $("kosten").textContent = "letzte Antwort ≈ " + (r.usd * 100).toFixed(2).replace(".", ",") + " Cent"; }
   catch (e) { $("fe").textContent = e.message; }
   sendet = false; $("los").disabled = false; laden();
 }
 $("los").onclick = senden;
 $("text").onkeydown = e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); senden(); } };
-$("neu").onclick = async () => { if (!confirm("Den Chat mit Ute leeren? Gebuchte Termine und Vorschläge bleiben.")) return; try { await api("/neu", {}); laden(); } catch (e) { $("fe").textContent = e.message; } };
+$("neu").onclick = async () => { if (!confirm("Den Chat mit Donna leeren? Gebuchte Termine und Vorschläge bleiben.")) return; try { await api("/neu", {}); laden(); } catch (e) { $("fe").textContent = e.message; } };
 (async () => { if (!IM_DASHBOARD) { for (let i = 0; i < 30 && typeof WA === "undefined"; i++) await new Promise(r => setTimeout(r, 100)); try { await Promise.race([WA.onInit(), new Promise(r => setTimeout(r, 2500))]); window.__waName = WA.player.name || ""; } catch {} }
   if (!IM_DASHBOARD && !ausweis()) { $("verlauf").innerHTML = '<div class="fehler">Bitte zuerst das Büro entsperren (Anmelden), dann noch einmal die Leertaste drücken.</div>'; return; }
   laden(); setInterval(() => { if (!sendet && !document.activeElement.matches("textarea")) laden(); }, 30000); })();
