@@ -138,13 +138,13 @@
   var kollisionGid = 3;
   var freigabe = /* @__PURE__ */ new Map();
   var vorname = (n) => String(n || "").trim().split(/\s+/)[0].toLowerCase();
-  var istBesitzer = (t) => t.besitzer.toLowerCase() === vorname(WA.player.name);
-  var meineTuer = () => tueren.find(istBesitzer);
-  var tuerStatus = (t) => String(WA.state[t.variable] || "frei");
+  var istBesitzer = (t) => t.offen ? zimmerDaten(t).s !== "frei" && vorname(zimmerDaten(t).wer) === vorname(WA.player.name) : t.besitzer.toLowerCase() === vorname(WA.player.name);
+  var meineTuer = () => tueren.find((t) => !t.offen && istBesitzer(t));
+  var tuerStatus = (t) => t.offen ? zimmerDaten(t).s : String(WA.state[t.variable] || "frei");
   var TEXT = { frei: "\u{1F7E2} T\xFCr: frei", besetzt: "\u{1F7E1} T\xFCr: besetzt", zu: "\u{1F534} T\xFCr: zu" };
   function tuerAnwenden(t) {
     const s = tuerStatus(t);
-    const darfDurch = istBesitzer(t) || (freigabe.get(t.variable) || 0) > Date.now();
+    const darfDurch = istBesitzer(t) || (freigabe.get(t.variable) || 0) > Date.now() || !!t.offen && aktuellerBereich === t.raum;
     const kacheln = t.felder.map(([x, y]) => ({ x, y, tile: s === "zu" && !darfDurch ? kollisionGid : null, layer: "collisions" }));
     const sg = (t.senk ? schildGidsSenk : schildGids)[s] || null;
     t.schild.forEach(([x, y], i) => kacheln.push({ x, y, tile: sg ? sg[i] : null, layer: "furniture/labels" }));
@@ -153,6 +153,42 @@
     } catch {
     }
   }
+  // ===================== Offene Zimmer abschließbar (13.10.2026, Sam: O2 „unsichtbare Wand“) =====================
+  // Die 16 offenen Zimmer (Karte: Bereiche „Zimmer 1“–„Zimmer 16“ mit offen=true, kartenbau/zimmer-tueren-einbauen.js) haben keinen
+  // festen Besitzer: wer drin ist und das Zimmer frei vorfindet, stellt es über den Knopf in der Leiste auf besetzt/zu. Die Raum-Variable
+  // enthält {s, wer, t}; der Halter frischt t jede Minute auf, solange er drin ist. Ohne Auffrischung (Browser zu) gilt das Zimmer nach
+  // 3 Min als frei; verlässt der Halter das Zimmer, wird es nach 2 Min frei. „Zu“ = unsichtbare Sperre über der Öffnung (tuerAnwenden).
+  function zimmerDaten(t) {
+  try { const d = JSON.parse(String(WA.state[t.variable] || "")); if (d && d.s && Date.now() - Number(d.t || 0) < 3 * 60000) return d; } catch { /* leer */ }
+  return { s: "frei", wer: "", t: 0 };
+  }
+  function werVon(t) { return t.offen ? zimmerDaten(t).wer : t.besitzer; }
+  function zimmerSetzen(t, s) { WA.state.saveVariable(t.variable, s === "frei" ? "" : JSON.stringify({ s, wer: WA.player.name, t: Date.now() })); }
+  var ZTEXT = { frei: "🟢 frei", besetzt: "🟡 besetzt", zu: "🔴 zu" };
+  function zimmerKnopf() {
+  try { WA.ui.actionBar.removeButton("sw-zimmer"); } catch { /* nicht da */ }
+  const t = tueren.find((x) => x.offen && x.raum === aktuellerBereich); if (!t) return;
+  const d = zimmerDaten(t), fremd = d.s !== "frei" && vorname(d.wer) !== vorname(WA.player.name), wer = String(d.wer).split(/\s+/)[0];
+  try { WA.ui.actionBar.addButton({ id: "sw-zimmer", label: fremd ? "🔒 " + t.raum + ": " + wer : "🚪 " + t.raum + ": " + (ZTEXT[d.s] || ZTEXT.frei), callback: () => {
+    const n = zimmerDaten(t);
+    if (n.s !== "frei" && vorname(n.wer) !== vorname(WA.player.name)) return kurzMeldung(t.raum + " hat gerade " + String(n.wer).split(/\s+/)[0] + " – nur wer es eingestellt hat, kann umstellen", 5000);
+    zimmerSetzen(t, ({ frei: "besetzt", besetzt: "zu", zu: "frei" })[n.s] || "frei");
+  } }); } catch { /* ältere Version */ }
+  }
+  var zimmerWeg = new Map();
+  function zimmerRein(raum) {
+  const t = tueren.find((x) => x.offen && x.raum === raum); if (!t) return;
+  clearTimeout(zimmerWeg.get(raum)); tuerAnwenden(t); zimmerKnopf();
+  }
+  function zimmerRaus(raum) {
+  const t = tueren.find((x) => x.offen && x.raum === raum); if (!t) return;
+  tuerAnwenden(t); zimmerKnopf();
+  if (istBesitzer(t)) zimmerWeg.set(raum, setTimeout(() => { if (aktuellerBereich !== raum && istBesitzer(t)) zimmerSetzen(t, "frei"); }, 2 * 60000));
+  }
+  setInterval(() => { for (const t of tueren) if (t.offen) {
+  if (aktuellerBereich === t.raum && istBesitzer(t)) zimmerSetzen(t, zimmerDaten(t).s); // auffrischen, solange ich drin bin
+  tuerAnwenden(t); // abgelaufene Zimmer (Halter weg) wieder frei zeigen
+  } }, 60000);
   function tuerKnopf() {
     const t = meineTuer();
     if (!t || !HANDY || true) return;
@@ -191,23 +227,23 @@
     if (!t) return;
     const zu = tuerStatus(t) === "zu";
     hinweis = WA.ui.displayActionMessage({
-      message: `${t.raum}: ${t.besitzer} ist ${zu ? "nicht zu st\xF6ren \u2013 T\xFCr abgeschlossen" : "besch\xE4ftigt"}. Leertaste = anklopfen`,
+      message: `${t.raum}: ${String(werVon(t)).split(/\s+/)[0]} ist ${zu ? "nicht zu st\xF6ren \u2013 " + (t.offen ? "Zimmer" : "T\xFCr") + " abgeschlossen" : "besch\xE4ftigt"}. Leertaste = anklopfen`,
       callback: () => anklopfen(t)
     });
   }
   function anklopfen(t) {
     if (Date.now() - (geklopft.get(t.variable) || 0) < 15e3) return;
     geklopft.set(t.variable, Date.now());
-    WA.event.broadcast("sw-klopfen", { an: t.besitzer, von: WA.player.name, variable: t.variable });
+    WA.event.broadcast("sw-klopfen", { an: werVon(t), von: WA.player.name, variable: t.variable });
     fetch(ENDPOINT, {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-Buero-Key": BUERO_KEY },
-      body: JSON.stringify({ name: WA.player.name, event: "klopfen", an: t.besitzer, raum: t.raum, sitzung: SITZUNG })
+      body: JSON.stringify({ name: WA.player.name, event: "klopfen", an: werVon(t), raum: t.raum, sitzung: SITZUNG })
     }).catch(() => {
     });
     hinweisTuer = null;
     hinweisZeigen(null);
-    const m = WA.ui.displayActionMessage({ message: `Angeklopft bei ${t.besitzer} \u2013 einen Moment \u2026`, callback: () => {
+    const m = WA.ui.displayActionMessage({ message: `Angeklopft bei ${String(werVon(t)).split(/\s+/)[0]} \u2013 einen Moment \u2026`, callback: () => {
     } });
     setTimeout(() => {
       try {
@@ -229,7 +265,7 @@
         if (l.type === "group") lauf(l.layers || []);
         if (l.type === "objectgroup") (l.objects || []).forEach((o) => {
           const pr = (n) => ((o.properties || []).find((x) => x.name === n) || {}).value;
-          if (pr("tuerVariable")) tueren.push({ raum: o.name, besitzer: pr("besitzer"), variable: pr("tuerVariable"), felder: JSON.parse(pr("tuerFelder")), schild: JSON.parse(pr("schildFelder")), rechteck: [o.x / 32, o.y / 32, o.width / 32, o.height / 32], senk: !!pr("schildSenk") });
+          if (pr("tuerVariable")) tueren.push({ raum: o.name, besitzer: pr("besitzer"), variable: pr("tuerVariable"), felder: JSON.parse(pr("tuerFelder")), schild: JSON.parse(pr("schildFelder")), rechteck: [o.x / 32, o.y / 32, o.width / 32, o.height / 32], senk: !!pr("schildSenk"), offen: !!pr("offen") });
         });
       });
       lauf(k.layers || []);
@@ -253,6 +289,10 @@
       tuerAnwenden(t);
       WA.state.onVariableChange(t.variable).subscribe(() => {
         tuerAnwenden(t);
+        if (t.offen) {
+          if (aktuellerBereich === t.raum) zimmerKnopf();
+          return;
+        }
         if (istBesitzer(t)) {
           tuerKnopf();
           melden("heartbeat");
@@ -263,10 +303,10 @@
     WA.player.onPlayerMove((e) => hinweisZeigen(naheTuer(e.x, e.y)));
     WA.event.on("sw-klopfen").subscribe((ev) => {
       const d = ev.data || {};
-      const t = meineTuer();
+      const t = tueren.find((x) => x.offen && x.variable === d.variable && istBesitzer(x)) || meineTuer();
       if (!t || vorname(d.an) !== vorname(WA.player.name)) return;
       const m = WA.ui.displayActionMessage({
-        message: `\u270A ${d.von} klopft an deine T\xFCr \u2013 Leertaste = reinlassen`,
+        message: `\u270A ${d.von} klopft an ${t.offen ? t.raum : "deine T\xFCr"} \u2013 Leertaste = reinlassen`,
         callback: () => WA.event.broadcast("sw-reinlassen", { fuer: d.von, variable: t.variable })
       });
       setTimeout(() => {
@@ -283,7 +323,7 @@
       if (!t) return;
       freigabe.set(t.variable, Date.now() + 3e4);
       tuerAnwenden(t);
-      const m = WA.ui.displayActionMessage({ message: `${t.besitzer} hat dich reingelassen \u2013 komm rein!`, callback: () => {
+      const m = WA.ui.displayActionMessage({ message: `${String(werVon(t)).split(/\s+/)[0]} hat dich reingelassen \u2013 komm rein!`, callback: () => {
       } });
       setTimeout(() => {
         try {
@@ -1586,12 +1626,14 @@
       reservierungZeigen(name);
       effekte();
       bereit.then(() => zimmerBetreten(name));
+      zimmerRein(name);
     });
     api.onLeave(name).subscribe(() => {
       if (aktuellerBereich === name) aktuellerBereich = null;
       bereit.then(() => melden("betreten"));
       effekte();
       zimmerVerlassen(name);
+      zimmerRaus(name);
     });
   }
   function feierabendOeffnen() {
