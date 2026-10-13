@@ -51,6 +51,12 @@
   :root.hell .leer { color: #374151 !important; } :root.hell a { color: #0f766e !important; }
   :root.hell .zk { background: rgba(255, 255, 255, .5); color: #1f2937; border: 1px solid rgba(17, 24, 39, .15); } :root.hell .zk.an { background: #0f766e; color: #fff; border-color: #0f766e; }
   :root.hell input, :root.hell select, :root.hell .zh-sel { background: rgba(255, 255, 255, .6) !important; color: #111827 !important; border-color: rgba(17, 24, 39, .2) !important; color-scheme: light; }
+  /* übrige Reiter + Live-Kasten + Ausweis-Formular im hellen Glas (13.10.2026) */
+  .zh-live { background: rgba(255, 255, 255, .45); border: 1px solid rgba(15, 118, 110, .45); color: #111827; }
+  :root.glas.hell body:hover .zh-live, :root.glas.hell body:focus-within .zh-live { background: rgba(255, 255, 255, .95); }
+  :root.hell .gross { color: #0f766e !important; } :root.hell .box { background: rgba(255, 255, 255, .45) !important; color: #111827 !important; }
+  :root.hell label { color: #374151 !important; } :root.hell .fehler { color: #b91c1c; } :root.hell .banner .firma { color: rgba(255, 255, 255, .85); }
+  :root.hell .knoepfe a, :root.hell .knoepfe button { background: rgba(255, 255, 255, .55); color: #111827 !important; } :root.hell .knoepfe .haupt { background: #0f766e; color: #fff !important; }
   .zh-karte { background: rgba(255, 255, 255, .45); border: 1px solid rgba(255, 255, 255, .6); border-radius: 12px; padding: 9px 10px; margin-bottom: 7px; font-size: 12.5px; color: #111827; }
   .zh-m { font-size: 11.5px; color: #4b5563; } .zh-l { font-size: 10.5px; opacity: .85; } .zh-z { font-size: 16px; font-weight: 800; }
   .zh-mini { background: rgba(255, 255, 255, .55); border-radius: 9px; padding: 6px 9px; color: #111827; }
@@ -130,7 +136,7 @@ function zeigen() {
     <div class="reiter">${REITER.map(([k, t]) => `<button data-r="${k}" class="${k === reiter ? "an" : ""}">${t}</button>`).join("")}</div>
     <div class="inhalt">${inhalt}</div>
     ${p.ich ? "" : `<div class="knoepfe">${p.durchwahl ? `<a class="haupt" href="tel:${esc(p.durchwahl)}">📞 Anrufen</a>` : ""}<button id="hin">🚶 Zu ${esc(v)} gehen</button></div>`}`;
-  document.documentElement.classList.toggle("hell", reiter === "zeit"); // 13.10.2026: Zeit-Reiter in hellem Glas (G4)
+  document.documentElement.classList.add("hell"); // 13.10.2026 (Sam): ganzes Profil in hellem Glas (G4), nicht nur der Zeit-Reiter
   document.querySelectorAll("[data-r]").forEach(b => b.onclick = () => { reiter = b.dataset.r; zeigen(); });
   liveLaden();
   if (reiter === "zeit") zeitLaden();
@@ -145,11 +151,11 @@ async function liveLaden() {
   let d; try { d = await api("/live?" + (P && P.ich ? "ich=1" : "name=" + encodeURIComponent(NAME))); } catch { return; }
   if (!d || !d.pfad) { box.innerHTML = ""; return; }
   const zeit = t => new Date(t).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
-  box.innerHTML = `<div style="margin:12px 14px 0;background:rgba(20,184,166,.13);border:1px solid rgba(94,234,212,.4);border-radius:10px;padding:10px 12px">
-    <div style="display:flex;justify-content:space-between;font-size:11.5px">${d.live ? '<span style="color:#fca5a5;font-weight:700">● Live im SW-internen Portal</span><span style="opacity:.8">seit ' + minSeit(d.seit) + "</span>"
+  box.innerHTML = `<div class="zh-live" style="margin:12px 14px 0;border-radius:10px;padding:10px 12px">
+    <div style="display:flex;justify-content:space-between;font-size:11.5px">${d.live ? '<span style="color:#b91c1c;font-weight:700">● Live im SW-internen Portal</span><span style="opacity:.8">seit ' + minSeit(d.seit) + "</span>"
       : '<span style="opacity:.75">zuletzt im SW-internen Portal vor ' + minSeit(d.zuletzt) + "</span><span></span>"}</div>
-    <div style="font-size:14px;font-weight:700;margin:4px 0 2px">${esc(d.pfad)}</div>${d.mandant ? `<div style="font-size:13px;font-weight:600;color:#fde68a">👔 ${esc(d.mandant)}</div>` : ""}${d.detail ? `<div style="font-size:12.5px;color:#5eead4">${esc(d.detail)}</div>` : ""}
-    ${(d.verlauf || []).length ? '<div style="margin-top:8px;border-top:1px solid rgba(255,255,255,.1);padding-top:6px;font-size:11.5px;opacity:.75;line-height:1.6">Heute davor:<br>'
+    <div style="font-size:14px;font-weight:700;margin:4px 0 2px">${esc(d.pfad)}</div>${d.mandant ? `<div style="font-size:13px;font-weight:600;color:#374151">👔 ${esc(d.mandant)}</div>` : ""}${d.detail ? `<div style="font-size:12.5px;color:#0f766e">${esc(d.detail)}</div>` : ""}
+    ${(d.verlauf || []).length ? '<div style="margin-top:8px;border-top:1px solid rgba(17,24,39,.12);padding-top:6px;font-size:11.5px;color:#374151;line-height:1.6">Heute davor:<br>'
       + d.verlauf.map(v => esc(zeit(v.von) + " " + v.pfad + (v.mandant ? " · " + v.mandant : "") + (v.detail ? " · " + v.detail : "") + " · " + minSeit(Date.now() - (v.bis - v.von)))).join("<br>") + "</div>" : ""}</div>`;
   clearTimeout(liveLaden.t); liveLaden.t = setTimeout(liveLaden, 60000);
 }
