@@ -40,7 +40,10 @@
   .fehler { color: #fca5a5; font-size: 13px; font-weight: 600; min-height: 18px; margin-top: 6px; }
   /* Reiter „⏱ Zeit“ hell (13.10.2026, Sam: G4): Rahmen 15 % weiß, Karten 45 % weiß, dunkle Schrift; :root.… schlägt glas.css */
   :root.hell body { background: #eef2f5 !important; color: #111827 !important; text-shadow: none !important; }
-  :root.glas.hell body, :root.glas.hell body:hover, :root.glas.hell body:focus-within { background: rgba(255, 255, 255, .15) !important; }
+  :root.glas.hell body { background: rgba(255, 255, 255, .15) !important; transition: background-color .25s ease; }
+  /* Maus drauf (13.10.2026, Sam: „sonst nicht lesbar“): fast deckend weiß, wie die anderen Fenster beim Drauffahren dunkel werden */
+  :root.glas.hell body:hover, :root.glas.hell body:focus-within { background: rgba(255, 255, 255, .88) !important; }
+  :root.glas.hell body:hover :is(.zh-karte, .zh-mini, .z), :root.glas.hell body:focus-within :is(.zh-karte, .zh-mini, .z) { background: rgba(255, 255, 255, .95) !important; }
   :root.hell header { background: rgba(255, 255, 255, .35) !important; color: #111827 !important; }
   :root.hell .name { color: #111827; } :root.hell .rolle { color: #374151; } :root.hell .abz span { background: rgba(255, 255, 255, .45); color: #1f2937; }
   :root.hell .reiter button { color: #374151; } :root.hell .reiter button.an { background: #0f766e; color: #fff; }
