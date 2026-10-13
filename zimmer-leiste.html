@@ -31,13 +31,17 @@
   .kopf button { padding:3px 8px; font-size:11px; }
   .zeilen { flex:1; min-height:0; overflow-y:auto; line-height:1.45; }
   .zeilen div b { color:#9fe1cb; font-weight:600; } .zeilen .ich b { color:#fac775; } .zeilen .grau { color:rgba(255,255,255,.5); font-style:italic; }
+  .pg { width:6px; height:26px; border-radius:3px; background:rgba(255,255,255,.12); display:flex; align-items:flex-end; overflow:hidden; } .pg[hidden] { display:none; }
+  .pg i { display:block; width:100%; height:0; background:#6ee7b7; transition:height .1s; } .pg.still i { background:#fcd34d; }
+  .hoert { width:8px; height:8px; border-radius:50%; background:#6ee7b7; display:inline-block; } .hoert.nein { background:#fcd34d; }
+  .warn { color:#fcd34d; }
   .frage { flex:1; display:flex; align-items:center; gap:10px; } .frage div { flex:1; } .hin { font-size:11.5px; color:rgba(255,255,255,.6); }
 </style>
 </head>
 <body>
 <div class="mit" id="mit" hidden></div>
 <div class="l"><div class="t" id="t">💬 Gespräch …</div><div class="z" id="z">0:00</div>
-  <button id="mic" title="Gespräch mitschreiben (alle müssen zustimmen)">🎙</button>
+  <button id="mic" title="Gespräch mitschreiben (alle müssen zustimmen)">🎙</button><span class="pg" id="pg" hidden title="Ton von deinem Mikrofon"><i id="pgI"></i></span>
   <button data-was="gespraechOeffnen" data-fokus="protokoll" title="Protokoll schreiben">📝 Notiz</button>
   <button data-was="gespraechOeffnen" data-fokus="aufgabe" title="Aufgabe für die Aufgaben Box">＋ Aufgabe</button>
   <button data-was="gespraechOeffnen" data-fokus="" title="Großes Fenster">⤢</button>
@@ -72,7 +76,7 @@ async function mitAktion(aktion) { try { G = await api("/gespraeche/" + encodeUR
 function mitMalen() {
   const m = M(), box = $("mit"), aktiv = m.status !== "aus";
   $("mic").textContent = m.status === "laeuft" ? "🔴" : "🎙"; $("mic").classList.toggle("an", m.status === "laeuft");
-  $("mic").title = m.status === "aus" ? "Gespräch mitschreiben (alle müssen zustimmen)" : "Mitschreiben beenden";
+  $("mic").title = m.status === "aus" ? "Gespräch mitschreiben (alle müssen zustimmen)" : !ichZugestimmt() ? "Mitmachen – ich stimme zu" : "Mitschreiben läuft – beenden über „✕ Beenden“";
   // Größe: aktiv → hohe Leiste (Text über der Leiste), sonst wieder schmal — das Büro-Skript öffnet sie dafür neu
   if (aktiv !== HOCH && !groesseGemeldet) { groesseGemeldet = true; buero({ was: "zimmerLeisteGroesse", hoch: aktiv }); }
   box.hidden = !HOCH || !aktiv; if (box.hidden) return;
@@ -84,7 +88,7 @@ function mitMalen() {
   } else {
     const zeilen = (m.zeilen || []).slice(-25).map(z => `<div class="${z.id === G.ich ? "ich" : ""}"><b>${esc(z.name)}:</b> ${esc(z.text)}</div>`).join("")
       + (zwischen ? `<div class="ich grau"><b>${esc(String(window.__waName || "Ich").split(/\s+/)[0])}:</b> ${esc(zwischen)} …</div>` : "");
-    const ok = SR ? (micFehler ? "⚠️ " + esc(micFehler) : ichZugestimmt() ? "" : "⚠️ Du hast noch nicht zugestimmt – du wirst nicht mitgeschrieben. <button id=\"mJa\" class=\"gruen\">Ja</button>")
+    const ok = SR ? (micFehler ? '<span class="warn">⚠️ ' + esc(micFehler) + "</span>" : ichZugestimmt() ? (m.status === "laeuft" && recSoll ? (recLaeuft ? '<span class="hoert"></span> Dein Mikrofon wird mitgeschrieben' : '<span class="hoert nein"></span> Spracherkennung startet neu …') : "") :"⚠️ Du hast noch nicht zugestimmt – du wirst nicht mitgeschrieben. <button id=\"mJa\" class=\"gruen\">Ja</button>")
       : "⚠️ Dein Browser kann nicht mitschreiben (nur Chrome/Edge) – die anderen schreiben weiter.";
     box.innerHTML = `<div class="kopf">${m.status === "laeuft" ? '<span class="p"></span> Mitschreiben läuft' : "⏸ Mitschreiben pausiert"} · ${m.anzahl || 0} Sätze<span class="sp"></span>`
       + (m.status === "laeuft" ? '<button id="mPause">⏸ Pause</button>' : '<button id="mWeiter">▶ Weiter</button>') + '<button id="mAus">✕ Beenden</button></div>'
@@ -96,19 +100,68 @@ function mitMalen() {
   an("mPause", () => mitAktion("pause")); an("mWeiter", () => mitAktion("weiter"));
 }
 // Spracherkennung an/aus je nach Status: läuft + ich habe zugestimmt + Leiste ist die hohe (nur EINE Leiste hört zu)
+// 13.10.2026 (Sam): Chrome beendet die Erkennung nach Stille von selbst, ein Neustart scheiterte bisher still → Wächter alle 3 s startet
+// eine FRISCHE Erkennung; halbe Sätze (grauer Text) werden beim Abbruch trotzdem abgeschickt; jede Störung steht in der Leiste und geht
+// ans Störungsprotokoll (Server: daten/mitschrift_stoerungen.jsonl); Pegel zeigt, ob vom Windows-Standard-Mikrofon überhaupt Ton kommt
+// (die Spracherkennung nimmt immer das Windows-Standard-Mikrofon, nicht das im Büro gewählte).
+let recLaeuft = false, recVersuch = 0, waechter = null, gemeldeteStoerungen = {};
+const zeileSenden = t => api("/gespraeche/" + encodeURIComponent(ID) + "/mitschrift/zeile", { method: "POST", body: JSON.stringify({ text: t }) }).then(laden).catch(() => {});
+function stoerung(art, text) {
+  micFehler = text; mitMalen();
+  if (gemeldeteStoerungen[art]) return; gemeldeteStoerungen[art] = true; // je Art nur einmal pro Leiste melden
+  api("/gespraeche/" + encodeURIComponent(ID) + "/mitschrift/stoerung", { method: "POST", body: JSON.stringify({ art, text }) }).catch(() => {});
+}
+const FEHLERTEXT = {
+  "audio-capture": "Kein Mikrofon gefunden – in Windows unter Soundeinstellungen › Eingabe das Headset als Standard wählen.",
+  "network": "Spracherkennung nicht erreichbar (Internet?) – versuche es weiter …",
+  "aborted": "Spracherkennung wurde abgebrochen – läuft das Büro noch in einem zweiten Fenster? Das bitte schließen.",
+  "language-not-supported": "Deutsch wird von der Spracherkennung hier nicht unterstützt.",
+};
+function recStarten() {
+  if (!recSoll) return;
+  try { rec && (rec.onend = null, rec.abort()); } catch {}
+  recVersuch = Date.now();
+  const r = rec = new SR(); r.lang = "de-DE"; r.continuous = true; r.interimResults = true;
+  r.onstart = () => { if (rec !== r) return; recLaeuft = true; mitMalen(); };
+  r.onresult = ev => { if (rec !== r) return; let z = "";
+    for (let i = ev.resultIndex; i < ev.results.length; i++) { const x = ev.results[i], t = x[0].transcript.trim(); if (!t) continue;
+      if (x.isFinal) zeileSenden(t); else z += t + " "; }
+    zwischen = z.trim(); if (!/^(Spracherkennung|Kein Ton)/.test(micFehler)) micFehler = ""; mitMalen(); };
+  r.onerror = ev => { if (rec !== r) return;
+    if (ev.error === "no-speech") return; // nur Stille – normal, der Wächter startet neu
+    if (ev.error === "not-allowed" || ev.error === "service-not-allowed") { recSoll = false; stoerung(ev.error, "Mikrofon ist hier nicht erlaubt – im Browser das Mikrofon für das Büro freigeben."); return; }
+    stoerung(ev.error, FEHLERTEXT[ev.error] || "Spracherkennung: " + ev.error); };
+  r.onend = () => { if (rec !== r) return; recLaeuft = false;
+    if (zwischen) { zeileSenden(zwischen); zwischen = ""; } // halben Satz nicht verlieren
+    mitMalen(); if (recSoll) setTimeout(recStarten, 300); };
+  try { r.start(); } catch (e) { stoerung("start", "Spracherkennung startet nicht: " + e.message); }
+}
+// Pegel vom Windows-Standard-Mikrofon (dasselbe, das die Spracherkennung nimmt); 12 s fast still → Hinweis
+let pegel = null;
+async function pegelAn() {
+  if (pegel) return; pegel = { still: Date.now(), laut: false };
+  try {
+    const s = await navigator.mediaDevices.getUserMedia({ audio: true }); if (!recSoll) { s.getTracks().forEach(t => t.stop()); pegel = null; return; }
+    const ctx = new (window.AudioContext || window.webkitAudioContext)(), an = ctx.createAnalyser(); an.fftSize = 512; ctx.createMediaStreamSource(s).connect(an);
+    const d = new Uint8Array(an.fftSize); Object.assign(pegel, { s, ctx });
+    const geraet = (s.getAudioTracks()[0] || {}).label || "";
+    pegel.iv = setInterval(() => { an.getByteTimeDomainData(d); let max = 0; for (const v of d) max = Math.max(max, Math.abs(v - 128));
+      const h = Math.min(100, Math.round(max / 50 * 100)); $("pgI").style.height = h + "%";
+      if (max > 1) { pegel.still = Date.now(); pegel.laut = true; if (/^Kein Ton/.test(micFehler)) { micFehler = ""; mitMalen(); } }
+      $("pg").classList.toggle("still", Date.now() - pegel.still > 4000);
+      if (Date.now() - pegel.still > 12000 && !/^Kein Ton/.test(micFehler)) stoerung("kein-ton", "Kein Ton vom Windows-Mikrofon" + (geraet ? " („" + geraet + "“)" : "") + " – in Windows unter Soundeinstellungen › Eingabe das Headset wählen.");
+    }, 120);
+    $("pg").hidden = false; $("pg").title = "Ton von: " + (geraet || "Windows-Standard-Mikrofon");
+  } catch (e) { pegel = null; stoerung("pegel", "Mikrofon nicht erreichbar: " + e.message); }
+}
+function pegelAus() { if (!pegel) return; clearInterval(pegel.iv); try { pegel.s.getTracks().forEach(t => t.stop()); pegel.ctx.close(); } catch {} pegel = null; $("pg").hidden = true; }
 function steuern() {
   const soll = !!(SR && HOCH && G && G.status === "laeuft" && !G.zeitEnde && M().status === "laeuft" && ichZugestimmt());
   if (soll === recSoll) return; recSoll = soll;
-  if (!soll) { try { rec && rec.stop(); } catch {} zwischen = ""; return; }
-  rec = new SR(); rec.lang = "de-DE"; rec.continuous = true; rec.interimResults = true;
-  rec.onresult = ev => { let z = "";
-    for (let i = ev.resultIndex; i < ev.results.length; i++) { const r = ev.results[i], t = r[0].transcript.trim(); if (!t) continue;
-      if (r.isFinal) api("/gespraeche/" + encodeURIComponent(ID) + "/mitschrift/zeile", { method: "POST", body: JSON.stringify({ text: t }) }).then(laden).catch(() => {}); else z += t + " "; }
-    zwischen = z.trim(); micFehler = ""; mitMalen(); };
-  rec.onerror = ev => { if (ev.error === "not-allowed" || ev.error === "service-not-allowed") { micFehler = "Mikrofon ist hier nicht erlaubt – im Browser das Mikrofon für das Büro freigeben."; recSoll = false; mitMalen(); } };
-  // Chrome beendet die Erkennung nach Stille von selbst → neu starten, solange sie laufen soll
-  rec.onend = () => { if (recSoll) setTimeout(() => { try { recSoll && rec.start(); } catch {} }, 300); };
-  try { rec.start(); } catch (e) { micFehler = e.message; }
+  if (!soll) { clearInterval(waechter); waechter = null; try { rec && (rec.onend = null, rec.stop()); } catch {} if (zwischen && M().status !== "aus") zeileSenden(zwischen); zwischen = ""; recLaeuft = false; pegelAus(); mitMalen(); return; }
+  micFehler = ""; recStarten(); pegelAn();
+  // Wächter: läuft die Erkennung nicht (Neustart still gescheitert), frisch starten
+  waechter = setInterval(() => { if (recSoll && !recLaeuft && Date.now() - recVersuch > 2500) recStarten(); }, 3000);
 }
 
 async function laden() {
@@ -121,7 +174,13 @@ async function laden() {
   for (let i = 0; i < 30 && typeof WA === "undefined"; i++) await new Promise(r => setTimeout(r, 100));
   try { await Promise.race([WA.onInit(), new Promise(r => setTimeout(r, 2500))]); window.__waName = WA.player.name || ""; } catch {}
   document.querySelectorAll("button[data-was]").forEach(b => b.onclick = () => { buero({ was: b.dataset.was, fokus: b.dataset.fokus || "" }); try { b.blur(); window.blur(); } catch {} });
-  $("mic").onclick = () => mitAktion(M().status === "aus" ? "start" : "stop");
+  // 13.10.2026 (Sam): 🎙 heißt „mitmachen“ – startet, wenn aus; stimmt zu, wenn ich noch nicht zugestimmt habe; setzt sonst nichts zurück.
+  // Beenden nur über „✕ Beenden“ (vorher hat ein zweiter Klick alles gestoppt und die Zustimmungen gelöscht)
+  $("mic").onclick = () => { const s = M().status;
+    if (s === "aus") return mitAktion("start");
+    if (!ichZugestimmt()) return mitAktion("ja");
+    if (s === "pause") return mitAktion("weiter");
+    micFehler = "Läuft schon – beenden über „✕ Beenden“ oben."; mitMalen(); setTimeout(() => { if (/^Läuft schon/.test(micFehler)) { micFehler = ""; mitMalen(); } }, 4000); };
   // wer erst nach dem Start dazukam, wird so Teilnehmer (der Server prüft, ob man wirklich im Büro steht)
   if (q.get("raum") && q.get("weiter") !== "1") { try { await api("/gespraeche/laufend?raum=" + encodeURIComponent(q.get("raum"))); } catch {} }
   if (q.get("weiter") === "1") { try { await api("/gespraeche/" + encodeURIComponent(ID) + "/zeit", { method: "POST", body: JSON.stringify({ stop: false }) }); } catch {} }
