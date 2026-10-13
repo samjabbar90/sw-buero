@@ -89,6 +89,8 @@ function zeichnen() {
   $("verlauf").innerHTML = c.length ? c.map(m => `<div class="b ${m.rolle === "ute" ? "ute" : "du"}">${esc(m.text)}</div>`).join("")
     : `<div class="b ute">Hallo ${esc(String(S.ich || "").split(/\s+/)[0])}! Ich bin Donna 🙂 Ich finde freie Zeiten, trage Termine ein und buche die Meeting-Räume oben. Wobei kann ich helfen?</div>`;
   $("verlauf").scrollTop = $("verlauf").scrollHeight;
+  // ausgeschaltet unter Controlling › Donna einrichten (13.10.2026): nur noch über Vorschläge entscheiden, kein Chat
+  if (S.aus) { $("verlauf").innerHTML = `<div class="b ute">Hallo! Für dich ist das Gespräch mit mir gerade ausgeschaltet. Über Terminvorschläge an dich kannst du oben trotzdem entscheiden. Fragen dazu: an die Leitung.</div>`; $("text").disabled = true; $("los").disabled = true; }
   $("chips").innerHTML = c.length ? "" : ["Wann habe ich nächste Woche 1 Stunde frei?", "Termin mit einem Kollegen finden", "Mandanten-Termin per Zoom für einen Kollegen"].map(t => `<button data-t="${esc(t)}">${esc(t)}</button>`).join("");
   document.querySelectorAll("[data-w]").forEach(b => b.onclick = async () => { if (!confirm("Diesen Termin eintragen: " + b.textContent + "?")) return;
     try { const r = await api("/vorschlag/" + encodeURIComponent(b.dataset.w) + "/waehlen", { index: +b.dataset.i }); alert("✅ Eingetragen" + (r.raum ? " – Raum " + r.raum : "") + "."); laden(); } catch (e) { $("fe").textContent = e.message; } });
