@@ -134,6 +134,7 @@
   }
   var tueren = [];
   var schildGids = {};
+  var schildGidsSenk = {};
   var kollisionGid = 3;
   var freigabe = /* @__PURE__ */ new Map();
   var vorname = (n) => String(n || "").trim().split(/\s+/)[0].toLowerCase();
@@ -145,7 +146,7 @@
     const s = tuerStatus(t);
     const darfDurch = istBesitzer(t) || (freigabe.get(t.variable) || 0) > Date.now();
     const kacheln = t.felder.map(([x, y]) => ({ x, y, tile: s === "zu" && !darfDurch ? kollisionGid : null, layer: "collisions" }));
-    const sg = schildGids[s] || null;
+    const sg = (t.senk ? schildGidsSenk : schildGids)[s] || null;
     t.schild.forEach(([x, y], i) => kacheln.push({ x, y, tile: sg ? sg[i] : null, layer: "furniture/labels" }));
     try {
       WA.room.setTiles(kacheln);
@@ -220,13 +221,15 @@
       const k = await ladeKarte();
       const p = (k.properties || []).find((x) => x.name === "tuerSchilder");
       if (p) schildGids = JSON.parse(p.value);
+      const ps = (k.properties || []).find((x) => x.name === "tuerSchilderSenk");
+      if (ps) schildGidsSenk = JSON.parse(ps.value);
       const zonen = (k.tilesets || []).find((t) => t.name === "WA_Special_Zones");
       if (zonen) kollisionGid = zonen.firstgid + 2;
       const lauf = (ls) => ls.forEach((l) => {
         if (l.type === "group") lauf(l.layers || []);
         if (l.type === "objectgroup") (l.objects || []).forEach((o) => {
           const pr = (n) => ((o.properties || []).find((x) => x.name === n) || {}).value;
-          if (pr("tuerVariable")) tueren.push({ raum: o.name, besitzer: pr("besitzer"), variable: pr("tuerVariable"), felder: JSON.parse(pr("tuerFelder")), schild: JSON.parse(pr("schildFelder")), rechteck: [o.x / 32, o.y / 32, o.width / 32, o.height / 32] });
+          if (pr("tuerVariable")) tueren.push({ raum: o.name, besitzer: pr("besitzer"), variable: pr("tuerVariable"), felder: JSON.parse(pr("tuerFelder")), schild: JSON.parse(pr("schildFelder")), rechteck: [o.x / 32, o.y / 32, o.width / 32, o.height / 32], senk: !!pr("schildSenk") });
         });
       });
       lauf(k.layers || []);
