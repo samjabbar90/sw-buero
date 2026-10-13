@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ute · Termine</title>
+<!-- Ute (13.10.2026, Sam): KI-Terminassistentin. Im Büro (Wartebereich oben, Leertaste) als Glas-Fenster, im SW-internen Portal unter
+     „Ute · Termine“. Dieselbe Datei liegt in app/frontend/public/ute.html (dort Anmeldung übers Portal statt Büro-Ausweis).
+     Oben: Vorschläge, über die ich entscheiden muss (eine Zeit antippen = Termin wird eingetragen). Darunter der Chat mit Ute. Server: services/ute.js -->
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #eef2f5; color: #111827; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; font-size: 14px; }
+  header { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: rgba(255, 255, 255, .55); }
+  header h1 { margin: 0; font-size: 15px; flex: 1; } header .u { font-size: 11.5px; color: #4b5563; font-weight: 400; display: block; }
+  .av { width: 38px; height: 38px; border-radius: 50%; background: #fde7ef; display: flex; align-items: center; justify-content: center; font-size: 20px; flex: none; }
+  main { padding: 10px 14px 14px; display: flex; flex-direction: column; gap: 10px; }
+  .karte { background: rgba(255, 255, 255, .6); border: 1px solid rgba(255, 255, 255, .7); border-radius: 12px; padding: 10px 12px; }
+  .karte h2 { margin: 0 0 6px; font-size: 13px; }
+  .vs { border: 1px solid #5dcaa5; background: rgba(225, 245, 238, .9); border-radius: 10px; padding: 9px 11px; margin-top: 6px; color: #04342c; }
+  .zeiten { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 7px; }
+  .zeiten button, .chips button { font: inherit; font-size: 12.5px; border: 1.5px solid #0f6e56; background: #fff; color: #085041; border-radius: 8px; padding: 5px 10px; cursor: pointer; }
+  .zeiten button:hover { background: #0f6e56; color: #fff; }
+  .leise { font: inherit; font-size: 12px; background: none; border: none; color: #6b7280; text-decoration: underline; cursor: pointer; padding: 4px 0; }
+  .m { font-size: 11.5px; color: #4b5563; }
+  #verlauf { display: flex; flex-direction: column; gap: 7px; max-height: 46vh; overflow-y: auto; padding: 2px; }
+  .b { max-width: 86%; padding: 8px 11px; border-radius: 12px; line-height: 1.5; white-space: pre-wrap; }
+  .b.ute { background: rgba(255, 255, 255, .85); align-self: flex-start; } .b.du { background: #e1f5ee; color: #04342c; align-self: flex-end; }
+  .eingabe { display: flex; gap: 6px; margin-top: 8px; }
+  .eingabe textarea { flex: 1; font: inherit; font-size: 13.5px; border: 1.5px solid rgba(17, 24, 39, .2); border-radius: 10px; padding: 8px 10px; resize: none; min-height: 40px; background: rgba(255, 255, 255, .8); color: #111827; }
+  .senden { font: inherit; font-weight: 700; border: 0; border-radius: 10px; padding: 0 16px; background: #0f6e56; color: #fff; cursor: pointer; }
+  .senden:disabled { opacity: .5; cursor: default; }
+  .chips { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 6px; } .chips button { font-size: 11.5px; border-width: 1px; border-color: #9fe1cb; border-radius: 999px; }
+  .fehler { color: #b91c1c; font-size: 12.5px; }
+  /* im Büro: helles Glas wie das Profil (G4) */
+  :root.glas body { background: rgba(255, 255, 255, .15) !important; color: #111827 !important; text-shadow: none !important; }
+  :root.glas body:hover, :root.glas body:focus-within { background: rgba(255, 255, 255, .88) !important; }
+  :root.glas header { background: rgba(255, 255, 255, .45) !important; color: #111827 !important; }
+  :root.glas .karte { background: rgba(255, 255, 255, .5) !important; color: #111827 !important; }
+  :root.glas small, :root.glas .m { color: #4b5563 !important; }
+  :root.glas textarea { background: rgba(255, 255, 255, .8) !important; color: #111827 !important; border-color: rgba(17, 24, 39, .2) !important; color-scheme: light; }
+</style>
+<script src="glas.js?v=1791559958"></script>
+</head>
+<body>
+<header><div class="av">🗓</div><h1>Ute · Terminassistentin<span class="u">findet freie Zeiten, bucht Termine und Meeting-Räume</span></h1></header>
+<main>
+  <div id="entscheiden"></div>
+  <div class="karte">
+    <div id="verlauf"><div class="m">Lädt …</div></div>
+    <div class="chips" id="chips"></div>
+    <div class="eingabe"><textarea id="text" rows="1" placeholder="z. B. „Wann habe ich nächste Woche 1 Stunde frei?“"></textarea><button class="senden" id="los">Senden</button></div>
+    <div class="fehler" id="fe"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px"><span class="m" id="kosten"></span><button class="leise" id="neu">Neu anfangen</button></div>
+  </div>
+  <div id="vonmir"></div>
+</main>
+<script src="https://play.workadventu.re/iframe_api.js"></script>
+<script>
+const IM_DASHBOARD = location.hostname === "swdigitaltest.de";
+const KEY = "a21b2aa2a42fe6189b05773c07bbc9ad78e38b34ba3bb6fe", API = IM_DASHBOARD ? "/api/ute" : "https://swdigitaltest.de/buero-praesenz/ute";
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const ausweis = () => { try { return localStorage.getItem("swBueroAusweis") || ""; } catch { return ""; } };
+async function api(pfad, body) {
+  const opt = body === undefined ? {} : { method: "POST", body: JSON.stringify(body) };
+  const r = await fetch(API + pfad, IM_DASHBOARD ? { ...opt, credentials: "include", headers: { "Content-Type": "application/json" } }
+    : { ...opt, headers: { "X-Buero-Key": KEY, "X-Buero-Ausweis": ausweis(), "X-Buero-Name": encodeURIComponent(window.__waName || ""), "Content-Type": "application/json" } });
+  const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(/ausweis/.test(d.error || "") ? "Bitte das Büro kurz neu entsperren." : d.error || "Fehler " + r.status); return d;
+}
+const tagDE = d => new Date(d + "T12:00:00").toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit" });
+let S = null, sendet = false;
+function zeichnen() {
+  const fm = S.fuerMich || [];
+  $("entscheiden").innerHTML = fm.length ? `<div class="karte"><h2>📅 Für dich zu entscheiden</h2>` + fm.map(v => `<div class="vs"><b>${esc(v.von)}</b> ${v.art === "fuer" ? "schlägt dir einen Termin vor" : "möchte einen Termin mit dir"}: <b>${esc(v.titel)}</b>${v.mandant ? " · " + esc(v.mandant) : ""}${v.mitRaum ? " · mit Meeting-Raum" : ""}
+      ${v.notiz ? `<div class="m">${esc(v.notiz)}</div>` : ""}<div class="zeiten">${v.optionen.map((o, i) => `<button data-w="${esc(v.id)}" data-i="${i}">${tagDE(o.datum)} · ${esc(o.von)}–${esc(o.bis)}</button>`).join("")}</div>
+      <div style="display:flex;gap:10px;align-items:center;margin-top:4px"><span class="m">Zeit antippen = Termin wird eingetragen</span><span style="flex:1"></span><button class="leise" data-ab="${esc(v.id)}">keine passt</button></div></div>`).join("") + "</div>" : "";
+  const vm = S.vonMir || [];
+  $("vonmir").innerHTML = vm.length ? `<div class="karte"><h2>⏳ Warten auf Antwort</h2>` + vm.map(v => `<div class="m" style="margin-top:4px">„${esc(v.titel)}“ an <b>${esc(v.an)}</b> · ${v.optionen.map(o => tagDE(o.datum) + " " + o.von).join(", ")}</div>`).join("") + "</div>" : "";
+  const c = S.chat || [];
+  $("verlauf").innerHTML = c.length ? c.map(m => `<div class="b ${m.rolle === "ute" ? "ute" : "du"}">${esc(m.text)}</div>`).join("")
+    : `<div class="b ute">Hallo ${esc(String(S.ich || "").split(/\s+/)[0])}! Ich bin Ute 🙂 Ich finde freie Zeiten, trage Termine ein und buche die Meeting-Räume oben. Wobei kann ich helfen?</div>`;
+  $("verlauf").scrollTop = $("verlauf").scrollHeight;
+  $("chips").innerHTML = c.length ? "" : ["Wann habe ich nächste Woche 1 Stunde frei?", "Termin mit einem Kollegen finden", "Mandanten-Termin per Zoom für einen Kollegen"].map(t => `<button data-t="${esc(t)}">${esc(t)}</button>`).join("");
+  document.querySelectorAll("[data-w]").forEach(b => b.onclick = async () => { if (!confirm("Diesen Termin eintragen: " + b.textContent + "?")) return;
+    try { const r = await api("/vorschlag/" + encodeURIComponent(b.dataset.w) + "/waehlen", { index: +b.dataset.i }); alert("✅ Eingetragen" + (r.raum ? " – Raum " + r.raum : "") + "."); laden(); } catch (e) { $("fe").textContent = e.message; } });
+  document.querySelectorAll("[data-ab]").forEach(b => b.onclick = async () => { const g = prompt("Kurz sagen, warum keine passt (optional):", ""); if (g === null) return;
+    try { await api("/vorschlag/" + encodeURIComponent(b.dataset.ab) + "/ablehnen", { grund: g }); laden(); } catch (e) { $("fe").textContent = e.message; } });
+  document.querySelectorAll("[data-t]").forEach(b => b.onclick = () => { $("text").value = b.dataset.t; $("text").focus(); });
+}
+async function laden() { try { S = await api(""); $("fe").textContent = ""; zeichnen(); } catch (e) { $("verlauf").innerHTML = `<div class="fehler">${esc(e.message)}</div>`; } }
+async function senden() {
+  const t = $("text").value.trim(); if (!t || sendet) return; sendet = true; $("los").disabled = true; $("fe").textContent = "";
+  S.chat = [...(S.chat || []), { rolle: "du", text: t }, { rolle: "ute", text: "… Ute schaut nach …" }]; zeichnen(); $("text").value = "";
+  try { const r = await api("/chat", { text: t }); if (r.usd) $("kosten").textContent = "letzte Antwort ≈ " + (r.usd * 100).toFixed(2).replace(".", ",") + " Cent"; }
+  catch (e) { $("fe").textContent = e.message; }
+  sendet = false; $("los").disabled = false; laden();
+}
+$("los").onclick = senden;
+$("text").onkeydown = e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); senden(); } };
+$("neu").onclick = async () => { if (!confirm("Den Chat mit Ute leeren? Gebuchte Termine und Vorschläge bleiben.")) return; try { await api("/neu", {}); laden(); } catch (e) { $("fe").textContent = e.message; } };
+(async () => { if (!IM_DASHBOARD) { for (let i = 0; i < 30 && typeof WA === "undefined"; i++) await new Promise(r => setTimeout(r, 100)); try { await Promise.race([WA.onInit(), new Promise(r => setTimeout(r, 2500))]); window.__waName = WA.player.name || ""; } catch {} }
+  if (!IM_DASHBOARD && !ausweis()) { $("verlauf").innerHTML = '<div class="fehler">Bitte zuerst das Büro entsperren (Anmelden), dann noch einmal die Leertaste drücken.</div>'; return; }
+  laden(); setInterval(() => { if (!sendet && !document.activeElement.matches("textarea")) laden(); }, 30000); })();
+</script>
+</body>
+</html>

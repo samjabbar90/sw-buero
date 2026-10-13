@@ -1551,6 +1551,21 @@
       fenster = null;
     });
   }
+  function utePlatz() {
+    let fenster = null;
+    leertasteBereich("ute-platz", { x: 53, y: 8, w: 6, h: 1 }, "🗓 Ute · Termine – Leertaste: freie Zeiten finden und buchen", async () => {
+      try {
+        fenster = await glasFenster(SEITEN + "ute.html?t=" + Date.now());
+      } catch {
+      }
+    }, () => {
+      try {
+        fenster && fenster.close();
+      } catch {
+      }
+      fenster = null;
+    });
+  }
   function minaPlatz() {
     [["leon", "Leon \xB7 Recherche", 104], ["mina", "Mina \xB7 Social Media", 106], ["sophie", "Sophie \xB7 Content", 108]].forEach(([k, t, x]) => {
       let fenster = null;
@@ -1874,6 +1889,7 @@
     glaswandAgenten();
     fussball();
     minaPlatz();
+    utePlatz();
     jaPlatz();
     itPlatz();
     fussgaengerAmpel();
