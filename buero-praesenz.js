@@ -448,7 +448,7 @@
     }
   }
   var fxStand = {};
-  var FEIERABEND_RAEUME = ["Besprechung 10", "Besprechung 11", "Besprechung Glas", "Pause", "Lernzimmer", "Helpcenter", "Fitnessraum", "Fibu Backoffice"];
+  var FEIERABEND_RAEUME = ["Besprechung 11", "Besprechung Glas", "Pause", "Lernzimmer", "Helpcenter", "Fitnessraum", "Fibu Backoffice"];
   var toene = {};
   function ton(name) {
     try {
@@ -702,7 +702,7 @@
     } catch {
     }
   }
-  var HELPCENTER = [{ x: 40, y: 23 + DY }];
+  var HELPCENTER = [{ x: 40, y: 22 + DY }];
   var hcFenster = null;
   var hcHinweis = null;
   function helpcenterRoboter() {
@@ -1098,7 +1098,11 @@
       fenster = null;
     });
   }
-  var GESPRAECHS_RAEUME = [{ raum: "Besprechung 10", x: 14, y: 39 + DY, w: 10, h: 5 }, { raum: "Besprechung 11", x: 25, y: 39 + DY, w: 7, h: 5 }, { raum: "Besprechung Glas", x: 45, y: 6 + DY, w: 8, h: 8 }];
+  var GESPRAECHS_RAEUME = [
+    // 14.10.2026: Besprechung 10 ist jetzt das Lernzimmer
+    { raum: "Besprechung 11", x: 25, y: 39 + DY, w: 7, h: 5 },
+    { raum: "Besprechung Glas", x: 45, y: 6 + DY, w: 8, h: 8 }
+  ];
   function gespraechsRaeume() {
     for (const r of GESPRAECHS_RAEUME) {
       let fenster = null;
