@@ -70,7 +70,12 @@ const merk = { holen: k => { try { return localStorage.getItem(k) || ""; } catch
 let zu = merk.holen("swTcZu") === "1", groesseJetzt = "";
 async function groesse(klein) { const g = klein ? "klein" : "gross"; if (g === groesseJetzt) return; groesseJetzt = g;
   try { const alle = await WA.ui.website.getAll(); for (const w of alle) if (/tagescheck.html?karte/.test(String(w.url || ""))) w.size = klein ? { width: "112px", height: "40px" } : { width: "280px", height: "150px" }; } catch { groesseJetzt = ""; } }
-function klappen(z) { zu = z; merk.setzen("swTcZu", z ? "1" : ""); karteZeichnen(); }
+// Schlüssel der aktuellen Mahnung (Punkt bald fällig / überfällig) – je Punkt und Stufe klappt die Pille nur einmal von selbst auf
+function mahnSchl() { if (!D || !D.punkte) return ""; const p = D.punkte.find(x => x.id === D.naechster); if (!p) return "";
+  const b = min(p.bis), rot = D.verpasst.includes(p.id), bald = !rot && b !== null && b - D.jetztMin <= 15;
+  return rot || bald ? new Date().toDateString() + ":" + p.id + ":" + (rot ? "rot" : "bald") : ""; }
+// 14.10.2026 abends (Angelina konnte nicht einklappen): wer selbst zuklappt, hat die aktuelle Mahnung gesehen → nicht sofort wieder aufklappen
+function klappen(z) { if (z) { const k = mahnSchl(); if (k) merk.setzen("swTcAuf", k); } zu = z; merk.setzen("swTcZu", z ? "1" : ""); karteZeichnen(); }
 
 function marke(p) {
   const j = D.jetztMin, b = min(p.bis);
@@ -87,7 +92,7 @@ function karteZeichnen() {
   if (!D.aktiv) { app.innerHTML = ""; return; }
   const p = D.punkte.find(x => x.id === D.naechster), pz = Math.round(D.erledigt / D.gesamt * 100);
   const bis = p ? min(p.bis) : null, rot = !!(p && D.verpasst.includes(p.id)), bald = !!(p && !rot && bis !== null && bis - D.jetztMin <= 15);
-  if (zu && (rot || bald)) { const schl = new Date().toDateString() + ":" + p.id + ":" + (rot ? "rot" : "bald"); if (merk.holen("swTcAuf") !== schl) { merk.setzen("swTcAuf", schl); zu = false; merk.setzen("swTcZu", ""); } }
+  if (zu && (rot || bald)) { const schl = mahnSchl(); if (schl && merk.holen("swTcAuf") !== schl) { merk.setzen("swTcAuf", schl); zu = false; merk.setzen("swTcZu", ""); } }
   if (zu && !erklaeren) { groesse(true); app.innerHTML = `<div class="pille" id="auf" title="Tages-Check aufklappen">✅ ${D.erledigt}/${D.gesamt}<span class="pu ${rot ? "rot" : bald ? "bald" : ""}"></span></div>`; $("auf").onclick = () => klappen(false); return; }
   groesse(false);
   let h = `<div class="k"><div class="kopf"><span>✅ <b>Tages-Check</b> · ${D.erledigt}/${D.gesamt}</span><span><a id="alle">Liste ▾</a> &nbsp;<a id="zuK" title="einklappen">▴</a></span></div><div class="balken"><div style="width:${pz}%"></div></div>`;

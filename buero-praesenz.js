@@ -1895,7 +1895,7 @@
     }
     if (tcAktiv && !HANDY) {
       try {
-        await WA.ui.website.open({ url: SEITEN + "tagescheck.html?karte=1", allowApi: true, visible: true, position: { vertical: "top", horizontal: "left" }, size: { width: "280px", height: "150px" }, margin: { top: "64px", left: "10px" } });
+        await WA.ui.website.open({ url: SEITEN + "tagescheck.html?karte=1&v=3", allowApi: true, visible: true, position: { vertical: "top", horizontal: "left" }, size: { width: "280px", height: "150px" }, margin: { top: "64px", left: "10px" } });
       } catch {
       }
     }
