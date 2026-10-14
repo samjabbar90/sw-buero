@@ -2106,7 +2106,7 @@
         visible: true,
         position: { vertical: "bottom", horizontal: "right" },
         size: { width: HANDY ? "130px" : "232px", height: HANDY ? "99px" : "176px" },
-        margin: { bottom: HANDY ? "158px" : "20px", right: HANDY ? "14px" : "20px" }
+        margin: { bottom: HANDY ? "158px" : "20px", right: HANDY ? "14px" : "92px" }
       });
     } catch {
     }
