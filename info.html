@@ -60,7 +60,7 @@ function zeichnen() {
   // 14.10.2026 (Sam): nur noch frei | Fokus (selbst gewählt, mit Ende) – „zu“ setzt das Büro automatisch (2+ Leute, Telefonat, Termin)
   const v = String(WA.state[meineVar] || ''), bis = v.startsWith('fokus:') ? Number(v.slice(6)) || 0 : 0;
   if (bis > Date.now()) { $('tuer').innerHTML = '🎯 Fokus bis ' + new Date(bis).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) + ' ✕'; $('tuer').title = 'Tippen: Fokus beenden'; }
-  else { $('tuer').innerHTML = 'Tür 🟢'; $('tuer').title = 'Tür frei · tippen: Fokus einschalten (nur anklopfen)'; }
+  else { $('tuer').innerHTML = 'Tür 🟢'; $('tuer').title = 'Tür frei · tippen: 🎯 Fokus – Büro 25 Min abschließen (max. 3× am Tag)'; }
 
 }
 function fokusEnde(abgelaufen) {
@@ -78,7 +78,8 @@ $('fokus').addEventListener('click', () => {
 $('tuer').addEventListener('click', () => {
   const v = String(WA.state[meineVar] || '');
   if (v.startsWith('fokus:') && Number(v.slice(6)) > Date.now()) { WA.state.saveVariable(meineVar, 'frei'); return; }
-  $('tuer').style.display = 'none'; $('fokusWahl').style.display = ''; setTimeout(() => { $('fokusWahl').style.display = 'none'; $('tuer').style.display = ''; }, 8000);
+  // 14.10.2026 abends (Sam): Fokus = abgeschlossen, immer 25 Min, max. 3× am Tag – zählt das Büro-Skript (Aktion „tuer“)
+  try { WA.player.state.saveVariable('swAktion', { was: 'tuer', t: Date.now() }, { public: false, persist: false }); } catch (e) { /* ältere Version */ }
 });
 document.querySelectorAll('.fw').forEach(b => b.addEventListener('click', () => {
   WA.state.saveVariable(meineVar, 'fokus:' + (Date.now() + Number(b.dataset.m) * 60000));

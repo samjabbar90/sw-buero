@@ -1,0 +1,35 @@
+/* Helles Glas wie „Mein Profil“ (14.10.2026, Sam: „Wer ist da, Kalender, Ideen, Reisen der Optik von Mein Profil anpassen“).
+   Gilt nur, wenn die Seite als Glas-Fenster offen ist (html.glas) und die Seite html.hell setzt; schlägt glas.css über die Spezifität. */
+:root.glas.hell { color-scheme: light; }
+:root.glas.hell body { background: rgba(255, 255, 255, .15) !important; color: #111827 !important; text-shadow: none !important; }
+:root.glas.hell body:hover, :root.glas.hell body:focus-within { background: rgba(255, 255, 255, .88) !important; }
+:root.glas.hell header { background: rgba(255, 255, 255, .35) !important; color: #111827 !important; }
+:root.glas.hell :is(.karte, .box, .idee, .lektion, .z, .bot, #form-content, .tipp, .zeile, .konto div) {
+  background: rgba(255, 255, 255, .45) !important; border-color: rgba(255, 255, 255, .6) !important; color: #111827 !important; }
+:root.glas.hell body:hover :is(.karte, .box, .idee, .lektion, .z, .bot, #form-content, .tipp, .zeile, .konto div),
+:root.glas.hell body:focus-within :is(.karte, .box, .idee, .lektion, .z, .bot, #form-content, .tipp, .zeile, .konto div) { background: rgba(255, 255, 255, .95) !important; }
+:root.glas.hell :is(.klein, .h, .m, .wer, .hinweis, .unter, .u, .leer, small, label, .s, .zul, h2, .fr, .gruppe, .mehr, .konto small, .mini span.wt, .tag) { color: #374151 !important; }
+:root.glas.hell :is(.gross, .p, .abschnitt, a, .text, .t, .x, .n, .titel, .tt, .ti, .z) { color: #111827 !important; }
+:root.glas.hell .tag.heute, :root.glas.hell .was { color: #0f766e !important; }
+:root.glas.hell :is(input, select, textarea, .fc) { background: rgba(255, 255, 255, .6) !important; color: #111827 !important; border-color: rgba(17, 24, 39, .2) !important; color-scheme: light; }
+:root.glas.hell :is(input, textarea)::placeholder { color: rgba(17, 24, 39, .45); }
+/* Knöpfe: dunkelgrau, Hauptknöpfe Petrol (wie im Profil) */
+:root.glas.hell :is(button.k, button.leicht, button.haken:not(.an), .k, .chip, .reiter button, .arten button, .glas-k) { background: #3f4651 !important; color: #fff !important; border-color: #3f4651 !important; }
+:root.glas.hell :is(button.k.voll, button.haken.an, a.knopf, main button:not(.k):not(.leicht):not(.haken):not(.glas-k):not(.chip):not(.klein), .msg button, .reiter button.an, .chip.an, .arten button.an, button.an) {
+  background: #0f766e !important; color: #fff !important; border-color: #0f766e !important; }
+:root.glas.hell .glas-k:hover, :root.glas.hell button.k:hover { background: #1f2937 !important; }
+:root.glas.hell :is(.balken, .b) { background: rgba(17, 24, 39, .12) !important; } :root.glas.hell :is(.balken > div, .b > div) { background: #0f766e !important; }
+/* Wer ist da */
+:root.glas.hell .r:hover { background: rgba(15, 118, 110, .08) !important; } :root.glas.hell .weg .n { color: #6b7280 !important; }
+:root.glas.hell .live { background: #fee2e2 !important; color: #b91c1c !important; } :root.glas.hell .ok { color: #047857 !important; }
+/* Kalender */
+:root.glas.hell .raster .std { border-color: rgba(17, 24, 39, .12) !important; color: #6b7280 !important; }
+:root.glas.hell .blk { background: #e0e7ff !important; color: #1e1b4b !important; } :root.glas.hell .blk.google { background: #cffafe !important; color: #164e63 !important; }
+:root.glas.hell .blk.besetzt { background: #e2e8f0 !important; color: #334155 !important; }
+:root.glas.hell .t { background: rgba(238, 242, 255, .85) !important; } :root.glas.hell .t.google { background: rgba(236, 254, 255, .85) !important; } :root.glas.hell .t.besetzt { background: rgba(241, 245, 249, .85) !important; }
+:root.glas.hell .mini span.gew { background: #0f766e !important; color: #fff !important; }
+/* Ideen */
+:root.glas.hell .zeile.auf { border-color: #0f766e !important; } :root.glas.hell :is(.rot, .faellig) { color: #b91c1c !important; }
+:root.glas.hell .tag { background: #ccfbf1 !important; color: #0f766e !important; }
+/* Ziehstellen dunkel statt weiß */
+:root.glas.hell #glas-rand { filter: invert(1) opacity(.6); } :root.glas.hell #glas-ecke { filter: invert(1) opacity(.6); }

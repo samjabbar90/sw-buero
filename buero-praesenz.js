@@ -152,7 +152,10 @@
     return "";
   }
   var tuerStatus = (t) => {
-    if (t.offen) return zimmerDaten(t).s;
+    if (t.offen) {
+      const d = zimmerDaten(t);
+      return d.s !== "frei" && (info.telefoniert || []).some((n) => vorname(n) === vorname(d.wer)) ? "zu" : d.s;
+    }
     if (autoZu(t)) return "zu";
     return fokusBis(t) > Date.now() ? "fokus" : "frei";
   };
@@ -160,6 +163,30 @@
   var TEXT = { frei: "\u{1F7E2} T\xFCr: frei", fokus: "\u{1F3AF} Fokus", zu: "\u{1F534} T\xFCr: zu" };
   function fokusSetzen(t, min) {
     WA.state.saveVariable(t.variable, min > 0 ? "fokus:" + (Date.now() + min * 6e4) : "frei");
+  }
+  var FOKUS_MIN = 25;
+  var FOKUS_MAX = 3;
+  var heuteTag = () => (/* @__PURE__ */ new Date()).toLocaleDateString("sv-SE", { timeZone: "Europe/Berlin" });
+  var fokusGenutzt = () => {
+    const z = WA.player.state.swFokusZaehler;
+    return z && z.tag === heuteTag() ? Number(z.n) || 0 : 0;
+  };
+  function fokusErlaubt() {
+    const n = fokusGenutzt();
+    if (n >= FOKUS_MAX) {
+      kurzMeldung("\u{1F3AF} Heute schon " + FOKUS_MAX + "\xD7 Fokus genutzt \u2013 morgen wieder", 6e3);
+      return false;
+    }
+    try {
+      WA.player.state.saveVariable("swFokusZaehler", { tag: heuteTag(), n: n + 1 }, { public: false, persist: true });
+    } catch {
+    }
+    kurzMeldung("\u{1F512} Fokus: dein Zimmer ist " + FOKUS_MIN + " Min abgeschlossen \xB7 heute noch " + (FOKUS_MAX - n - 1) + "\xD7", 6e3);
+    return true;
+  }
+  function fokusUmschalten(t) {
+    if (fokusBis(t) > Date.now()) return fokusSetzen(t, 0);
+    if (fokusErlaubt()) fokusSetzen(t, FOKUS_MIN);
   }
   function tuerAnwenden(t) {
     const s = tuerStatus(t);
@@ -179,9 +206,7 @@
       WA.ui.actionBar.removeButton("sw-tuer");
     } catch {
     }
-    WA.ui.actionBar.addButton({ id: "sw-tuer", label: TEXT[tuerStatus(t)] || TEXT.frei, callback: () => {
-      fokusSetzen(t, fokusBis(t) > Date.now() ? 0 : 60);
-    } });
+    WA.ui.actionBar.addButton({ id: "sw-tuer", label: TEXT[tuerStatus(t)] || TEXT.frei, callback: () => fokusUmschalten(t) });
   }
   function tuerWache(raum) {
     const t = tueren.find((x) => x.raum === raum);
@@ -320,7 +345,10 @@
   function zimmerDaten(t) {
     try {
       const d = JSON.parse(String(WA.state[t.variable] || ""));
-      if (d && d.s && Date.now() - Number(d.t || 0) < 3 * 6e4) return d;
+      if (d && d.s && Date.now() - Number(d.t || 0) < 3 * 6e4) {
+        if (d.s === "zu" && !(Number(d.bis) > Date.now())) d.s = "besetzt";
+        return d;
+      }
     } catch {
     }
     return { s: "frei", wer: "", t: 0 };
@@ -328,10 +356,10 @@
   function werVon(t) {
     return t.offen ? zimmerDaten(t).wer : t.besitzer;
   }
-  function zimmerSetzen(t, s) {
-    WA.state.saveVariable(t.variable, s === "frei" ? "" : JSON.stringify({ s, wer: WA.player.name, t: Date.now() }));
+  function zimmerSetzen(t, s, bis = 0) {
+    WA.state.saveVariable(t.variable, s === "frei" ? "" : JSON.stringify({ s, wer: WA.player.name, t: Date.now(), ...bis ? { bis } : {} }));
   }
-  var ZTEXT = { frei: "\u{1F7E2} frei", besetzt: "\u{1F7E1} besetzt", zu: "\u{1F534} zu" };
+  var ZTEXT = { frei: "\u{1F7E2} frei", besetzt: "\u{1F7E1} besetzt", zu: "\u{1F512} Fokus" };
   function zimmerKnopf() {
     try {
       WA.ui.actionBar.removeButton("sw-zimmer");
@@ -344,7 +372,11 @@
       WA.ui.actionBar.addButton({ id: "sw-zimmer", label: fremd ? "\u{1F512} " + t.raum + ": " + wer : "\u{1F6AA} " + t.raum + ": " + (ZTEXT[d.s] || ZTEXT.frei), callback: () => {
         const n = zimmerDaten(t);
         if (n.s !== "frei" && vorname(n.wer) !== vorname(WA.player.name)) return kurzMeldung(t.raum + " hat gerade " + String(n.wer).split(/\s+/)[0] + " \u2013 nur wer es eingestellt hat, kann umstellen", 5e3);
-        zimmerSetzen(t, { frei: "besetzt", besetzt: "zu", zu: "frei" }[n.s] || "frei");
+        if (n.s === "besetzt") {
+          if (fokusErlaubt()) zimmerSetzen(t, "zu", Date.now() + FOKUS_MIN * 6e4);
+          return;
+        }
+        zimmerSetzen(t, n.s === "frei" ? "besetzt" : "frei");
       } });
     } catch {
     }
@@ -368,7 +400,10 @@
   }
   setInterval(() => {
     for (const t of tueren) if (t.offen) {
-      if (aktuellerBereich === t.raum && istBesitzer(t)) zimmerSetzen(t, zimmerDaten(t).s);
+      if (aktuellerBereich === t.raum && istBesitzer(t)) {
+        const d = zimmerDaten(t);
+        zimmerSetzen(t, d.s, d.s === "zu" ? Number(d.bis) || 0 : 0);
+      }
       tuerAnwenden(t);
     }
   }, 6e4);
@@ -1861,6 +1896,13 @@
       if (WA.room.hashParameters && WA.room.hashParameters.handy) HANDY = true;
     } catch {
     }
+    try {
+      const c = WA.controls;
+      c.disableInviteButton?.();
+      c.disableInviteUserButton?.();
+      if (!/^sam\b/i.test(String(WA.player.name || ""))) c.disableMapEditor?.();
+    } catch {
+    }
     if (HANDY) try {
       WA.ui.displayActionMessage = handyHinweis;
     } catch {
@@ -2178,8 +2220,9 @@
           zuRaum: () => zuRaum(String(v.name || "")),
           meinProfil: () => glasFenster(SEITEN + "profil.html?ich=1&tore=" + toreVon(WA.player.name || "") + "&t=" + Date.now()),
           tuer: () => {
-            if (tuer) fokusSetzen(tuer, fokusBis(tuer) > Date.now() && !v.min ? 0 : Number(v.min) || 60);
+            if (tuer) fokusUmschalten(tuer);
           }
+          // 14.10.2026: immer 25 Min, max. 3× am Tag
         })[v.was]?.();
       });
     } catch {
@@ -2220,6 +2263,17 @@
     setInterval(() => melden("heartbeat"), 3e4);
     window.addEventListener("pagehide", (e) => {
       if (!HANDY || !e.persisted) melden("verlassen");
+    });
+    window.addEventListener("beforeunload", (e) => {
+      try {
+        if (HANDY || beendet) return;
+        const heute = (/* @__PURE__ */ new Date()).toLocaleDateString("sv-SE", { timeZone: "Europe/Berlin" });
+        if (WA.player.state.swFeierabendTag === heute) return;
+        e.preventDefault();
+        e.returnValue = "Du hast noch nicht auf Feierabend geklickt \u2013 B\xFCro wirklich schlie\xDFen?";
+        return e.returnValue;
+      } catch {
+      }
     });
   });
 })();

@@ -29,6 +29,8 @@
 <script>
 // Jeder Knopf meldet die Aktion über die Spieler-Variable „swAktion“ — das Büro-Skript (buero-praesenz.js) führt sie aus.
 // Danach den Fokus abgeben, damit Leertaste/Steuerung beim Büro bleiben.
+// 14.10.2026 (Sam): Nachfrage beim Schließen ohne Feierabend – auch hier, falls der Browser sie aus dem Skript-Rahmen nicht zeigt
+window.addEventListener("beforeunload", e => { try { const heute = new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Berlin" }); if (/Android|iPhone|iPod|Mobile/i.test(navigator.userAgent) || WA.player.state.swFeierabendTag === heute) return; e.preventDefault(); e.returnValue = ""; return ""; } catch (x) { /* egal */ } });
 WA.onInit().then(() => {
   document.querySelectorAll("button[data-was]").forEach(b => b.onclick = () => {
     try { WA.player.state.saveVariable("swAktion", { was: b.dataset.was, t: Date.now() }, { public: false, persist: false }); } catch (e) { console.warn(e); }

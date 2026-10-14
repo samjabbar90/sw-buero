@@ -6,25 +6,34 @@
 <title>Schnellreise</title>
 <script src="https://play.workadventu.re/iframe_api.js"></script>
 <style>
-  :root { --bg: #1e293b; --karte: #273449; --text: #e2e8f0; --leise: #94a3b8; --akzent: #0d9488; }
+  :root { --bg: #eef2f5; --karte: rgba(255,255,255,.9); --text: #111827; --leise: #4b5563; --akzent: #0f766e; color-scheme: light; } /* 14.10.2026 (Sam): helle Optik wie Mein Profil */
   * { box-sizing: border-box; }
   body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); padding: 14px; }
-  input { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid #475569; background: #0f172a; color: var(--text); font-size: 15px; margin-bottom: 12px; }
+  input { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(17,24,39,.2); background: #fff; color: var(--text); font-size: 15px; margin-bottom: 12px; }
   h2 { font-size: 12px; letter-spacing: .6px; text-transform: uppercase; color: var(--leise); margin: 14px 0 6px; }
   .liste { display: grid; gap: 6px; }
   .zeile { display: flex; gap: 6px; } .zeile > button:first-child { flex: 1; } .zoom { width: auto !important; flex: none; justify-content: center; padding: 10px 12px !important; }
-  button { text-align: left; width: 100%; padding: 10px 12px; border: 1px solid #334155; border-radius: 10px; background: var(--karte); color: var(--text); font-size: 14px; cursor: pointer; display: flex; gap: 8px; align-items: center; }
+  button { text-align: left; width: 100%; padding: 10px 12px; border: 1px solid rgba(17,24,39,.1); border-radius: 10px; background: var(--karte); color: var(--text); font-size: 14px; cursor: pointer; display: flex; gap: 8px; align-items: center; }
   button:hover { border-color: var(--akzent); }
   .leer { color: var(--leise); font-size: 13px; }
   .punkt { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; flex-shrink: 0; }
+  /* 14.10.2026 (Sam): schlichte Symbole statt Tür, Gesichter bei Büros, Gruppen einklappbar */
+  .sym { width: 30px; height: 30px; border-radius: 50%; flex: none; display: flex; align-items: center; justify-content: center; background: rgba(15,118,110,.12); color: #0f766e; }
+  .sym svg { width: 17px; height: 17px; }
+  .gesicht { width: 30px; height: 30px; border-radius: 50%; flex: none; background: #475569 center/cover no-repeat; display: flex; align-items: center; justify-content: center; font-size: 11.5px; font-weight: 800; color: #fff; border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(17,24,39,.12); }
+  .gesicht.leer2 { background: rgba(148,163,184,.18); color: #94a3b8; }
+  details { border-top: 1px solid rgba(17,24,39,.1); } details:first-of-type { border-top: 0; }
+  summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 12px; letter-spacing: .6px; text-transform: uppercase; color: var(--leise); padding: 12px 2px 8px; font-weight: 700; user-select: none; }
+  summary::-webkit-details-marker { display: none; } summary .pf { transition: transform .15s; font-size: 10px; } details[open] summary .pf { transform: rotate(90deg); }
+  summary .anz { margin-left: auto; font-weight: 600; letter-spacing: 0; text-transform: none; font-size: 12px; opacity: .8; }
 </style>
 </head>
 <body>
 <div style="display:flex;gap:8px;align-items:flex-start;padding-right:44px"><input id="suche" placeholder="Raum oder Kollege suchen …" autocomplete="off" style="flex:1">
-<button id="schliessen" type="button" aria-label="Schließen" style="flex:none;width:42px;height:42px;border-radius:10px;border:1px solid #64748b;background:#334155;color:#fff;font-size:20px;cursor:pointer">✕</button></div>
+<button id="schliessen" type="button" aria-label="Schließen" style="flex:none;width:42px;height:42px;border-radius:10px;border:1px solid #3f4651;background:#3f4651;color:#fff;font-size:20px;cursor:pointer">✕</button></div>
 <h2>Kollegen im Büro</h2>
 <div class="liste" id="leute"><div class="leer">Lädt …</div></div>
-<h2>Räume <span style="font-weight:400;font-size:12px;opacity:.7">· 👁 = nur ansehen (Kamera zoomt hin, du bleibst stehen; „Zu mir“ oben holt dich zurück)</span></h2>
+<h2>Räume <span style="font-weight:400;font-size:12px;opacity:.7;text-transform:none;letter-spacing:0">· 👁 = nur ansehen (Kamera zoomt hin, du bleibst stehen)</span></h2>
 <div class="liste" id="raeume"><div class="leer">Lädt …</div></div>
 <script>
 // Schnellreise (06.10.2026): Räume aus der Karte + Kollegen im Büro; Klick = sofort dort (WA.player.teleport).
@@ -64,15 +73,66 @@ function vorDemRaum(r) {
   }
   return freiesFeld(r.x + r.w / 2, r.y + r.h + T); // kein Weg gefunden: unterhalb des Raums
 }
+// Anzeige-Namen (14.10.2026, Sam) – die Bereiche in der Karte behalten ihre Namen (Türen, Live-Anzeige, Reservierungen hängen daran)
+const PERSON = { "Zimmer 1": "Tanja R.", "Zimmer 2": "Christiane S.", "Zimmer 3": "Jana J.", "Zimmer 4": "Kubilay A.", "Zimmer 5": "Bin W.", "Zimmer 6": "Onur K.",
+  "Zimmer 7": "Dilber A.", "Zimmer 8": "Fatih K.", "Zimmer 9": "Kerstin C.", "Zimmer 10": "Angelinka T.", "Zimmer 11": "", "Zimmer 12": "", "Zimmer 13": "Ilona S.",
+  "Zimmer 14": "Julien M.", "Zimmer 15": "Bahjat D.", "Zimmer 16": "", "Büro Leutrim": "Katharina K.", "Büro Katharina": "Ferhat F.", "Büro Ferhat": "Leutrim S.",
+  "Büro Angelina": "Angelina M.", "Büro Sam": "Sam J.", "Büro Noura": "Noura A.", "Büro Emre": "Emre A.", "Büro Kadir": "Kadir K.", "Büro Attila": "Attila K." };
+const NAME = { "Besprechung Glas": "Besprechungszimmer 1", "Besprechung 11": "Besprechungszimmer 2", "Pause": "Pausenraum", "Lernzimmer": "Schulungsraum" };
+const SVG = p => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + p + '</svg>';
+const ICON = {
+  besprechung: SVG('<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>'),
+  schulung: SVG('<path d="M22 10 12 5 2 10l10 5 10-5z"/><path d="M6 12v5c3 2 9 2 12 0v-5"/>'),
+  pause: SVG('<path d="M17 8h1a4 4 0 1 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/><path d="M6 2v2M10 2v2M14 2v2"/>'),
+  fitness: SVG('<path d="M6.5 6.5h11M6.5 17.5h11M3 9v6M21 9v6M6.5 6.5v11M17.5 6.5v11"/>'),
+  hilfe: SVG('<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><path d="m4.93 4.93 4.24 4.24M14.83 14.83l4.24 4.24M14.83 9.17l4.24-4.24M4.93 19.07l4.24-4.24"/>'),
+  mandant: SVG('<rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4M8 6h.01M16 6h.01M12 6h.01M12 10h.01M12 14h.01M16 10h.01M16 14h.01M8 10h.01M8 14h.01"/>'),
+  abteilung: SVG('<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>'),
+  ort: SVG('<path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>'),
+};
+const STAEDTE = ["Paris", "Berlin", "Lissabon", "New York", "Amsterdam", "Moskau"];
+function art(n) {
+  if (/^(Büro |Zimmer \d)/.test(n)) return "buero";
+  if (/^Besprechung/.test(n)) return "besprechung";
+  if (n === "Lernzimmer") return "schulung";
+  if (STAEDTE.includes(n) || /Donna|Mandanten/.test(n)) return "mandant";
+  if (/^Pause|Lounge|Terrasse|Küche/.test(n)) return "pause";
+  if (/Fitness/.test(n)) return "fitness";
+  if (/Helpcenter/.test(n)) return "hilfe";
+  if (/abschluss|IT-|Social|Ron|Mina|Agent|Onboarding/i.test(n)) return "abteilung";
+  return "ort";
+}
+const GRUPPEN = [["besprechung", "Besprechung & Schulung"], ["buero", "Büros"], ["gemeinsam", "Gemeinsame Räume"], ["mandant", "Mandanten-Etage"], ["abteilung", "Abteilungen & Anbau"], ["ort", "Weitere Orte"]];
+const gruppeVon = a => a === "besprechung" || a === "schulung" ? "besprechung" : a === "pause" || a === "fitness" || a === "hilfe" ? "gemeinsam" : a;
+function anzeige(x) { if (x.name in PERSON) return PERSON[x.name] ? PERSON[x.name] + " Büro" : "Leeres Büro (" + x.name + ")"; return NAME[x.name] || x.name; }
+// Gesichter aus dem SW-internen Portal (Kurzname „Vorname N.“ oder eindeutiger Vorname)
+let GES = [];
+function gesichtVon(name) { const n = String(name || "").toLowerCase().trim(); if (!n) return null;
+  const g = GES.find(x => x.kurz.toLowerCase() === n || x.name.toLowerCase() === n); if (g) return g.foto;
+  const v = n.split(/\s+/)[0], t = GES.filter(x => x.name.toLowerCase().split(/\s+/)[0] === v); return t.length === 1 ? t[0].foto : null; }
+const initialen = n => String(n || "?").split(/\s+/).map(w => w[0] || "").join("").slice(0, 2).toUpperCase();
+const gesicht = (f, n) => f ? '<span class="gesicht" style="background-image:url(&quot;' + esc(f) + '&quot;)"></span>' : '<span class="gesicht">' + esc(initialen(n)) + '</span>';
+function bild(x) {
+  const a = art(x.name);
+  if (a === "buero") { const p = PERSON[x.name]; if (p === "") return '<span class="gesicht leer2">–</span>'; const n = p || x.name.replace(/^Büro |^Zimmer /, ""); return gesicht(gesichtVon(n), n); }
+  return '<span class="sym">' + ICON[a] + '</span>';
+}
+let zu = new Set(); try { zu = new Set(JSON.parse(localStorage.getItem("swReiseZu") || "[]")); } catch {}
 const raumVon = (px, py) => raeume.filter(r => px >= r.x && px < r.x + r.w && py >= r.y && py < r.y + r.h).sort((a, b) => a.w * a.h - b.w * b.h)[0];
 
 function zeichnen() {
   const s = document.getElementById('suche').value.trim().toLowerCase();
   const passt = n => !s || n.toLowerCase().includes(s);
-  const r = raeume.filter(x => passt(x.name));
-  document.getElementById('raeume').innerHTML = r.length ? r.map((x, i) => `<div class="zeile"><button data-raum="${raeume.indexOf(x)}">🚪 ${esc(x.name)}</button><button class="zoom" data-zoom="${raeume.indexOf(x)}" title="Nur ansehen – Kamera zoomt auf ${esc(x.name)}">👁</button></div>`).join('') : '<div class="leer">Kein Raum gefunden</div>';
+  const r = raeume.filter(x => passt(x.name) || passt(anzeige(x)));
+  const zeile = x => '<div class="zeile"><button data-raum="' + raeume.indexOf(x) + '">' + bild(x) + '<span>' + esc(anzeige(x)) + '</span></button><button class="zoom" data-zoom="' + raeume.indexOf(x) + '" title="Nur ansehen – Kamera zoomt hin">👁</button></div>';
+  document.getElementById('raeume').innerHTML = r.length ? GRUPPEN.map(([g, titel]) => {
+    const teil = r.filter(x => gruppeVon(art(x.name)) === g).sort((a, b) => anzeige(a).startsWith("Leeres") - anzeige(b).startsWith("Leeres") || anzeige(a).localeCompare(anzeige(b), 'de'));
+    if (!teil.length) return '';
+    return '<details data-g="' + g + '"' + (s || !zu.has(g) ? ' open' : '') + '><summary><span class="pf">▶</span>' + titel + '<span class="anz">' + teil.length + '</span></summary><div class="liste" style="padding-bottom:10px">' + teil.map(zeile).join('') + '</div></details>';
+  }).join('') : '<div class="leer">Kein Raum gefunden</div>';
+  document.querySelectorAll('details[data-g]').forEach(d => d.addEventListener('toggle', () => { if (s) return; d.open ? zu.delete(d.dataset.g) : zu.add(d.dataset.g); try { localStorage.setItem("swReiseZu", JSON.stringify([...zu])); } catch {} }));
   const leute = [...WA.players.list()].filter(p => passt(p.name)).sort((a, b) => a.name.localeCompare(b.name, 'de'));
-  document.getElementById('leute').innerHTML = leute.length ? leute.map(p => `<button data-spieler="${esc(p.playerId)}"><span class="punkt"></span>${esc(p.name)}</button>`).join('') : '<div class="leer">Gerade niemand außer dir</div>';
+  document.getElementById('leute').innerHTML = leute.length ? leute.map(p => '<button data-spieler="' + esc(p.playerId) + '">' + gesicht(gesichtVon(p.name), p.name) + '<span style="flex:1">' + esc(p.name) + '</span><span class="punkt"></span></button>').join('') : '<div class="leer">Gerade niemand außer dir</div>';
 }
 document.addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
@@ -96,9 +156,9 @@ WA.onInit().then(async () => {
   // Plätze innerhalb eines Raums (z. B. „Mina“ im Social-Media-Büro) sind keine eigenen Reiseziele; doppelte Namen (Fitnessraum) nur einmal
   raeume = raeume.filter(a => !raeume.some(b => b !== a && b.w * b.h > a.w * a.h && a.x >= b.x && a.y >= b.y && a.x + a.w <= b.x + b.w && a.y + a.h <= b.y + b.h));
   raeume = raeume.filter((a, i) => raeume.findIndex(b => b.name === a.name) === i);
-  // Eigene Büros zuerst alphabetisch, gemeinsame Räume oben
-  raeume.sort((a, b) => (a.name.startsWith('Büro') - b.name.startsWith('Büro')) || a.name.localeCompare(b.name, 'de'));
   zeichnen();
+  // Gesichter nachladen (Büro-Ausweis aus dem Büro-Schloss; ohne Ausweis bleiben Anfangsbuchstaben)
+  try { const aw = localStorage.getItem("swBueroAusweis") || ""; if (aw) { const g = await fetch("https://swdigitaltest.de/buero-praesenz/gesichter", { headers: { "X-Buero-Key": "a21b2aa2a42fe6189b05773c07bbc9ad78e38b34ba3bb6fe", "X-Buero-Ausweis": aw } }); if (g.ok) { GES = await g.json(); zeichnen(); } } } catch {}
   WA.players.onPlayerEnters.subscribe(zeichnen); WA.players.onPlayerLeaves.subscribe(zeichnen);
   document.getElementById('suche').focus();
 });

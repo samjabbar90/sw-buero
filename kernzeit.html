@@ -107,7 +107,7 @@ async function start() {
   if (!ausweis.holen()) return ausweisFormular();
   try {
     let d;
-    if (FEIERABEND && !feierabendGemacht) { $("kopf").textContent = "🚪 Feierabend"; d = await api("/kernzeit/feierabend", { method: "POST" }); feierabendGemacht = true; }
+    if (FEIERABEND && !feierabendGemacht) { $("kopf").textContent = "🚪 Feierabend"; d = await api("/kernzeit/feierabend", { method: "POST" }); feierabendGemacht = true; try { WA.player.state.saveVariable("swFeierabendTag", new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Berlin" }), { public: false, persist: true }); } catch (e) { /* ohne Büro */ } }
     else d = await api("/kernzeit");
     zeigen(d);
   } catch (e) { if (e.message === "ausweis") return ausweisFormular("Bitte kurz neu anmelden."); $("inhalt").innerHTML = '<div class="leer">' + esc(e.message) + "</div>"; }
