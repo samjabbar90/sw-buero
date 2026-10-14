@@ -4,7 +4,7 @@
   var BUERO_KEY = "a21b2aa2a42fe6189b05773c07bbc9ad78e38b34ba3bb6fe";
   var DASHBOARD = "https://swdigitaltest.de";
   var SITZUNG = Math.random().toString(36).slice(2) + Date.now().toString(36);
-  var DY = 12;
+  var DY = 26;
   var HANDY = (screen.width || 1200) < 768 || /Android|iPhone|iPod|Mobile/i.test(navigator.userAgent);
   var aktuellerBereich = null;
   var beendet = false;
@@ -1571,7 +1571,7 @@
   }
   function ronPlatz() {
     let fenster = null;
-    leertasteBereich("ron-platz", { x: 106, y: 31, w: 2, h: 2 }, "\u{1F4AC} Ron \xB7 Onboarding \u2013 Leertaste", async () => {
+    leertasteBereich("ron-platz", { x: 106, y: 31 + 14, w: 2, h: 2 }, "\u{1F4AC} Ron \xB7 Onboarding \u2013 Leertaste", async () => {
       try {
         fenster = await glasFenster(SEITEN + "ron.html?t=" + Date.now());
       } catch {
@@ -1618,7 +1618,7 @@
   }
   function utePlatz() {
     let fenster = null;
-    leertasteBereich("ute-platz", { x: 51, y: 6, w: 6, h: 2 }, "\u{1F5D3} Termine mit Donna \u2013 Leertaste: freie Zeiten finden und buchen", async () => {
+    leertasteBereich("ute-platz", { x: 51, y: 6 + 14, w: 6, h: 2 }, "\u{1F5D3} Termine mit Donna \u2013 Leertaste: freie Zeiten finden und buchen", async () => {
       try {
         fenster = await glasFenster(SEITEN + "ute.html?t=" + Date.now());
       } catch {
@@ -2008,7 +2008,7 @@
         allowApi: true,
         visible: true,
         position: { vertical: "bottom", horizontal: "right" },
-        size: { width: HANDY ? "130px" : "232px", height: HANDY ? "83px" : "148px" },
+        size: { width: HANDY ? "130px" : "232px", height: HANDY ? "99px" : "176px" },
         margin: { bottom: HANDY ? "158px" : "20px", right: HANDY ? "14px" : "20px" }
       });
     } catch {

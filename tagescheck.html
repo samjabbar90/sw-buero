@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark">
 <title>Tages-Check</title>
+<!-- 14.10.2026 (Sam: T1 „Pille“): Karte einklappbar (▴) → nur „✅ 3/7“; klappt von selbst auf, wenn der nächste Punkt in ≤ 15 Min fällig
+     oder überfällig ist (je Punkt nur einmal). Zustand im Browser (swTcZu); die Größe des Fensters wird per WA.ui.website angepasst. -->
 <!-- Tages-Check (09.10.2026, Sam: Variante 2): ?karte=1 = schwebende Karte oben links (nächste Aufgabe, ▶ In Bearbeitung, ✓ Erledigt,
      Erklärung); ohne = ganze Liste als Glas-Fenster. Alles muss erledigt sein, sonst braucht es eine Erklärung. Nur mit Büro-Ausweis. -->
 <style>
@@ -23,6 +25,9 @@
   .b-arbeit { background:#2563eb; } .b-ok { background:#10b981; } .b-erkl { background:#475569; } .b-leicht { background:rgba(255,255,255,.12); }
   textarea { width:100%; font:inherit; font-size:12.5px; border-radius:7px; border:1px solid rgba(255,255,255,.25); background:rgba(0,0,0,.35); color:#fff; padding:6px; resize:none; height:46px; }
   .fehler { color:#fca5a5; font-size:11.5px; margin-top:3px; }
+  /* T1 (14.10.2026, Sam): eingeklappt nur eine Pille „✅ 3/7“ */
+  .pille { display:inline-flex; align-items:center; gap:7px; height:34px; padding:0 13px; border-radius:17px; background:rgba(22,26,34,.95); border:1px solid rgba(255,255,255,.12); color:#fff; font-size:13.5px; font-weight:700; cursor:pointer; }
+  .pille .pu { width:9px; height:9px; border-radius:50%; background:#10b981; } .pille .pu.bald { background:#f59e0b; } .pille .pu.rot { background:#ef4444; }
   /* ganze Liste (Glas-Fenster) */
   body.liste { background:#f8fafc; color:#0f172a; }
   header { position:sticky; top:0; z-index:2; background:#0f766e; color:#fff; padding:14px 16px; } header h1 { margin:0; font-size:18px; }
@@ -61,6 +66,11 @@ async function api(pfad, opt = {}) {
 function weitersagen() { try { WA.player.state.saveVariable("swTagesCheck", { t: Date.now() }, { public: false, persist: false }); } catch {} }
 function listeOeffnen() { try { WA.player.state.saveVariable("swAktion", { was: "tagescheck", t: Date.now() }, { public: false, persist: false }); } catch {} }
 let D = null, erklaeren = null, fehler = "";
+const merk = { holen: k => { try { return localStorage.getItem(k) || ""; } catch { return ""; } }, setzen: (k, v) => { try { localStorage.setItem(k, v); } catch {} } };
+let zu = merk.holen("swTcZu") === "1", groesseJetzt = "";
+async function groesse(klein) { const g = klein ? "klein" : "gross"; if (g === groesseJetzt) return; groesseJetzt = g;
+  try { const alle = await WA.ui.website.getAll(); for (const w of alle) if (/tagescheck.html?karte/.test(String(w.url || ""))) w.size = klein ? { width: "112px", height: "40px" } : { width: "280px", height: "150px" }; } catch { groesseJetzt = ""; } }
+function klappen(z) { zu = z; merk.setzen("swTcZu", z ? "1" : ""); karteZeichnen(); }
 
 function marke(p) {
   const j = D.jetztMin, b = min(p.bis);
@@ -76,7 +86,11 @@ function karteZeichnen() {
   if (!D) { app.innerHTML = '<div class="k"><div class="klein">Lädt …</div></div>'; return; }
   if (!D.aktiv) { app.innerHTML = ""; return; }
   const p = D.punkte.find(x => x.id === D.naechster), pz = Math.round(D.erledigt / D.gesamt * 100);
-  let h = `<div class="k"><div class="kopf"><span>✅ <b>Tages-Check</b> · ${D.erledigt}/${D.gesamt}</span><a id="alle">Liste ▾</a></div><div class="balken"><div style="width:${pz}%"></div></div>`;
+  const bis = p ? min(p.bis) : null, rot = !!(p && D.verpasst.includes(p.id)), bald = !!(p && !rot && bis !== null && bis - D.jetztMin <= 15);
+  if (zu && (rot || bald)) { const schl = new Date().toDateString() + ":" + p.id + ":" + (rot ? "rot" : "bald"); if (merk.holen("swTcAuf") !== schl) { merk.setzen("swTcAuf", schl); zu = false; merk.setzen("swTcZu", ""); } }
+  if (zu && !erklaeren) { groesse(true); app.innerHTML = `<div class="pille" id="auf" title="Tages-Check aufklappen">✅ ${D.erledigt}/${D.gesamt}<span class="pu ${rot ? "rot" : bald ? "bald" : ""}"></span></div>`; $("auf").onclick = () => klappen(false); return; }
+  groesse(false);
+  let h = `<div class="k"><div class="kopf"><span>✅ <b>Tages-Check</b> · ${D.erledigt}/${D.gesamt}</span><span><a id="alle">Liste ▾</a> &nbsp;<a id="zuK" title="einklappen">▴</a></span></div><div class="balken"><div style="width:${pz}%"></div></div>`;
   if (!p) h += '<div class="text" style="margin-top:6px">🎉 Alles erledigt für heute</div><div class="klein">Gut gemacht!</div>';
   else if (erklaeren === p.id) h += `<div class="klein">Warum ist „${esc(p.text)}“ nicht erledigt?</div><textarea id="erkl" maxlength="500" placeholder="kurze Erklärung"></textarea><div class="zeile" style="margin-top:5px"><button class="b-ok" id="senden">Senden</button><button class="b-leicht" id="abbr">Abbrechen</button></div>`;
   else {
@@ -89,6 +103,7 @@ function karteZeichnen() {
   if (fehler) h += `<div class="fehler">${esc(fehler)}</div>`;
   app.innerHTML = h + "</div>";
   if ($("alle")) $("alle").onclick = listeOeffnen;
+  if ($("zuK")) $("zuK").onclick = () => klappen(true);
   document.querySelectorAll("[data-s]").forEach(b => b.onclick = () => setzen(p.id, b.dataset.s));
   if ($("erklKnopf")) $("erklKnopf").onclick = () => { erklaeren = p.id; fehler = ""; karteZeichnen(); setTimeout(() => $("erkl") && $("erkl").focus(), 30); };
   if ($("senden")) $("senden").onclick = () => setzen(p.id, "erklaert", $("erkl").value);
