@@ -413,6 +413,37 @@
   var begruesst = false;
   var ballonsGesetzt = "";
   var hm = (d) => d.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin" });
+  var infoLeiste = null;
+  var hinweiseOffen = 0;
+  function leisteVerschieben() {
+    try {
+      if (infoLeiste) infoLeiste.margin = { bottom: hinweiseOffen > 0 ? "150px" : "14px" };
+    } catch {
+    }
+  }
+  function hinweiseUeberwachen() {
+    try {
+      const orig = WA.ui.displayActionMessage.bind(WA.ui);
+      WA.ui.displayActionMessage = (o) => {
+        const m = orig(o);
+        hinweiseOffen++;
+        leisteVerschieben();
+        let weg = false;
+        return { ...m, remove: () => {
+          if (!weg) {
+            weg = true;
+            hinweiseOffen = Math.max(0, hinweiseOffen - 1);
+            leisteVerschieben();
+          }
+          try {
+            return m.remove();
+          } catch {
+          }
+        } };
+      };
+    } catch {
+    }
+  }
   function leertasteAus(_) {
     return { remove: () => {
     } };
@@ -1925,6 +1956,7 @@
       WA.ui.displayActionMessage = handyHinweis;
     } catch {
     }
+    else hinweiseUeberwachen();
     const frisch = async () => {
       try {
         const r = await fetch(ENDPOINT.replace(/melden$/, "ausweis/frisch"), { method: "POST", headers: { "Content-Type": "application/json", "X-Buero-Key": BUERO_KEY }, body: JSON.stringify({ name: WA.player.name }) });
@@ -1992,7 +2024,7 @@
       } catch {
       }
     } else try {
-      await WA.ui.website.open({
+      infoLeiste = await WA.ui.website.open({
         url: "https://samjabbar90.github.io/sw-buero/info.html?v=5" + (kzAktiv ? "&kz=1" : ""),
         allowApi: true,
         visible: true,
