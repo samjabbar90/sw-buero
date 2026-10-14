@@ -5,19 +5,30 @@
 <title>Ausweis</title>
 <!-- 15.10.2026 (Leutrim: Ideen/Kalender/Gespräch gehen nicht): Das Büro-Skript läuft in einem eigenen, abgeschotteten Rahmen – was es im
      Browser-Speicher ablegt, sehen die Büro-Fenster nicht. Nach der Anmeldung über die Anmeldeseite legt das Skript den Ausweis in die private
-     Spieler-Variable swAusweisNeu; diese unsichtbare Seite (gleicher Rahmen wie alle Fenster) übernimmt ihn in den Speicher und schließt sich. -->
+     Spieler-Variable swAusweisNeu; diese unsichtbare Seite (gleicher Rahmen wie alle Fenster) übernimmt ihn in den Speicher.
+     Seit 15.10. (Sam: „muss für alle gehen“) prüft sie bei jedem Betreten außerdem beim Server, ob der Ausweis der Fenster gültig ist,
+     und meldet das Ergebnis über swAusweisStand ans Skript – fehlt er, zeigt das Büro den Sperrbildschirm. -->
 <style>html,body{margin:0;background:transparent}</style>
 </head>
 <body>
 <script src="https://play.workadventu.re/iframe_api.js"></script>
 <script>
+const KEY = "a21b2aa2a42fe6189b05773c07bbc9ad78e38b34ba3bb6fe", API = "https://swdigitaltest.de/buero-praesenz";
 (async () => {
+  let stand = "ok";
   try {
     await WA.onInit();
-    const t = WA.player.state.swAusweisNeu;
-    if (t) { try { localStorage.setItem("swBueroAusweis", String(t)); } catch (e) {} WA.player.state.saveVariable("swAusweisNeu", "", { public: false, persist: false }); }
-    const alle = await WA.ui.website.getAll(); const ich = alle.find(w => /ausweis-sync\.html/.test(String(w.url || ""))); if (ich) ich.close();
+    const neu = WA.player.state.swAusweisNeu;
+    if (neu) { try { localStorage.setItem("swBueroAusweis", String(neu)); } catch (e) {} await WA.player.state.saveVariable("swAusweisNeu", "", { public: false, persist: false }); }
+    let t = ""; try { t = localStorage.getItem("swBueroAusweis") || ""; } catch (e) {}
+    if (!t) stand = "fehlt";
+    else try {
+      const r = await fetch(API + "/ausweis/pruefen", { method: "POST", headers: { "X-Buero-Key": KEY, "X-Buero-Ausweis": t, "X-Buero-Name": encodeURIComponent(WA.player.name || ""), "Content-Type": "application/json" }, body: "{}" });
+      if (r.status === 401) { stand = "fehlt"; try { localStorage.removeItem("swBueroAusweis"); } catch (e) {} }
+    } catch (e) { /* Server nicht erreichbar: nicht sperren */ }
+    await WA.player.state.saveVariable("swAusweisStand", { s: stand, t: Date.now() }, { public: false, persist: false });
   } catch (e) { /* ältere Version */ }
+  try { const alle = await WA.ui.website.getAll(); alle.filter(w => /ausweis-sync\.html/.test(String(w.url || ""))).forEach(w => w.close()); } catch (e) {}
 })();
 </script>
 </body>

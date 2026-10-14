@@ -448,12 +448,31 @@
     try {
       await WA.player.state.saveVariable("swAusweisNeu", token, { public: false, persist: false });
     } catch {
-      return;
     }
-    try {
-      await WA.ui.website.open({ url: SEITEN + "ausweis-sync.html?v=1", allowApi: true, visible: true, position: { vertical: "top", horizontal: "left" }, size: { width: "1px", height: "1px" }, margin: { top: "0px", left: "0px" } });
-    } catch {
-    }
+  }
+  function ausweisPruefen() {
+    return new Promise((fertig) => {
+      let abo = null;
+      const start = Date.now();
+      const ende = (s) => {
+        clearTimeout(uhr);
+        try {
+          abo && abo.unsubscribe();
+        } catch {
+        }
+        fertig(s);
+      };
+      const uhr = setTimeout(() => ende("ok"), 8e3);
+      try {
+        abo = WA.player.state.onVariableChange("swAusweisStand").subscribe((v) => {
+          if (v && Number(v.t) >= start - 1e3) ende(v.s === "fehlt" ? "fehlt" : "ok");
+        });
+      } catch {
+        ende("ok");
+        return;
+      }
+      WA.ui.website.open({ url: SEITEN + "ausweis-sync.html?v=2&t=" + Date.now(), allowApi: true, visible: true, position: { vertical: "top", horizontal: "left" }, size: { width: "1px", height: "1px" }, margin: { top: "0px", left: "0px" } }).catch(() => ende("ok"));
+    });
   }
   function leertasteAus(_) {
     return { remove: () => {
@@ -1982,6 +2001,7 @@
       if (await frisch()) schlossMerken(true);
       else await schliessen();
     }
+    if (!gesperrt && await ausweisPruefen() === "fehlt" && !gesperrt) await schliessen();
     schlossWache();
     bereit = melden("betreten", true);
     const tiled = await kartenBereiche();
