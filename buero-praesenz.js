@@ -140,12 +140,31 @@
   var vorname = (n) => String(n || "").trim().split(/\s+/)[0].toLowerCase();
   var istBesitzer = (t) => t.offen ? zimmerDaten(t).s !== "frei" && vorname(zimmerDaten(t).wer) === vorname(WA.player.name) : t.besitzer.toLowerCase() === vorname(WA.player.name);
   var meineTuer = () => tueren.find((t) => !t.offen && istBesitzer(t));
-  var tuerStatus = (t) => t.offen ? zimmerDaten(t).s : String(WA.state[t.variable] || "frei");
-  var TEXT = { frei: "\u{1F7E2} T\xFCr: frei", besetzt: "\u{1F7E1} T\xFCr: besetzt", zu: "\u{1F534} T\xFCr: zu" };
+  var fokusBis = (t) => {
+    const v = String(WA.state[t.variable] || "");
+    return v.startsWith("fokus:") ? Number(v.slice(6)) || 0 : 0;
+  };
+  function autoZu(t) {
+    const wer = vorname(t.besitzer), gleich = (n) => String(n).toLowerCase() === wer;
+    if ((info.telefoniert || []).some(gleich)) return "telefoniert";
+    if ((info.imTermin || []).some(gleich)) return "hat einen Termin";
+    if ((info.zuRaeume || []).includes(t.raum)) return "hat Besuch";
+    return "";
+  }
+  var tuerStatus = (t) => {
+    if (t.offen) return zimmerDaten(t).s;
+    if (autoZu(t)) return "zu";
+    return fokusBis(t) > Date.now() ? "fokus" : "frei";
+  };
+  var bisText = (ms) => new Date(ms).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
+  var TEXT = { frei: "\u{1F7E2} T\xFCr: frei", fokus: "\u{1F3AF} Fokus", zu: "\u{1F534} T\xFCr: zu" };
+  function fokusSetzen(t, min) {
+    WA.state.saveVariable(t.variable, min > 0 ? "fokus:" + (Date.now() + min * 6e4) : "frei");
+  }
   function tuerAnwenden(t) {
     const s = tuerStatus(t);
     const darfDurch = istBesitzer(t) || (freigabe.get(t.variable) || 0) > Date.now() || !!t.offen && aktuellerBereich === t.raum;
-    const kacheln = t.felder.map(([x, y]) => ({ x, y, tile: s === "zu" && !darfDurch ? kollisionGid : null, layer: "collisions" }));
+    const kacheln = t.felder.map(([x, y]) => ({ x, y, tile: (s === "zu" || s === "fokus") && !darfDurch ? kollisionGid : null, layer: "collisions" }));
     const sg = (t.senk ? schildGidsSenk : schildGids)[s] || null;
     t.schild.forEach(([x, y], i) => kacheln.push({ x, y, tile: sg ? sg[i] : null, layer: "furniture/labels" }));
     try {
@@ -153,42 +172,6 @@
     } catch {
     }
   }
-  // ===================== Offene Zimmer abschließbar (13.10.2026, Sam: O2 „unsichtbare Wand“) =====================
-  // Die 16 offenen Zimmer (Karte: Bereiche „Zimmer 1“–„Zimmer 16“ mit offen=true, kartenbau/zimmer-tueren-einbauen.js) haben keinen
-  // festen Besitzer: wer drin ist und das Zimmer frei vorfindet, stellt es über den Knopf in der Leiste auf besetzt/zu. Die Raum-Variable
-  // enthält {s, wer, t}; der Halter frischt t jede Minute auf, solange er drin ist. Ohne Auffrischung (Browser zu) gilt das Zimmer nach
-  // 3 Min als frei; verlässt der Halter das Zimmer, wird es nach 2 Min frei. „Zu“ = unsichtbare Sperre über der Öffnung (tuerAnwenden).
-  function zimmerDaten(t) {
-  try { const d = JSON.parse(String(WA.state[t.variable] || "")); if (d && d.s && Date.now() - Number(d.t || 0) < 3 * 60000) return d; } catch { /* leer */ }
-  return { s: "frei", wer: "", t: 0 };
-  }
-  function werVon(t) { return t.offen ? zimmerDaten(t).wer : t.besitzer; }
-  function zimmerSetzen(t, s) { WA.state.saveVariable(t.variable, s === "frei" ? "" : JSON.stringify({ s, wer: WA.player.name, t: Date.now() })); }
-  var ZTEXT = { frei: "🟢 frei", besetzt: "🟡 besetzt", zu: "🔴 zu" };
-  function zimmerKnopf() {
-  try { WA.ui.actionBar.removeButton("sw-zimmer"); } catch { /* nicht da */ }
-  const t = tueren.find((x) => x.offen && x.raum === aktuellerBereich); if (!t) return;
-  const d = zimmerDaten(t), fremd = d.s !== "frei" && vorname(d.wer) !== vorname(WA.player.name), wer = String(d.wer).split(/\s+/)[0];
-  try { WA.ui.actionBar.addButton({ id: "sw-zimmer", label: fremd ? "🔒 " + t.raum + ": " + wer : "🚪 " + t.raum + ": " + (ZTEXT[d.s] || ZTEXT.frei), callback: () => {
-    const n = zimmerDaten(t);
-    if (n.s !== "frei" && vorname(n.wer) !== vorname(WA.player.name)) return kurzMeldung(t.raum + " hat gerade " + String(n.wer).split(/\s+/)[0] + " – nur wer es eingestellt hat, kann umstellen", 5000);
-    zimmerSetzen(t, ({ frei: "besetzt", besetzt: "zu", zu: "frei" })[n.s] || "frei");
-  } }); } catch { /* ältere Version */ }
-  }
-  var zimmerWeg = new Map();
-  function zimmerRein(raum) {
-  const t = tueren.find((x) => x.offen && x.raum === raum); if (!t) return;
-  clearTimeout(zimmerWeg.get(raum)); tuerAnwenden(t); zimmerKnopf();
-  }
-  function zimmerRaus(raum) {
-  const t = tueren.find((x) => x.offen && x.raum === raum); if (!t) return;
-  tuerAnwenden(t); zimmerKnopf();
-  if (istBesitzer(t)) zimmerWeg.set(raum, setTimeout(() => { if (aktuellerBereich !== raum && istBesitzer(t)) zimmerSetzen(t, "frei"); }, 2 * 60000));
-  }
-  setInterval(() => { for (const t of tueren) if (t.offen) {
-  if (aktuellerBereich === t.raum && istBesitzer(t)) zimmerSetzen(t, zimmerDaten(t).s); // auffrischen, solange ich drin bin
-  tuerAnwenden(t); // abgelaufene Zimmer (Halter weg) wieder frei zeigen
-  } }, 60000);
   function tuerKnopf() {
     const t = meineTuer();
     if (!t || !HANDY || true) return;
@@ -197,15 +180,14 @@
     } catch {
     }
     WA.ui.actionBar.addButton({ id: "sw-tuer", label: TEXT[tuerStatus(t)] || TEXT.frei, callback: () => {
-      const naechster = { frei: "besetzt", besetzt: "zu", zu: "frei" }[tuerStatus(t)] || "frei";
-      WA.state.saveVariable(t.variable, naechster);
+      fokusSetzen(t, fokusBis(t) > Date.now() ? 0 : 60);
     } });
   }
   function tuerWache(raum) {
     const t = tueren.find((x) => x.raum === raum);
-    if (!t || !t.draussen || tuerStatus(t) !== "zu" || istBesitzer(t) || (freigabe.get(t.variable) || 0) > Date.now()) return;
+    if (!t || !t.draussen || !["zu", "fokus"].includes(tuerStatus(t)) || istBesitzer(t) || (freigabe.get(t.variable) || 0) > Date.now()) return;
     WA.player.teleport(t.draussen[0] * 32 + 16, t.draussen[1] * 32 + 16);
-    kurzMeldung(`\u{1F512} ${t.raum} ist abgeschlossen \u2013 Leertaste vor der T\xFCr = anklopfen`, 6e3);
+    kurzMeldung(`\u{1F512} ${t.raum} ist gerade nicht frei \u2013 Leertaste vor der T\xFCr = anklopfen`, 6e3);
   }
   var hinweis = null;
   var hinweisTuer = null;
@@ -225,9 +207,10 @@
     }
     hinweisTuer = t ? t.variable : null;
     if (!t) return;
-    const zu = tuerStatus(t) === "zu";
+    const st = tuerStatus(t), wer = String(werVon(t)).split(/\s+/)[0];
+    const grund = t.offen ? st === "zu" ? "nicht zu st\xF6ren \u2013 Zimmer abgeschlossen" : "besch\xE4ftigt" : st === "fokus" ? "im Fokus bis " + bisText(fokusBis(t)) : st === "zu" ? autoZu(t) || "besch\xE4ftigt" : "besch\xE4ftigt";
     hinweis = WA.ui.displayActionMessage({
-      message: `${t.raum}: ${String(werVon(t)).split(/\s+/)[0]} ist ${zu ? "nicht zu st\xF6ren \u2013 " + (t.offen ? "Zimmer" : "T\xFCr") + " abgeschlossen" : "besch\xE4ftigt"}. Leertaste = anklopfen`,
+      message: `${t.raum}: ${wer} ${t.offen || st !== "zu" ? "ist " : ""}${grund}. Leertaste = anklopfen`,
       callback: () => anklopfen(t)
     });
   }
@@ -334,6 +317,61 @@
       setTimeout(() => tuerAnwenden(t), 30500);
     });
   }
+  function zimmerDaten(t) {
+    try {
+      const d = JSON.parse(String(WA.state[t.variable] || ""));
+      if (d && d.s && Date.now() - Number(d.t || 0) < 3 * 6e4) return d;
+    } catch {
+    }
+    return { s: "frei", wer: "", t: 0 };
+  }
+  function werVon(t) {
+    return t.offen ? zimmerDaten(t).wer : t.besitzer;
+  }
+  function zimmerSetzen(t, s) {
+    WA.state.saveVariable(t.variable, s === "frei" ? "" : JSON.stringify({ s, wer: WA.player.name, t: Date.now() }));
+  }
+  var ZTEXT = { frei: "\u{1F7E2} frei", besetzt: "\u{1F7E1} besetzt", zu: "\u{1F534} zu" };
+  function zimmerKnopf() {
+    try {
+      WA.ui.actionBar.removeButton("sw-zimmer");
+    } catch {
+    }
+    const t = tueren.find((x) => x.offen && x.raum === aktuellerBereich);
+    if (!t) return;
+    const d = zimmerDaten(t), fremd = d.s !== "frei" && vorname(d.wer) !== vorname(WA.player.name), wer = String(d.wer).split(/\s+/)[0];
+    try {
+      WA.ui.actionBar.addButton({ id: "sw-zimmer", label: fremd ? "\u{1F512} " + t.raum + ": " + wer : "\u{1F6AA} " + t.raum + ": " + (ZTEXT[d.s] || ZTEXT.frei), callback: () => {
+        const n = zimmerDaten(t);
+        if (n.s !== "frei" && vorname(n.wer) !== vorname(WA.player.name)) return kurzMeldung(t.raum + " hat gerade " + String(n.wer).split(/\s+/)[0] + " \u2013 nur wer es eingestellt hat, kann umstellen", 5e3);
+        zimmerSetzen(t, { frei: "besetzt", besetzt: "zu", zu: "frei" }[n.s] || "frei");
+      } });
+    } catch {
+    }
+  }
+  var zimmerWeg = /* @__PURE__ */ new Map();
+  function zimmerRein(raum) {
+    const t = tueren.find((x) => x.offen && x.raum === raum);
+    if (!t) return;
+    clearTimeout(zimmerWeg.get(raum));
+    tuerAnwenden(t);
+    zimmerKnopf();
+  }
+  function zimmerRaus(raum) {
+    const t = tueren.find((x) => x.offen && x.raum === raum);
+    if (!t) return;
+    tuerAnwenden(t);
+    zimmerKnopf();
+    if (istBesitzer(t)) zimmerWeg.set(raum, setTimeout(() => {
+      if (aktuellerBereich !== raum && istBesitzer(t)) zimmerSetzen(t, "frei");
+    }, 2 * 6e4));
+  }
+  setInterval(() => {
+    for (const t of tueren) if (t.offen) {
+      if (aktuellerBereich === t.raum && istBesitzer(t)) zimmerSetzen(t, zimmerDaten(t).s);
+      tuerAnwenden(t);
+    }
+  }, 6e4);
   var INFO = "https://swdigitaltest.de/buero-praesenz/info";
   var info = { durchsage: null, geburtstage: [], reservierungen: [] };
   var durchsageGezeigt = null;
@@ -384,8 +422,20 @@
   }
   var tuerVorTelefon = null;
   function telefonTuer() {
+    for (const x of tueren) if (!x.offen) tuerAnwenden(x);
     const t = meineTuer();
     if (!t) return;
+    if (WA.state[t.variable] === "besetzt" || WA.state[t.variable] === "zu") WA.state.saveVariable(t.variable, "frei");
+    if (fokusBis(t) && fokusBis(t) <= Date.now()) {
+      fokusSetzen(t, 0);
+      kurzMeldung("\u2615 Fokuszeit vorbei \u2013 deine T\xFCr ist wieder frei", 8e3);
+    }
+    const grund = autoZu(t);
+    if (grund && tuerVorTelefon === null) {
+      tuerVorTelefon = "x";
+      kurzMeldung(`\u{1F534} Deine T\xFCr ist zu \u2013 du ${grund === "hat Besuch" ? "hast Besuch" : grund === "hat einen Termin" ? "hast einen Termin" : "telefonierst"}`, 5e3);
+    } else if (!grund && tuerVorTelefon !== null) tuerVorTelefon = null;
+    return;
     const ich = vorname(WA.player.name), gleich = (n) => String(n).toLowerCase() === ich;
     const telefonat = (info.telefoniert || []).some(gleich), termin = (info.imTermin || []).some(gleich), telefoniere = telefonat || termin;
     if (telefoniere && tuerVorTelefon === null) {
@@ -402,7 +452,7 @@
   var toene = {};
   function ton(name) {
     try {
-      (toene[name] ||= WA.sound.loadSound(SEITEN + "toene/" + name + ".wav")).play({ volume: 0.5 });
+      (toene[name] || (toene[name] = WA.sound.loadSound(SEITEN + "toene/" + name + ".wav"))).play({ volume: 0.5 });
     } catch {
     }
   }
@@ -1519,10 +1569,9 @@
       fenster = null;
     });
   }
-  // Ron (14.10.2026): Onboarding-Agent, Zimmer R4 im Anbau – Leertaste an seinem Tisch → ron.html
   function ronPlatz() {
     let fenster = null;
-    leertasteBereich("ron-platz", { x: 106, y: 31, w: 2, h: 2 }, "💬 Ron · Onboarding – Leertaste", async () => {
+    leertasteBereich("ron-platz", { x: 106, y: 31, w: 2, h: 2 }, "\u{1F4AC} Ron \xB7 Onboarding \u2013 Leertaste", async () => {
       try {
         fenster = await glasFenster(SEITEN + "ron.html?t=" + Date.now());
       } catch {
@@ -1569,7 +1618,7 @@
   }
   function utePlatz() {
     let fenster = null;
-    leertasteBereich("ute-platz", { x: 51, y: 6, w: 6, h: 2 }, "🗓 Termine mit Donna – Leertaste: freie Zeiten finden und buchen", async () => {
+    leertasteBereich("ute-platz", { x: 51, y: 6, w: 6, h: 2 }, "\u{1F5D3} Termine mit Donna \u2013 Leertaste: freie Zeiten finden und buchen", async () => {
       try {
         fenster = await glasFenster(SEITEN + "ute.html?t=" + Date.now());
       } catch {
@@ -2077,12 +2126,13 @@
         handyMenue = null;
       }
     };
-    // Tippen/Klicken in einem Büro-Fenster (glas.js meldet „swAktiv“) zählt wie Laufen (13.10.2026, Sam: ganze PC-Aktivität)
+    let letzteAktion = 0;
     try {
-      WA.player.state.onVariableChange("swAktiv").subscribe(() => { letzteAktivitaet = Date.now(); });
+      WA.player.state.onVariableChange("swAktiv").subscribe(() => {
+        letzteAktivitaet = Date.now();
+      });
     } catch {
     }
-    let letzteAktion = 0;
     try {
       letzteAktion = Number((WA.player.state.swAktion || {}).t) || 0;
     } catch {
@@ -2124,7 +2174,7 @@
           zuRaum: () => zuRaum(String(v.name || "")),
           meinProfil: () => glasFenster(SEITEN + "profil.html?ich=1&tore=" + toreVon(WA.player.name || "") + "&t=" + Date.now()),
           tuer: () => {
-            if (tuer) WA.state.saveVariable(tuer.variable, { frei: "besetzt", besetzt: "zu", zu: "frei" }[tuerStatus(tuer)] || "frei");
+            if (tuer) fokusSetzen(tuer, fokusBis(tuer) > Date.now() && !v.min ? 0 : Number(v.min) || 60);
           }
         })[v.was]?.();
       });

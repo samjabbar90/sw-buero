@@ -23,7 +23,7 @@
 // „Mehr“ aus der Handy-Leiste (09.10.2026, Sam: Vorschlag 3): die Funktionen, die am PC oben als Knöpfe stehen.
 const TUER = new URLSearchParams(location.search).get("tuer") || "";
 const PUNKTE = [
-  ...(TUER ? [["tuer", "🚪 Tür umschalten", "jetzt: " + ({ frei: "frei", besetzt: "besetzt", zu: "zu" }[TUER] || TUER) + " → frei / besetzt / zu"]] : []),
+  ...(TUER ? [["tuer", TUER === "fokus" ? "🎯 Fokus beenden" : "🎯 Fokus 60 Min", TUER === "fokus" ? "Tür wieder frei" : TUER === "zu" ? "Tür ist gerade automatisch zu" : "nur anklopfen, endet nach 60 Min"]] : []), // 14.10.2026: frei | Fokus, „zu“ nur automatisch
   ["meinProfil", "👤 Mein Profil", "so sehen dich die Kollegen"],
   ["kalender", "📅 Kalender", "Termine, Kollegen, Raum buchen"],
   ["tagescheck", "✅ Tages-Check", "deine Liste für heute"],

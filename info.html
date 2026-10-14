@@ -15,6 +15,7 @@
   b { color:#fff; font-weight:700; }
   button { font:inherit; border:0; cursor:pointer; color:inherit; background:transparent; }
   #tuer { border-radius:999px; }
+  .fw { font:inherit; font-size:12px; background:rgba(124,58,237,.85); color:#fff; border:0; border-radius:6px; padding:1px 6px; margin:0 1px; cursor:pointer; }
   #tuer:hover { background:rgba(255,255,255,.08); }
   #fokus { background:#0d9488; color:#fff; font-weight:700; border-radius:999px; margin-left:4px; border-left:0 !important; }
   #fokus.an { background:#b45309; }
@@ -35,10 +36,10 @@
 <body>
 <div class="pille">
   <span class="teil">🕐 <b id="uhr">–</b></span>
-  <button class="teil" id="tuer" style="display:none" title="Tippen: frei → besetzt → zu">–</button>
+  <button class="teil" id="tuer" style="display:none" title="Tippen: Fokus einschalten">–</button><span class="teil" id="fokusWahl" style="display:none">🎯 <button class="fw" data-m="30">30</button><button class="fw" data-m="60">60</button><button class="fw" data-m="90">90</button><button class="fw" data-m="120">120</button> Min</span>
   <span class="teil" id="online" style="display:none" title="Heute zum ersten Mal im Büro">🟢 <span class="lang">online seit <b id="seit">–</b>&nbsp;·&nbsp;</span><b id="dauer"></b></span>
   <span class="teil" title="Kollegen im Büro">👥 <b id="leute">–</b></span>
-  <button class="teil" id="fokus" style="display:none" title="Fokus: 25 Min Tür auf „besetzt“">🎯</button>
+  <button class="teil" id="fokus" style="display:none !important" aria-hidden="true"></button>
   <button class="teil" id="feierabend" style="display:none" title="Arbeitszeit prüfen und Feierabend machen">🚪 Feierabend</button>
   <button class="teil" id="news" title="News öffnen">📰<span class="zahl" id="newsZahl" style="display:none"></span></button>
 </div>
@@ -56,11 +57,11 @@ function zeichnen() {
   $('uhr').textContent = new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
   try { $('leute').textContent = String([...WA.players.list()].length + 1); } catch { $('leute').textContent = '–'; }
   if (!meineVar) return;
-  $('tuer').innerHTML = STATUS[WA.state[meineVar] || 'frei'] || STATUS.frei;
-  $('tuer').title = 'Tür ' + (WA.state[meineVar] || 'frei') + ' · tippen: frei → besetzt → zu';
-  const bis = fokusBis(), b = $('fokus');
-  if (bis > Date.now()) { b.className = 'teil an'; b.textContent = '🎯 noch ' + Math.ceil((bis - Date.now()) / 60000) + ' Min ✕'; }
-  else { b.className = 'teil'; b.textContent = '🎯'; if (bis) fokusEnde(true); }
+  // 14.10.2026 (Sam): nur noch frei | Fokus (selbst gewählt, mit Ende) – „zu“ setzt das Büro automatisch (2+ Leute, Telefonat, Termin)
+  const v = String(WA.state[meineVar] || ''), bis = v.startsWith('fokus:') ? Number(v.slice(6)) || 0 : 0;
+  if (bis > Date.now()) { $('tuer').innerHTML = '🎯 Fokus bis ' + new Date(bis).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) + ' ✕'; $('tuer').title = 'Tippen: Fokus beenden'; }
+  else { $('tuer').innerHTML = 'Tür 🟢'; $('tuer').title = 'Tür frei · tippen: Fokus einschalten (nur anklopfen)'; }
+
 }
 function fokusEnde(abgelaufen) {
   try { localStorage.removeItem('swFokusBis'); } catch { /* egal */ }
@@ -75,9 +76,14 @@ $('fokus').addEventListener('click', () => {
   zeichnen();
 });
 $('tuer').addEventListener('click', () => {
-  const naechster = { frei: 'besetzt', besetzt: 'zu', zu: 'frei' }[WA.state[meineVar] || 'frei'] || 'frei';
-  WA.state.saveVariable(meineVar, naechster);
+  const v = String(WA.state[meineVar] || '');
+  if (v.startsWith('fokus:') && Number(v.slice(6)) > Date.now()) { WA.state.saveVariable(meineVar, 'frei'); return; }
+  $('tuer').style.display = 'none'; $('fokusWahl').style.display = ''; setTimeout(() => { $('fokusWahl').style.display = 'none'; $('tuer').style.display = ''; }, 8000);
 });
+document.querySelectorAll('.fw').forEach(b => b.addEventListener('click', () => {
+  WA.state.saveVariable(meineVar, 'fokus:' + (Date.now() + Number(b.dataset.m) * 60000));
+  $('fokusWahl').style.display = 'none'; $('tuer').style.display = '';
+}));
 
 // News: ungelesene zählen (gelesen = seit dem letzten Öffnen von news.html in diesem Browser, gleicher Speicher)
 const NEWS_KEY = "a21b2aa2a42fe6189b05773c07bbc9ad78e38b34ba3bb6fe";
@@ -124,7 +130,7 @@ WA.onInit().then(async () => {
     }); });
     lauf(k.layers || []);
   } catch { /* ohne Tür */ }
-  if (meineVar) { $('tuer').style.display = ''; $('fokus').style.display = ''; WA.state.onVariableChange(meineVar).subscribe(zeichnen); }
+  if (meineVar) { $('tuer').style.display = ''; WA.state.onVariableChange(meineVar).subscribe(zeichnen); }
   try { WA.players.onPlayerEnters.subscribe(zeichnen); WA.players.onPlayerLeaves.subscribe(zeichnen); } catch { /* egal */ }
   zeichnen(); setInterval(zeichnen, 20000);
   onlineLaden(); setInterval(onlineLaden, 5 * 60000);
