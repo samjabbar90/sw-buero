@@ -1098,7 +1098,7 @@
       fenster = null;
     });
   }
-  var GESPRAECHS_RAEUME = [{ raum: "Besprechung 10", x: 14, y: 39 + DY, w: 10, h: 5 }, { raum: "Besprechung 11", x: 25, y: 39 + DY, w: 7, h: 5 }, { raum: "Besprechung Glas", x: 40, y: 6 + DY, w: 8, h: 8 }];
+  var GESPRAECHS_RAEUME = [{ raum: "Besprechung 10", x: 14, y: 39 + DY, w: 10, h: 5 }, { raum: "Besprechung 11", x: 25, y: 39 + DY, w: 7, h: 5 }, { raum: "Besprechung Glas", x: 45, y: 6 + DY, w: 8, h: 8 }];
   function gespraechsRaeume() {
     for (const r of GESPRAECHS_RAEUME) {
       let fenster = null;
