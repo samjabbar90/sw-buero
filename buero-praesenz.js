@@ -919,6 +919,30 @@
       });
     }
   }
+  var POSTER = [{ name: "poster-zimmer4", bild: "kubilay.jpg", x: 31, y: 18.15 + DY, w: 2.5, h: 1.4, zimmerX: 29, zimmerY: 17 + DY }];
+  function posterGross(bild) {
+    try {
+      WA.ui.modal.openModal({ title: "Poster", src: SEITEN + "poster.html?gross=1&bild=" + encodeURIComponent(bild), allowApi: true, position: "center" });
+    } catch {
+    }
+  }
+  function posterAufhaengen() {
+    for (const p of POSTER) {
+      try {
+        WA.room.website.create({
+          name: p.name,
+          url: SEITEN + "poster.html?bild=" + encodeURIComponent(p.bild),
+          visible: true,
+          allowApi: true,
+          origin: "map",
+          scale: 1,
+          position: { x: Math.round(p.x * 32), y: Math.round(p.y * 32), width: Math.round(p.w * 32), height: Math.round(p.h * 32) }
+        });
+      } catch {
+      }
+      leertasteBereich(p.name + "-davor", { x: p.zimmerX + 1, y: p.zimmerY + 3, w: 4, h: 2 }, "\u{1F5BC} Leertaste: Poster gro\xDF ansehen", () => posterGross(p.bild));
+    }
+  }
   var OFFENE_RAEUME = [14, 19, 24, 29, 52, 57, 62, 67].flatMap((x) => [17 + DY, 27 + DY].map((y) => ({ x, y, w: 5, h: 6 })));
   var ideenFenster = null;
   var ideenHinweis = null;
@@ -960,6 +984,7 @@
     } catch {
     }
     OFFENE_RAEUME.forEach((o, i) => {
+      if (POSTER.some((p) => p.zimmerX === o.x && p.zimmerY === o.y)) return;
       try {
         WA.room.area.create({ name: "offen-" + (i + 1), x: o.x * 32, y: o.y * 32, width: o.w * 32, height: o.h * 32 });
         WA.room.area.onEnter("offen-" + (i + 1)).subscribe(ideenHinweisZeigen);
@@ -1987,6 +2012,7 @@
     }
     glasBeobachten();
     ideen();
+    posterAufhaengen();
     helpcenterRoboter();
     lernzimmer();
     fitnessEmpfang();

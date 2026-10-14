@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Poster</title>
+<!-- Eigene Poster im Büro (14.10.2026, Sam: „kleiner, Whiteboard weg, wenn man drauf klickt sieht man das Bild groß“).
+     ?bild=<datei in poster/> → kleines Wandbild (als Webseite in die Karte gesetzt, main.ts POSTER); Klick öffnet es groß.
+     ?gross=1&bild=… → große Ansicht im Fenster. -->
+<style>
+  html, body { margin: 0; height: 100%; background: transparent; overflow: hidden; }
+  .wand { position: absolute; inset: 0; box-sizing: border-box; border: 2px solid #1f2937; background: #000 center/cover no-repeat; cursor: zoom-in;
+    box-shadow: 2px 3px 0 rgba(0, 0, 0, .25); }
+  .wand:hover { outline: 2px solid #fbbf24; }
+  body.gross { background: #111; display: flex; align-items: center; justify-content: center; }
+  body.gross img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
+  .zu { position: fixed; top: 10px; right: 10px; width: 40px; height: 40px; border-radius: 10px; border: 0; background: #3f4651; color: #fff; font-size: 20px; cursor: pointer; }
+</style>
+</head>
+<body>
+<script src="https://play.workadventu.re/iframe_api.js"></script>
+<script>
+const q = new URLSearchParams(location.search), BILD = "poster/" + (q.get("bild") || "").replace(/[^a-z0-9._-]/gi, "");
+if (q.has("gross")) {
+  document.body.className = "gross";
+  document.body.innerHTML = '<img alt="Poster" src="' + BILD + '"><button class="zu" title="Schließen">✕</button>';
+  document.querySelector(".zu").onclick = () => { try { WA.ui.modal.closeModal(); } catch (e) { window.close(); } };
+} else {
+  const d = document.createElement("div"); d.className = "wand"; d.title = "Klicken: Poster groß ansehen"; d.style.backgroundImage = "url('" + BILD + "')"; document.body.appendChild(d);
+  d.onclick = async () => { try { await WA.onInit(); WA.ui.modal.openModal({ title: "Poster", src: location.href.split("?")[0] + "?gross=1&bild=" + encodeURIComponent(q.get("bild") || ""), allowApi: true, position: "center", allow: "fullscreen" }); } catch (e) { window.open(BILD, "_blank"); } };
+}
+</script>
+</body>
+</html>
