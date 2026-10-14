@@ -2218,6 +2218,12 @@
         if (v.was === "hinweisTipp") return hinweisGetippt(Number(v.nr) || 0);
         if (v.was === "team") return HANDY ? handyBlattUmschalten("team", SEITEN + "wer.html?sheet=1&t=" + Date.now(), "78vh") : glasFenster(SEITEN + "wer.html?t=" + Date.now());
         if (ZIMMER_AKTIONEN[v.was]) return ZIMMER_AKTIONEN[v.was](v);
+        if (v.was === "feierabendGehen") {
+          return melden("verlassen").then(() => {
+            beendet = true;
+            WA.nav.goToPage(SEITEN + "weg.html?grund=feierabend");
+          });
+        }
         if (v.was === "abmelden") {
           return melden("verlassen").then(() => {
             beendet = true;

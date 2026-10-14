@@ -27,8 +27,20 @@
   .leer { color:#64748b; text-align:center; padding:20px 0; }
   html.glas .zahl { background:rgba(255,255,255,.08) !important; } html.glas .zahl span, html.glas .m { color:rgba(255,255,255,.7) !important; }
   html.glas .gruen { background:rgba(16,185,129,.15) !important; }
+  /* Feierabend F1 (14.10.2026, Sam) */
+  .fz { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; text-align:center; margin-top:6px; } .fz div { background:#f1f5f9; border-radius:9px; padding:6px 2px; }
+  .fz b { display:block; font-size:17px; } .fz span { font-size:11px; color:#64748b; }
+  .fb { height:8px; background:#e5e7eb; border-radius:4px; margin:9px 0 5px; position:relative; } .fb i { position:absolute; left:0; top:0; bottom:0; border-radius:4px; background:#0f766e; }
+  .fb s { position:absolute; top:-3px; bottom:-3px; border-left:2px dashed #b45309; }
+  .pk { display:flex; align-items:flex-start; gap:8px; padding:7px 0; border-top:1px solid #f1f5f9; font-size:13.5px; } .pk:first-of-type { border-top:0; }
+  .pk .st { width:20px; height:20px; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:800; flex:none; }
+  .st.ok { background:#dcfce7; color:#166534; } .st.offen { background:#fef3c7; color:#92400e; } .st.rot { background:#fee2e2; color:#b91c1c; }
+  .pk .tx { flex:1; min-width:0; } .pk .q { font-size:11px; color:#64748b; } .pk .f { font-size:11.5px; color:#64748b; white-space:nowrap; }
+  .fknoepfe { display:flex; gap:8px; } .fknoepfe button { flex:1; } button.grau { background:#3f4651; border-color:#3f4651; } button.warnk { background:#b45309; border-color:#b45309; }
+  textarea { width:100%; font:inherit; font-size:13px; padding:7px 9px; border:1.5px solid #cbd5e1; border-radius:8px; resize:vertical; min-height:42px; }
 </style>
 <script src="glas.js?v=1791917122"></script>
+<link rel="stylesheet" href="hell.css?v=1"><script>document.documentElement.classList.add("hell"); /* 14.10.2026: Optik wie Mein Profil (F1) */</script>
 </head>
 <body>
 <header><h1 id="kopf">⏰ Meine Arbeitszeit</h1></header>
@@ -102,13 +114,61 @@ async function grund(g) {
   try { zeigen(await api("/kernzeit/grund", { method: "POST", body: JSON.stringify({ grund: g }) })); }
   catch (e) { if (e.message === "ausweis") return ausweisFormular(); $("feG").textContent = e.message; }
 }
+// ===== Feierabend F1 (14.10.2026, Sam): Zeit + Aufgaben mit Frist heute, „Büro verlassen“ mit Hinweis/Grund/Begründungen =====
+let FS = null;
+const jetztMin = () => { const t = new Date().toLocaleTimeString("de-DE", { timeZone: "Europe/Berlin", hour: "2-digit", minute: "2-digit" }).split(":"); return +t[0] * 60 + +t[1]; };
+const minVon = t => { const m = /^(\d{1,2}):(\d{2})/.exec(t || ""); return m ? +m[1] * 60 + +m[2] : null; };
+async function fensterZu() { try { const alle = await WA.ui.website.getAll(); const me = alle.find(w => String(w.url || "").split("#")[0] === location.href.split("#")[0]); if (me) me.close(); } catch (e) { /* außerhalb des Büros */ } }
+function aufgabeHtml(a) {
+  const b = minVon(a.bis), ueber = !a.erledigt && b !== null && b <= jetztMin();
+  return `<div class="pk"><span class="st ${a.erledigt ? "ok" : ueber ? "rot" : "offen"}">${a.erledigt ? "✓" : ueber ? "!" : "○"}</span><div class="tx">${esc(a.text)}<div class="q">${esc(a.quelle)}${a.erklaert ? " · erklärt: " + esc(a.erklaert) : ""}</div></div><span class="f"${ueber ? ' style="color:#b91c1c"' : ""}>${a.bis ? (ueber ? "seit " : "bis ") + esc(a.bis) : "heute"}</span></div>`;
+}
+function feierabendZeigen() {
+  const s = FS, z = s.zeit, offen = s.aufgaben.filter(a => !a.erledigt);
+  let h = "";
+  if (z) {
+    const soll = Number(z.soll) || 0, pz = soll ? Math.min(100, Math.round((Number(z.istStd) || 0) / soll * 100)) : 100;
+    h += `<div class="box"><div class="titel">⏱ Zeit heute</div><div class="fz"><div><b>${esc(z.kommen || "–")}</b><span>gekommen</span></div><div><b>${std(z.istStd)}</b><span>Ist / ${std(soll)} Soll</span></div><div><b${z.fruehMin > 0 ? ' style="color:#b45309"' : ""}>${esc(z.bis)}</b><span>Kernzeit bis</span></div></div>
+      <div class="fb"><i style="width:${pz}%"></i></div>
+      <div class="m" style="${z.fruehMin > 0 ? "color:#b45309;font-weight:600" : ""}">${z.fruehMin > 0 ? "⚠ Du gehst " + z.fruehMin + " Min vor Ende der Kernarbeitszeit" : z.entschuldigt ? "✔ " + esc(z.entschuldigt) + " – keine Kernzeit-Meldung" : "✔ Kernarbeitszeit erreicht"}</div></div>`;
+  }
+  h += `<div class="box"><div class="titel">✅ Aufgaben mit Frist heute · ${s.aufgaben.length - offen.length} von ${s.aufgaben.length}</div>${s.aufgaben.length ? s.aufgaben.map(aufgabeHtml).join("") : '<div class="m">Heute keine Aufgaben mit Frist.</div>'}</div>`;
+  h += '<div class="fehler" id="fe"></div><div class="fknoepfe"><button class="grau" id="weiter">Weiterarbeiten</button><button class="warnk" id="gehen">Büro verlassen</button></div>';
+  $("inhalt").innerHTML = h;
+  $("weiter").onclick = fensterZu;
+  $("gehen").onclick = () => (offen.length || (z && z.fruehMin > 0)) ? hinweisZeigen() : verlassen("", {});
+}
+function hinweisZeigen() {
+  const s = FS, z = s.zeit, offen = s.aufgaben.filter(a => !a.erledigt), wem = (s.empfaenger || []).join(" und ") || "Sam";
+  const teile = [offen.length ? "<b>" + offen.length + (offen.length === 1 ? " Aufgabe" : " Aufgaben") + " mit Frist heute</b> nicht erledigt" : "", z && z.fruehMin > 0 ? "gehst <b>" + z.fruehMin + " Min vor Ende der Kernarbeitszeit</b>" : ""].filter(Boolean).join(" und ");
+  $("kopf").textContent = "⚠ Noch nicht alles erledigt";
+  $("inhalt").innerHTML = `<div class="box warn"><div style="font-size:14px;line-height:1.5">Du hast ${teile}.<br>Wenn du jetzt gehst, wird das an <b>${esc(wem)}</b> weitergeleitet.</div></div>
+    ${offen.length ? '<div class="box"><div class="titel">Warum kann das heute nicht erledigt werden?</div><div class="m">Optional je Aufgabe – deine Vorgesetzten können die Begründung freigeben.</div>' + offen.map(a => `<label>${esc(a.text)}</label><textarea data-k="${esc(a.key)}" maxlength="300" placeholder="Begründung"></textarea>`).join("") + "</div>" : ""}
+    <div class="box"><label style="margin-top:0">Grund (Pflicht)</label><textarea id="grund" maxlength="300" placeholder="z. B. Arzttermin – Rückruf mache ich morgen früh"></textarea></div>
+    <div class="fehler" id="fe"></div><div class="fknoepfe"><button class="grau" id="zurueck">Zurück</button><button class="warnk" id="trotzdem">Trotzdem gehen</button></div>`;
+  $("zurueck").onclick = () => { $("kopf").textContent = "🚪 Feierabend"; feierabendZeigen(); };
+  $("trotzdem").onclick = () => { const b = {}; document.querySelectorAll("textarea[data-k]").forEach(t => { if (t.value.trim()) b[t.dataset.k] = t.value.trim(); }); verlassen($("grund").value.trim(), b); };
+}
+async function verlassen(grund, begruendungen) {
+  const k = $("trotzdem") || $("gehen"); if (k) k.disabled = true; $("fe").textContent = "";
+  try {
+    const d = await api("/kernzeit/feierabend-gehen", { method: "POST", body: JSON.stringify({ grund, begruendungen }) });
+    try { WA.player.state.saveVariable("swFeierabendTag", new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Berlin" }), { public: false, persist: true }); } catch (e) { /* ohne Büro */ }
+    const kzD = d.kernzeit, frage = kzD && (kzD.offen || []).length;
+    $("kopf").textContent = "🚪 Feierabend";
+    if (frage) { zeigen(kzD); $("inhalt").insertAdjacentHTML("beforeend", '<button id="raus" class="warnk" style="width:100%">Jetzt Büro verlassen</button>'); $("raus").onclick = rausGehen; return; }
+    $("inhalt").innerHTML = '<div class="box gruen"><div class="titel">🌙 Schönen Feierabend!</div><div class="m">Du wirst gleich aus dem Büro abgemeldet …</div></div>';
+    setTimeout(rausGehen, 1800);
+  } catch (e) { if (e.message === "ausweis") return ausweisFormular("Bitte kurz neu anmelden."); $("fe").textContent = e.message; if (k) k.disabled = false; }
+}
+function rausGehen() { try { WA.player.state.saveVariable("swAktion", { was: "feierabendGehen", t: Date.now() }, { public: false, persist: false }); } catch (e) { /* ohne Büro */ } }
 let feierabendGemacht = false;
 async function start() {
   if (!ausweis.holen()) return ausweisFormular();
   try {
     let d;
-    if (FEIERABEND && !feierabendGemacht) { $("kopf").textContent = "🚪 Feierabend"; d = await api("/kernzeit/feierabend", { method: "POST" }); feierabendGemacht = true; try { WA.player.state.saveVariable("swFeierabendTag", new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Berlin" }), { public: false, persist: true }); } catch (e) { /* ohne Büro */ } }
-    else d = await api("/kernzeit");
+    if (FEIERABEND && !feierabendGemacht) { $("kopf").textContent = "🚪 Feierabend"; FS = await api("/kernzeit/feierabend-stand"); feierabendGemacht = true; return feierabendZeigen(); } // 14.10.2026: erst ansehen, gehen per Knopf
+    d = await api("/kernzeit");
     zeigen(d);
   } catch (e) { if (e.message === "ausweis") return ausweisFormular("Bitte kurz neu anmelden."); $("inhalt").innerHTML = '<div class="leer">' + esc(e.message) + "</div>"; }
 }
