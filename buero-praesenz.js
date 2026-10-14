@@ -1519,6 +1519,22 @@
       fenster = null;
     });
   }
+  // Ron (14.10.2026): Onboarding-Agent, Zimmer R4 im Anbau – Leertaste an seinem Tisch → ron.html
+  function ronPlatz() {
+    let fenster = null;
+    leertasteBereich("ron-platz", { x: 106, y: 31, w: 2, h: 2 }, "💬 Ron · Onboarding – Leertaste", async () => {
+      try {
+        fenster = await glasFenster(SEITEN + "ron.html?t=" + Date.now());
+      } catch {
+      }
+    }, () => {
+      try {
+        fenster && fenster.close();
+      } catch {
+      }
+      fenster = null;
+    });
+  }
   function itPlatz() {
     [["rengid", "Rengid \xB7 IT-Agent", 94], ["olga", "Olga \xB7 IT", 96]].forEach(([k, t, x]) => {
       let fenster = null;
@@ -1892,6 +1908,7 @@
     utePlatz();
     jaPlatz();
     itPlatz();
+    ronPlatz();
     fussgaengerAmpel();
     klingel();
     hundStarten();
