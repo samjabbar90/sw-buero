@@ -444,6 +444,17 @@
     } catch {
     }
   }
+  async function ausweisWeitergeben(token) {
+    try {
+      await WA.player.state.saveVariable("swAusweisNeu", token, { public: false, persist: false });
+    } catch {
+      return;
+    }
+    try {
+      await WA.ui.website.open({ url: SEITEN + "ausweis-sync.html?v=1", allowApi: true, visible: true, position: { vertical: "top", horizontal: "left" }, size: { width: "1px", height: "1px" }, margin: { top: "0px", left: "0px" } });
+    } catch {
+    }
+  }
   function leertasteAus(_) {
     return { remove: () => {
     } };
@@ -1961,12 +1972,7 @@
       try {
         const r = await fetch(ENDPOINT.replace(/melden$/, "ausweis/frisch"), { method: "POST", headers: { "Content-Type": "application/json", "X-Buero-Key": BUERO_KEY }, body: JSON.stringify({ name: WA.player.name }) });
         const d = await r.json();
-        if (d.token) {
-          try {
-            localStorage.setItem("swBueroAusweis", d.token);
-          } catch {
-          }
-        }
+        if (d.token) ausweisWeitergeben(d.token);
         return !!d.frisch;
       } catch {
         return false;
