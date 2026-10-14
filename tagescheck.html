@@ -26,6 +26,8 @@
   textarea { width:100%; font:inherit; font-size:12.5px; border-radius:7px; border:1px solid rgba(255,255,255,.25); background:rgba(0,0,0,.35); color:#fff; padding:6px; resize:none; height:46px; }
   .fehler { color:#fca5a5; font-size:11.5px; margin-top:3px; }
   /* T1 (14.10.2026, Sam): eingeklappt nur eine Pille „✅ 3/7“ */
+  .zuk { font-size:11px; font-weight:700; padding:3px 8px; border-radius:7px; background:#3f4651; color:#fff; border:0; cursor:pointer; } .zuk:hover { background:#1f2937; }
+  .kopf { cursor:pointer; } /* 14.10.2026 abends: Klick auf die Kopfzeile klappt ebenfalls ein */
   .pille { display:inline-flex; align-items:center; gap:7px; height:34px; padding:0 13px; border-radius:17px; background:rgba(22,26,34,.95); border:1px solid rgba(255,255,255,.12); color:#fff; font-size:13.5px; font-weight:700; cursor:pointer; }
   .pille .pu { width:9px; height:9px; border-radius:50%; background:#10b981; } .pille .pu.bald { background:#f59e0b; } .pille .pu.rot { background:#ef4444; }
   /* ganze Liste (Glas-Fenster) */
@@ -95,7 +97,7 @@ function karteZeichnen() {
   if (zu && (rot || bald)) { const schl = mahnSchl(); if (schl && merk.holen("swTcAuf") !== schl) { merk.setzen("swTcAuf", schl); zu = false; merk.setzen("swTcZu", ""); } }
   if (zu && !erklaeren) { groesse(true); app.innerHTML = `<div class="pille" id="auf" title="Tages-Check aufklappen">✅ ${D.erledigt}/${D.gesamt}<span class="pu ${rot ? "rot" : bald ? "bald" : ""}"></span></div>`; $("auf").onclick = () => klappen(false); return; }
   groesse(false);
-  let h = `<div class="k"><div class="kopf"><span>✅ <b>Tages-Check</b> · ${D.erledigt}/${D.gesamt}</span><span><a id="alle">Liste ▾</a> &nbsp;<a id="zuK" title="einklappen">▴</a></span></div><div class="balken"><div style="width:${pz}%"></div></div>`;
+  let h = `<div class="k"><div class="kopf"><span>✅ <b>Tages-Check</b> · ${D.erledigt}/${D.gesamt}</span><span style="display:flex;gap:6px;align-items:center"><a id="alle">Liste ▾</a><button id="zuK" class="zuk" title="Karte einklappen">– Einklappen</button></span></div><div class="balken"><div style="width:${pz}%"></div></div>`;
   if (!p) h += '<div class="text" style="margin-top:6px">🎉 Alles erledigt für heute</div><div class="klein">Gut gemacht!</div>';
   else if (erklaeren === p.id) h += `<div class="klein">Warum ist „${esc(p.text)}“ nicht erledigt?</div><textarea id="erkl" maxlength="500" placeholder="kurze Erklärung"></textarea><div class="zeile" style="margin-top:5px"><button class="b-ok" id="senden">Senden</button><button class="b-leicht" id="abbr">Abbrechen</button></div>`;
   else {
@@ -108,7 +110,8 @@ function karteZeichnen() {
   if (fehler) h += `<div class="fehler">${esc(fehler)}</div>`;
   app.innerHTML = h + "</div>";
   if ($("alle")) $("alle").onclick = listeOeffnen;
-  if ($("zuK")) $("zuK").onclick = () => klappen(true);
+  if ($("zuK")) $("zuK").onclick = e => { e.stopPropagation(); klappen(true); };
+  const kopf = document.querySelector(".kopf"); if (kopf) kopf.onclick = e => { if (!e.target.closest("a, button")) klappen(true); };
   document.querySelectorAll("[data-s]").forEach(b => b.onclick = () => setzen(p.id, b.dataset.s));
   if ($("erklKnopf")) $("erklKnopf").onclick = () => { erklaeren = p.id; fehler = ""; karteZeichnen(); setTimeout(() => $("erkl") && $("erkl").focus(), 30); };
   if ($("senden")) $("senden").onclick = () => setzen(p.id, "erklaert", $("erkl").value);
