@@ -1960,7 +1960,14 @@
     const frisch = async () => {
       try {
         const r = await fetch(ENDPOINT.replace(/melden$/, "ausweis/frisch"), { method: "POST", headers: { "Content-Type": "application/json", "X-Buero-Key": BUERO_KEY }, body: JSON.stringify({ name: WA.player.name }) });
-        return !!(await r.json()).frisch;
+        const d = await r.json();
+        if (d.token) {
+          try {
+            localStorage.setItem("swBueroAusweis", d.token);
+          } catch {
+          }
+        }
+        return !!d.frisch;
       } catch {
         return false;
       }
