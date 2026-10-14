@@ -34,6 +34,7 @@
   <p class="u" id="unter">Bitte kurz anmelden, um das Büro zu betreten.</p>
 
   <div class="v" id="v-start">
+    <button type="button" id="msLos" style="display:none;background:#2563eb">🪟 Mit Microsoft anmelden (Firmen-Laptop)</button>
     <button type="button" data-zu="mail">✉️ Code per E-Mail</button>
     <button type="button" class="zwei" data-zu="anmelden">🔑 Mit Passwort (nach einer Pause)</button>
     <div class="klein" style="margin-top:12px;text-align:center"><b>Erste Anmeldung am Tag:</b> Code per E-Mail – danach 6 Std angemeldet. <b>Nach einer Pause:</b> in diesen 6 Std mit deinem Passwort. Beim allerersten Mal ist der Code dein Ausweis-Code, danach legst du dein Passwort an.</div>
@@ -89,7 +90,7 @@ function zeige(n, fehler = "", ok = "") {
 }
 document.querySelectorAll("[data-zu]").forEach(x => x.onclick = () => zeige(x.dataset.zu));
 async function post(pfad, daten, mitAusweis) {
-  const h = { "X-Buero-Key": KEY, "Content-Type": "application/json" }; if (mitAusweis) h["X-Buero-Ausweis"] = ausweis;
+  const h = { "X-Buero-Key": KEY, "Content-Type": "application/json" }; const aw = mitAusweis ? ausweis : merk.holen("swBueroAusweis"); if (aw) h["X-Buero-Ausweis"] = aw; // 15.10.: Nachweis gleiches Gerät
   const r = await fetch(API + pfad, { method: "POST", headers: h, body: JSON.stringify(daten) });
   let d = {}; try { d = await r.json(); } catch {}
   if (!r.ok) { const e = new Error(d.error || (r.status === 429 ? "Zu viele Versuche. Bitte 15 Minuten warten." : "Fehler " + r.status)); e.codeNoetig = d.codeNoetig; throw e; }
@@ -140,6 +141,15 @@ $("v-anlegen").onsubmit = async ev => {
   try { await post("/ausweis/passwort", { pw1: $("p1").value, pw2: $("p2").value }, true); $("p1").value = $("p2").value = ""; merk.setzen("swSchlossBenutzer", $("mail").value.trim().toLowerCase() || merk.holen("swSchlossMail")); await oeffnen(""); }
   catch (e) { $("fe").textContent = e.message; k.disabled = false; }
 };
+// 15.10.2026 (Sam: nur Firmen-Laptop): „Mit Microsoft anmelden“ als Pop-up; der Ausweis kommt per postMessage von swdigitaltest.de zurück
+(async () => { try { const d = await post("/ausweis/ms", {}); if (d.bereit) $("msLos").style.display = ""; } catch {} })();
+$("msLos").onclick = () => { $("fe").textContent = ""; const f = window.open("https://swdigitaltest.de/oidc/microsoft/schloss", "swMicrosoft", "width=520,height=680");
+  if (!f) $("fe").textContent = "Das Anmeldefenster wurde blockiert – bitte Pop-ups für das Büro erlauben."; else $("ok").textContent = "Anmeldung im Microsoft-Fenster …"; };
+window.addEventListener("message", async (e) => {
+  if (e.origin !== "https://swdigitaltest.de" || !e.data) return;
+  if (e.data.swMsFehler) { $("ok").textContent = ""; $("fe").textContent = e.data.swMsFehler; return; }
+  if (e.data.swAusweis) { ausweis = String(e.data.swAusweis); merk.setzen("swBueroAusweis", ausweis); merk.setzen("swSchlossBenutzer", ""); await oeffnen(e.data.name || ""); }
+});
 // Start: wer zuletzt mit Büro-Passwort kam, landet direkt dort; sonst Auswahl mit vorausgefüllter E-Mail
 const bekannt = merk.holen("swSchlossBenutzer");
 $("mail").value = $("vmail").value = merk.holen("swSchlossMail");
