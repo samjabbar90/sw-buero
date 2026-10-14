@@ -24,7 +24,11 @@ const q = new URLSearchParams(location.search), BILD = "poster/" + (q.get("bild"
 if (q.has("gross")) {
   document.body.className = "gross";
   document.body.innerHTML = '<img alt="Poster" src="' + BILD + '"><button class="zu" title="Schließen">✕</button>';
-  document.querySelector(".zu").onclick = () => { try { WA.ui.modal.closeModal(); } catch (e) { window.close(); } };
+  const zu = () => { try { WA.ui.modal.closeModal(); } catch (e) { window.close(); } };
+  document.querySelector(".zu").onclick = zu;
+  // 14.10.2026: auch mit Esc und Klick neben das Bild schließen
+  document.addEventListener("keydown", e => { if (e.key === "Escape") zu(); });
+  document.body.addEventListener("click", e => { if (e.target === document.body) zu(); });
 } else {
   const d = document.createElement("div"); d.className = "wand"; d.title = "Klicken: Poster groß ansehen"; d.style.backgroundImage = "url('" + BILD + "')"; document.body.appendChild(d);
   d.onclick = async () => { try { await WA.onInit(); WA.ui.modal.openModal({ title: "Poster", src: location.href.split("?")[0] + "?gross=1&bild=" + encodeURIComponent(q.get("bild") || ""), allowApi: true, position: "center", allow: "fullscreen" }); } catch (e) { window.open(BILD, "_blank"); } };
