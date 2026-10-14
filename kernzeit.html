@@ -37,6 +37,8 @@
   .st.ok { background:#dcfce7; color:#166534; } .st.offen { background:#fef3c7; color:#92400e; } .st.rot { background:#fee2e2; color:#b91c1c; }
   .pk .tx { flex:1; min-width:0; } .pk .q { font-size:11px; color:#64748b; } .pk .f { font-size:11.5px; color:#64748b; white-space:nowrap; }
   .fknoepfe { display:flex; gap:8px; } .fknoepfe button { flex:1; } button.grau { background:#3f4651; border-color:#3f4651; } button.warnk { background:#b45309; border-color:#b45309; }
+  .ut { width:100%; border-collapse:collapse; font-size:13px; margin-top:6px; } .ut td, .ut th { padding:4px 6px; text-align:left; } .ut th { font-size:11px; color:#64748b; } .ut tr + tr td { border-top:1px solid #f1f5f9; }
+  .gross { font-size:24px; font-weight:800; color:#0f766e; } .uk { display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; } .uk button { flex:1; }
   textarea { width:100%; font:inherit; font-size:13px; padding:7px 9px; border:1.5px solid #cbd5e1; border-radius:8px; resize:vertical; min-height:42px; }
 </style>
 <script src="glas.js?v=1791917122"></script>
@@ -115,7 +117,41 @@ async function grund(g) {
   catch (e) { if (e.message === "ausweis") return ausweisFormular(); $("feG").textContent = e.message; }
 }
 // ===== Feierabend F1 (14.10.2026, Sam): Zeit + Aufgaben mit Frist heute, „Büro verlassen“ mit Hinweis/Grund/Begründungen =====
-let FS = null;
+let FS = null, UE = null;
+// ===== Überstunden (14.10.2026, Sam: 1A–1D / 2A–2C) =====
+const hm = m => (m < 0 ? "−" : "") + Math.floor(Math.abs(m) / 60) + ":" + String(Math.round(Math.abs(m) % 60)).padStart(2, "0");
+function ueKasten() {
+  const h = UE && UE.heute; if (!h || !h.aktiv || !h.ueberMin) return "";
+  if (h.beantragt) return `<div class="box gruen"><div class="titel">➕ Überstunden heute: +${hm(h.beantragt.minuten)}</div><div class="m">${h.beantragt.status === "genehmigt" ? "✔ bestätigt – ist auf deinem Konto" : h.beantragt.status === "abgelehnt" ? "✖ abgelehnt" : "⏳ beantragt – wartet auf Bestätigung"}</div></div>`;
+  const tab = `<table class="ut"><tr><th></th><th>System</th><th>DATEV</th></tr><tr><td>Ist heute</td><td>${hm(h.sysMin)}</td><td>${h.datevMin != null ? hm(h.datevMin) : "–"}</td></tr></table>`;
+  if (h.datevFehler) return `<div class="box warn"><div class="titel">➕ Überstunden heute: +${hm(h.ueberMin)}</div><div class="m">${esc(h.datevFehler)}</div><div class="uk"><button class="grau" id="ueNeu">↻ Neu prüfen</button></div></div>`;
+  if (!h.ok) return `<div class="box rot"><div class="titel">⚠ Zeiten stimmen nicht überein</div>${tab}<div style="color:#b91c1c;font-weight:700;margin-top:6px">✖ ${h.abw} Min Abweichung zwischen System und DATEV</div>
+    <div class="m" style="margin-top:4px">Bitte die Zeit in DATEV nachtragen oder an HR melden. Überstunden (+${hm(h.ueberMin)}) kannst du erst beantragen, wenn beides passt.</div>
+    <div class="uk"><button class="grau" id="ueNeu">↻ Neu prüfen</button><button class="warnk" id="ueHr">Korrektur an HR melden</button></div></div>`;
+  return `<div class="box gruen"><div class="titel">➕ Überstunden heute</div><div class="gross">+${hm(h.ueberMin)} Std</div>${tab}<div style="color:#166534;font-weight:700;margin-top:6px">✔ Abgleich in Ordnung – ${h.abw} Min Abweichung</div>
+    <div class="uk"><button id="ueAntrag">Überstunden beantragen (+${hm(h.ueberMin)})</button></div><div class="m" style="margin-top:4px">Auf dein Konto (jetzt ${hm(UE.konto)}) kommen sie, sobald deine Vorgesetzten bestätigen.</div></div>`;
+}
+function ueKnoepfe(neuZeichnen) {
+  if ($("ueNeu")) $("ueNeu").onclick = async () => { $("ueNeu").disabled = true; try { UE = await api("/kernzeit/ueberstunden"); } catch (e) {} neuZeichnen(); };
+  if ($("ueHr")) $("ueHr").onclick = async () => { $("ueHr").disabled = true; try { await api("/kernzeit/ueberstunden-korrektur", { method: "POST" }); $("ueHr").textContent = "✔ an HR gemeldet"; } catch (e) { alert(e.message); $("ueHr").disabled = false; } };
+  if ($("ueAntrag")) $("ueAntrag").onclick = async () => { $("ueAntrag").disabled = true; try { await api("/kernzeit/ueberstunden-beantragen", { method: "POST" }); UE = await api("/kernzeit/ueberstunden"); neuZeichnen(); } catch (e) { alert(e.message); $("ueAntrag").disabled = false; } };
+}
+// „Meine Arbeitszeit“: Konto, Überstundenabbau beantragen, Verlauf
+async function ueBereich() {
+  try { UE = await api("/kernzeit/ueberstunden"); } catch (e) { return; }
+  const morgen = new Date(Date.now() + 864e5).toLocaleDateString("sv-SE", { timeZone: "Europe/Berlin" });
+  const art = e => e.art === "plus" ? "Überstunden" : "Überstundenabbau " + esc(e.von) + "–" + esc(e.bis) + (e.ausnahme ? " (Ausnahme)" : "");
+  const st = e => e.status === "genehmigt" ? (e.art === "plus" ? "✔ bestätigt" : "✔ genehmigt") : e.status === "abgelehnt" ? "✖ abgelehnt" : "⏳ offen";
+  const h = `<div class="box" id="ueBox"><div class="titel">⏱ Überstundenkonto</div><div class="gross">${hm(UE.konto)} Std</div>${UE.beantragtAbbau ? '<div class="m">davon schon für Abbau beantragt: ' + hm(UE.beantragtAbbau) + "</div>" : ""}
+    <div class="titel" style="margin-top:12px">➖ Überstundenabbau beantragen</div><div class="m">Mindestens 12 Stunden vorher. Nach der Genehmigung gibt es im Zeitraum keine Kernzeit-Meldung.</div>
+    <div style="display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:6px;margin-top:6px"><div><label style="margin-top:0">Tag</label><input type="date" id="abTag" value="${morgen}"></div><div><label style="margin-top:0">von</label><input type="time" id="abVon" value="15:00"></div><div><label style="margin-top:0">bis</label><input type="time" id="abBis" value="17:00"></div></div>
+    <div class="fehler" id="abFe"></div><button id="abLos" style="width:100%;margin-top:8px">Beantragen</button>
+    ${(UE.verlauf || []).length ? '<div class="titel" style="margin-top:12px">Verlauf</div>' + UE.verlauf.slice(0, 12).map(e => '<div class="m" style="display:flex;gap:8px;padding:3px 0"><span style="flex:1">' + tagDE(e.datum) + " · " + art(e) + '</span><b style="color:' + (e.art === "plus" ? "#166534" : "#b91c1c") + '">' + (e.art === "plus" ? "+" : "−") + hm(e.minuten) + "</b><span>" + st(e) + "</span></div>").join("") : ""}</div>`;
+  const alt = $("ueBox"); if (alt) alt.remove(); $("inhalt").insertAdjacentHTML("beforeend", h);
+  $("abLos").onclick = async () => { $("abLos").disabled = true; $("abFe").textContent = "";
+    try { await api("/kernzeit/abbau", { method: "POST", body: JSON.stringify({ datum: $("abTag").value, von: $("abVon").value, bis: $("abBis").value }) }); ueBereich(); }
+    catch (e) { $("abFe").textContent = e.message; $("abLos").disabled = false; } };
+}
 const jetztMin = () => { const t = new Date().toLocaleTimeString("de-DE", { timeZone: "Europe/Berlin", hour: "2-digit", minute: "2-digit" }).split(":"); return +t[0] * 60 + +t[1]; };
 const minVon = t => { const m = /^(\d{1,2}):(\d{2})/.exec(t || ""); return m ? +m[1] * 60 + +m[2] : null; };
 async function fensterZu() { try { const alle = await WA.ui.website.getAll(); const me = alle.find(w => String(w.url || "").split("#")[0] === location.href.split("#")[0]); if (me) me.close(); } catch (e) { /* außerhalb des Büros */ } }
@@ -132,10 +168,11 @@ function feierabendZeigen() {
       <div class="fb"><i style="width:${pz}%"></i></div>
       <div class="m" style="${z.fruehMin > 0 ? "color:#b45309;font-weight:600" : ""}">${z.fruehMin > 0 ? "⚠ Du gehst " + z.fruehMin + " Min vor Ende der Kernarbeitszeit" : z.entschuldigt ? "✔ " + esc(z.entschuldigt) + " – keine Kernzeit-Meldung" : "✔ Kernarbeitszeit erreicht"}</div></div>`;
   }
+  h += ueKasten();
   h += `<div class="box"><div class="titel">✅ Aufgaben mit Frist heute · ${s.aufgaben.length - offen.length} von ${s.aufgaben.length}</div>${s.aufgaben.length ? s.aufgaben.map(aufgabeHtml).join("") : '<div class="m">Heute keine Aufgaben mit Frist.</div>'}</div>`;
   h += '<div class="fehler" id="fe"></div><div class="fknoepfe"><button class="grau" id="weiter">Weiterarbeiten</button><button class="warnk" id="gehen">Büro verlassen</button></div>';
   $("inhalt").innerHTML = h;
-  $("weiter").onclick = fensterZu;
+  $("weiter").onclick = fensterZu; ueKnoepfe(feierabendZeigen);
   $("gehen").onclick = () => (offen.length || (z && z.fruehMin > 0)) ? hinweisZeigen() : verlassen("", {});
 }
 function hinweisZeigen() {
@@ -167,9 +204,9 @@ async function start() {
   if (!ausweis.holen()) return ausweisFormular();
   try {
     let d;
-    if (FEIERABEND && !feierabendGemacht) { $("kopf").textContent = "🚪 Feierabend"; FS = await api("/kernzeit/feierabend-stand"); feierabendGemacht = true; return feierabendZeigen(); } // 14.10.2026: erst ansehen, gehen per Knopf
+    if (FEIERABEND && !feierabendGemacht) { $("kopf").textContent = "🚪 Feierabend"; [FS, UE] = await Promise.all([api("/kernzeit/feierabend-stand"), api("/kernzeit/ueberstunden").catch(() => null)]); feierabendGemacht = true; return feierabendZeigen(); } // 14.10.2026: erst ansehen, gehen per Knopf
     d = await api("/kernzeit");
-    zeigen(d);
+    zeigen(d); if (d.aktiv && !d.freierTag) ueBereich();
   } catch (e) { if (e.message === "ausweis") return ausweisFormular("Bitte kurz neu anmelden."); $("inhalt").innerHTML = '<div class="leer">' + esc(e.message) + "</div>"; }
 }
 start();
