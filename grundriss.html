@@ -58,10 +58,9 @@ function zeichnen() {
   h += `<rect x="${P(32, X0)}" y="${P(70, Y0)}" width="${30 * s}" height="${12 * s}" fill="#ffffff" stroke="#e5e7eb"/>`;
   for (const r of raeume) {
     const a = art(r.name), [f, st] = FARBE[a], x = P(r.x, X0), y = P(r.y, Y0), w = r.w * s, hh = r.h * s;
-    const label = r.name in PERSON ? (PERSON[r.name] ? kurz(PERSON[r.name]) : "frei") : (r.name in NAME ? NAME[r.name] : r.name);
+    const label = r.name in PERSON ? (PERSON[r.name] ? kurz(PERSON[r.name]) : "frei") : /^Zimmer d+$/.test(r.name) ? "frei" : (r.name in NAME ? NAME[r.name] : r.name);
     h += `<g class="raum" data-raum="${esc(r.name)}"><rect x="${x}" y="${y}" width="${w}" height="${hh}" rx="${s * 0.4}" fill="${f}" stroke="${st}" stroke-width="1.5"/>`;
     if (label) h += `<text x="${x + w / 2}" y="${y + Math.min(hh / 2, s * 1.6) + 4}" text-anchor="middle" font-size="${Math.max(9, Math.min(13, s * 1.6))}" font-weight="600" fill="#475569">${esc(label)}</text>`;
-    if (tueren[r.name]) h += `<text x="${x + w - s * 0.9}" y="${y + s * 1.2}" font-size="${Math.max(9, s * 1.2)}" text-anchor="middle">🚪</text>`;
     h += `</g>`;
   }
   svg.innerHTML = h + '<g id="leute"></g>'; leuteMalen();
