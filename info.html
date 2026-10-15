@@ -31,6 +31,8 @@
   /* Handy Layout 1 (12.10.2026, Sam): statt der breiten Leiste zwei kleine Chips oben – ?teil=status (Online-Dauer + Kollegen, Tippen = Team) und ?teil=tuer */
   body.teil-status .teil:has(#uhr), body.teil-status #tuer, body.teil-status #fokus, body.teil-status #feierabend, body.teil-status #news, body.teil-status .lang { display:none !important; }
   body.teil-tuer .teil:not(#tuer) { display:none !important; } body.teil-tuer #tuer { border-left:0 !important; }
+  /* flache Leiste am PC (15.10.2026 spät): 24 px hoch, ganz unten */
+  body.flach .pille { font-size:12px; border-radius:8px 8px 0 0; padding:0 2px; } body.flach .teil { height:20px; padding:0 9px; gap:4px; } body.flach button.teil { padding:0 10px; }
   body.teil-status .pille, body.teil-tuer .pille { font-size:13px; padding:0 2px; background:rgba(20,24,34,.88); border:1px solid rgba(255,255,255,.14); } body.teil-status .teil { padding:0 8px; } body.teil-status { cursor:pointer; }
 </style>
 </head>
@@ -128,6 +130,7 @@ if (new URLSearchParams(location.search).has('kz')) { $('feierabend').style.disp
 // Handy-Chips: Teil wählen; der Status-Chip öffnet beim Tippen das Team
 const TEIL = new URLSearchParams(location.search).get("teil") || "";
 if (TEIL) document.body.classList.add("teil-" + TEIL);
+if (new URLSearchParams(location.search).has("flach")) document.body.classList.add("flach");
 if (TEIL === "status") document.body.addEventListener("click", () => { try { WA.player.state.saveVariable("swAktion", { was: "team", t: Date.now() }, { public: false, persist: false }); } catch { /* ältere Version */ } });
 
 WA.onInit().then(async () => {
