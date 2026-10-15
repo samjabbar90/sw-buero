@@ -28,8 +28,93 @@
     }
     setTimeout(() => WA.nav.goToPage(url), 150);
   }
+  var mitteilungen = [];
+  var mtFenster = null;
+  var mtAnzahl = -1;
+  var mtLage = "";
+  function mitteilung(m, autoWegMs = 0) {
+    if (HANDY) {
+      kurzMeldung((m.art === "klopfen" ? "\u270A " : m.art === "termin" ? "\u{1F4C5} " : "\u{1F4AC} ") + (m.von ? String(m.von).split(/\s+/)[0] + ": " : "") + (m.titel || m.kurz || m.text || ""), 12e3);
+      return "";
+    }
+    const id = Math.random().toString(36).slice(2, 9);
+    mitteilungen = [{ ...m, id, t: Date.now() }, ...mitteilungen].slice(0, 5);
+    if (m.art === "klopfen" || m.art === "termin" || m.art === "nachricht") ton("klingel");
+    mtZeigen();
+    if (autoWegMs) setTimeout(() => mtWeg(id), autoWegMs);
+    return id;
+  }
+  function mtWeg(id) {
+    const n = mitteilungen.length;
+    mitteilungen = mitteilungen.filter((x) => x.id !== id);
+    if (mitteilungen.length !== n) mtZeigen();
+  }
+  async function mtZeigen() {
+    try {
+      await WA.player.state.saveVariable("swMitteilungen", mitteilungen, { public: false, persist: false });
+    } catch {
+    }
+    let rechts = 12;
+    if (glasOffen) {
+      try {
+        const g = glasLage();
+        if (g.position && g.position.horizontal === "right") rechts = parseInt(g.margin.right) + parseInt(g.size.width) + 10;
+      } catch {
+      }
+    }
+    const lage = mitteilungen.length + ":" + rechts;
+    if (lage === mtLage && mtFenster) return;
+    mtLage = lage;
+    const alt = mtFenster;
+    mtFenster = null;
+    if (mitteilungen.length) try {
+      mtFenster = await WA.ui.website.open({
+        url: SEITEN + "mitteilungen.html?v=1",
+        allowApi: true,
+        visible: true,
+        position: { vertical: "top", horizontal: "right" },
+        size: { width: "330px", height: mitteilungen.length * 104 + 8 + "px" },
+        margin: { top: "64px", right: rechts + "px" }
+      });
+    } catch {
+    }
+    try {
+      alt && alt.close();
+    } catch {
+    }
+    void mtAnzahl;
+  }
+  var MT_AKTIONEN = {
+    mtWeg: (m) => mtWeg(m.id),
+    mtReinlassen: (m) => {
+      try {
+        WA.event.broadcast("sw-reinlassen", { fuer: m.von, variable: m.variable });
+      } catch {
+      }
+      mtWeg(m.id);
+    },
+    mtGleich: (m) => {
+      try {
+        WA.event.broadcast("sw-gleich", { fuer: m.von, von: WA.player.name });
+      } catch {
+      }
+      mtWeg(m.id);
+    },
+    mtHin: (m) => {
+      if (m.raum) zuRaum(m.raum);
+      mtWeg(m.id);
+    },
+    mtChat: (m) => {
+      glasFenster(SEITEN + "wer.html?an=" + encodeURIComponent(m.von || "") + "&t=" + Date.now());
+      mtWeg(m.id);
+    }
+  };
   var nachrichtHinweis = null;
   function nachrichtZeigen(m) {
+    if (!HANDY) {
+      mitteilung({ art: "nachricht", von: m.von, text: String(m.text || "").slice(0, 300) });
+      return;
+    }
     try {
       nachrichtHinweis && nachrichtHinweis.remove();
     } catch {
@@ -206,6 +291,10 @@
       WA.room.setTiles(kacheln);
     } catch {
     }
+    try {
+      schilderAktualisieren();
+    } catch {
+    }
   }
   function tuerKnopf() {
     const t = meineTuer();
@@ -321,6 +410,10 @@
       const d = ev.data || {};
       const t = tueren.find((x) => x.offen && x.variable === d.variable && istBesitzer(x)) || meineTuer();
       if (!t || vorname(d.an) !== vorname(WA.player.name)) return;
+      if (!HANDY) {
+        mitteilung({ art: "klopfen", von: d.von, text: "an " + (t.offen ? t.raum : "deine T\xFCr"), variable: t.variable }, 6e4);
+        return;
+      }
       const m = WA.ui.displayActionMessage({
         message: `\u270A ${d.von} klopft an ${t.offen ? t.raum : "deine T\xFCr"} \u2013 Leertaste = reinlassen`,
         callback: () => WA.event.broadcast("sw-reinlassen", { fuer: d.von, variable: t.variable })
@@ -332,6 +425,11 @@
         }
       }, 2e4);
     });
+    WA.event.on("sw-gleich").subscribe((ev) => {
+      const d = ev.data || {};
+      if (d.fuer !== WA.player.name) return;
+      mitteilung({ art: "info", von: d.von, kurz: "kommt gleich", text: "Einen Moment \u2013 gleich geht die T\xFCr auf." }, 3e4);
+    });
     WA.event.on("sw-reinlassen").subscribe((ev) => {
       const d = ev.data || {};
       if (d.fuer !== WA.player.name) return;
@@ -339,14 +437,7 @@
       if (!t) return;
       freigabe.set(t.variable, Date.now() + 3e4);
       tuerAnwenden(t);
-      const m = WA.ui.displayActionMessage({ message: `${String(werVon(t)).split(/\s+/)[0]} hat dich reingelassen \u2013 komm rein!`, callback: () => {
-      } });
-      setTimeout(() => {
-        try {
-          m.remove();
-        } catch {
-        }
-      }, 5e3);
+      mitteilung({ art: "info", von: werVon(t), kurz: "hat dich reingelassen", text: "Komm rein \u2013 die T\xFCr ist 30 Sekunden offen." }, 1e4);
       setTimeout(() => tuerAnwenden(t), 30500);
     });
   }
@@ -438,30 +529,50 @@
   function hinweiseUeberwachen() {
     try {
       const orig = WA.ui.displayActionMessage.bind(WA.ui);
-      WA.ui.displayActionMessage = (o) => {
-        let weg = false;
-        const fertig = () => {
-          if (!weg) {
-            weg = true;
-            hinweiseOffen = Math.max(0, hinweiseOffen - 1);
-            leisteVerschieben();
-          }
-        };
-        const cb = o && o.callback;
-        const m = orig({ ...o, callback: () => {
-          fertig();
-          return cb && cb();
-        } });
-        hinweiseOffen++;
-        leisteVerschieben();
-        setTimeout(fertig, 6e4);
-        return { ...m, remove: () => {
-          fertig();
+      const stapel = [];
+      const zeigen = (e) => {
+        e.m = orig({ ...e.o, callback: () => {
+          e.m = null;
+          raus(e);
           try {
-            return m.remove();
+            return e.o.callback && e.o.callback();
+          } catch (x) {
+            console.warn(x);
+          }
+        } });
+      };
+      const zaehlen = () => {
+        hinweiseOffen = stapel.length;
+        leisteVerschieben();
+      };
+      const raus = (e) => {
+        if (e.weg) return;
+        e.weg = true;
+        try {
+          e.m && e.m.remove();
+        } catch {
+        }
+        e.m = null;
+        const i = stapel.indexOf(e);
+        if (i >= 0) stapel.splice(i, 1);
+        const oben = stapel[stapel.length - 1];
+        if (i === stapel.length && oben && !oben.m) zeigen(oben);
+        zaehlen();
+      };
+      WA.ui.displayActionMessage = (o) => {
+        const vorher = stapel[stapel.length - 1];
+        if (vorher && vorher.m) {
+          try {
+            vorher.m.remove();
           } catch {
           }
-        } };
+          vorher.m = null;
+        }
+        const e = { o, m: null, weg: false };
+        stapel.push(e);
+        zeigen(e);
+        zaehlen();
+        return { remove: () => raus(e) };
       };
     } catch {
     }
@@ -585,6 +696,7 @@
     }
   }
   function effekte() {
+    schilderAktualisieren();
     for (const o of ((karte && karte.layers || []).find((l) => l.name === "floorLayer") || { objects: [] }).objects) {
       if (!/^(Büro |Google Meet |Zoom |Teams )|^(Paris|Berlin|Lissabon|New York|Amsterdam|Moskau)$/.test(o.name)) continue;
       const an = aktuellerBereich === o.name || (info.belegt || []).includes(o.name);
@@ -764,6 +876,7 @@
     if (HANDY) handyBlattZu();
     try {
       glasOffen = { url: u, handle: await glasOeffnen(u) };
+      if (mitteilungen.length) mtZeigen();
     } catch (e) {
       console.warn("Glasfenster", e);
       try {
@@ -1681,21 +1794,41 @@
     "B\xFCro Kadir": "Kadir K.",
     "B\xFCro Attila": "Attila K."
   };
-  function namensschilder() {
+  var schilder = /* @__PURE__ */ new Map();
+  function schildStatus(t) {
+    if (t.offen ? zimmerDaten(t).s === "zu" : tuerStatus(t) === "fokus") return "fokus";
+    return aktuellerBereich === t.raum || (info.belegt || []).includes(t.raum) ? "da" : "weg";
+  }
+  var schildUrl = (t, n, st) => SEITEN + "schild.html?v=2&n=" + encodeURIComponent(n) + "&raum=" + encodeURIComponent(t.raum) + "&s=" + st;
+  async function namensschilder() {
     if (HANDY) return;
     for (const t of tueren) {
       const [rx, ry, rw] = t.rechteck, n = t.raum in SCHILD_PERSON ? SCHILD_PERSON[t.raum] : t.besitzer ? t.besitzer.charAt(0).toUpperCase() + t.besitzer.slice(1) : "";
-      const w = Math.min(rw - 0.4, 4.2);
+      const w = Math.min(rw - 0.3, 4.2), st = schildStatus(t);
       try {
-        WA.room.website.create({
+        const h = await WA.room.website.create({
           name: "schild-" + t.variable,
-          url: SEITEN + "schild.html?n=" + encodeURIComponent(n) + "&raum=" + encodeURIComponent(t.raum),
+          url: schildUrl(t, n, st),
           visible: true,
           allowApi: false,
           origin: "map",
           scale: 1,
-          position: { x: Math.round((rx + (rw - w) / 2) * 32), y: Math.round((ry + 0.05) * 32), width: Math.round(w * 32), height: 20 }
+          position: { x: Math.round((rx + 0.15) * 32), y: Math.round((ry + 0.1) * 32), width: Math.round(w * 32), height: 20 }
         });
+        schilder.set(t.variable, { h, n, s: st });
+      } catch {
+      }
+    }
+  }
+  function schilderAktualisieren() {
+    for (const t of tueren) {
+      const x = schilder.get(t.variable);
+      if (!x) continue;
+      const st = schildStatus(t);
+      if (st === x.s) continue;
+      x.s = st;
+      try {
+        x.h.url = schildUrl(t, x.n, st);
       } catch {
       }
     }
@@ -1763,6 +1896,10 @@
       } catch {
       }
       const text = (stufe === "vorher" ? `\u{1F4C5} In ${Math.max(1, rest)} Min: ` : "\u{1F4C5} Dein Termin hat begonnen: ") + t.titel + (t.ort ? " \xB7 " + t.ort : "") + (raum && !dort ? " \xB7 Leertaste = hinlaufen" : "");
+      if (!HANDY) {
+        mitteilung({ art: "termin", titel: (stufe === "vorher" ? "In " + Math.max(1, rest) + " Min: " : "Hat begonnen: ") + t.titel, text: t.ort ? "\u{1F4CD} " + t.ort : "", raum: raum && !dort ? raum : "" });
+        continue;
+      }
       ton("klingel");
       terminHinweis = WA.ui.displayActionMessage({ message: text, callback: () => {
         terminHinweis = null;
@@ -2433,6 +2570,10 @@
         if (v.was === "hinweisTipp") return hinweisGetippt(Number(v.nr) || 0);
         if (v.was === "team") return HANDY ? handyBlattUmschalten("team", SEITEN + "wer.html?sheet=1&t=" + Date.now(), "78vh") : glasFenster(SEITEN + "wer.html?t=" + Date.now());
         if (ZIMMER_AKTIONEN[v.was]) return ZIMMER_AKTIONEN[v.was](v);
+        if (MT_AKTIONEN[v.was]) {
+          const m = mitteilungen.find((x) => x.id === v.id);
+          return m ? MT_AKTIONEN[v.was](m) : void 0;
+        }
         if (v.was === "feierabendGehen") {
           return melden("verlassen").then(() => {
             beendet = true;

@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mitteilungen</title>
+<!-- Mitteilungen oben rechts, Layout H2 (15.10.2026, Sam): alles, was mit einer anderen Person zu tun hat (Nachricht, Anklopfen, Termin,
+     „komme gleich“, reingelassen), als Karte mit Knöpfen. Das Büro-Skript (main.ts › mitteilung) legt die Liste in die private
+     Spieler-Variable „swMitteilungen“; Knöpfe melden über „swAktion“ zurück (mtWeg, mtReinlassen, mtGleich, mtHin, mtChat).
+     Antworten auf Nachrichten geht direkt hier (Büro-Ausweis, /buero-praesenz/wer/nachricht). -->
+<style>
+  * { box-sizing:border-box; }
+  html, body { margin:0; background:transparent; overflow:hidden; font-family:system-ui,-apple-system,"Segoe UI",sans-serif; color:#111827; }
+  #l { display:flex; flex-direction:column; gap:8px; padding:4px; }
+  .m { background:#fff; border-radius:12px; padding:9px 11px; box-shadow:0 4px 14px rgba(0,0,0,.25); border-left:5px solid #0f766e; font-size:13.5px; height:96px; display:flex; flex-direction:column; animation:rein .25s ease-out; }
+  @keyframes rein { from { transform:translateX(30px); opacity:0; } to { transform:none; opacity:1; } }
+  .m.klopfen { border-left-color:#ea580c; } .m.termin { border-left-color:#2563eb; } .m.nachricht { border-left-color:#16a34a; } .m.info { border-left-color:#64748b; }
+  .kopf { display:flex; align-items:center; gap:6px; } .kopf b { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .zu { border:0; background:none; color:#6b7280; font-size:16px; cursor:pointer; padding:0 2px; line-height:1; }
+  .text { color:#374151; overflow:hidden; display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical; margin:2px 0 6px; }
+  .knoepfe { display:flex; gap:6px; margin-top:auto; }
+  .knoepfe button { font:inherit; font-size:12.5px; font-weight:700; border-radius:8px; padding:5px 10px; cursor:pointer; border:1.5px solid #0f766e; background:#fff; color:#0f766e; }
+  .knoepfe button.voll { background:#0f766e; color:#fff; }
+  .knoepfe input { flex:1; min-width:0; font:inherit; font-size:13px; border:1.5px solid #cbd5e1; border-radius:8px; padding:4px 8px; }
+  .zeit { font-size:11px; color:#9ca3af; font-weight:400; }
+</style>
+</head>
+<body>
+<div id="l"></div>
+<script src="https://play.workadventu.re/iframe_api.js"></script>
+<script>
+const KEY = "a21b2aa2a42fe6189b05773c07bbc9ad78e38b34ba3bb6fe";
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const ICON = { klopfen: "✊", termin: "📅", nachricht: "💬", info: "👋" };
+let liste = [], antwortAuf = "";
+const aktion = (was, id, extra) => { try { WA.player.state.saveVariable("swAktion", { was, id, ...(extra || {}), t: Date.now() }, { public: false, persist: false }); } catch (e) { console.warn(e); } };
+function zeichnen() {
+  document.getElementById("l").innerHTML = liste.map(m => {
+    const vn = String(m.von || "").split(/\s+/)[0], zeit = new Date(m.t).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
+    const titel = m.art === "klopfen" ? vn + " klopft an" : m.art === "nachricht" ? vn + " schreibt" : m.art === "termin" ? m.titel || "Termin" : (vn ? vn + " " : "") + (m.kurz || "");
+    let k = "";
+    if (m.art === "klopfen") k = `<button class="voll" data-a="mtReinlassen" data-id="${m.id}">Reinlassen</button><button data-a="mtGleich" data-id="${m.id}">Komme gleich</button>`;
+    if (m.art === "nachricht") k = antwortAuf === m.id ? `<input id="ant" placeholder="Antwort an ${esc(vn)} …" maxlength="300"><button class="voll" data-senden="${m.id}">Senden</button>`
+      : `<button class="voll" data-antw="${m.id}">Antworten</button><button data-a="mtChat" data-id="${m.id}">Chat öffnen</button>`;
+    if (m.art === "termin") k = (m.raum ? `<button class="voll" data-a="mtHin" data-id="${m.id}">🚶 Hingehen</button>` : "") + `<button data-a="mtWeg" data-id="${m.id}">OK</button>`;
+    return `<div class="m ${esc(m.art)}"><div class="kopf">${ICON[m.art] || "🔔"} <b>${esc(titel)}</b><span class="zeit">${zeit}</span><button class="zu" data-a="mtWeg" data-id="${m.id}" aria-label="Schließen">✕</button></div>
+      <div class="text">${esc(m.text || "")}</div><div class="knoepfe">${k}</div></div>`;
+  }).join("");
+  document.querySelectorAll("[data-a]").forEach(b => b.onclick = () => aktion(b.dataset.a, b.dataset.id));
+  document.querySelectorAll("[data-antw]").forEach(b => b.onclick = () => { antwortAuf = b.dataset.antw; zeichnen(); const i = document.getElementById("ant"); i && i.focus(); });
+  document.querySelectorAll("[data-senden]").forEach(b => b.onclick = () => senden(b.dataset.senden));
+  const i = document.getElementById("ant"); if (i) i.onkeydown = ev => { if (ev.key === "Enter") senden(antwortAuf); if (ev.key === "Escape") { antwortAuf = ""; zeichnen(); } ev.stopPropagation(); };
+}
+async function senden(id) {
+  const m = liste.find(x => x.id === id), i = document.getElementById("ant"), t = i ? i.value.trim() : ""; if (!m || !t) return;
+  let aw = ""; try { aw = localStorage.getItem("swBueroAusweis") || ""; } catch {}
+  try { const r = await fetch("https://swdigitaltest.de/buero-praesenz/wer/nachricht", { method: "POST", headers: { "X-Buero-Key": KEY, "X-Buero-Ausweis": aw, "X-Buero-Name": encodeURIComponent(WA.player.name || ""), "Content-Type": "application/json" }, body: JSON.stringify({ an: m.von, text: t }) });
+    const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || "Fehler");
+    antwortAuf = ""; aktion("mtWeg", id); }
+  catch (e) { aktion("mtChat", id); } // ohne Ausweis o. Ä.: Chat-Fenster öffnet die Anmeldung
+}
+WA.onInit().then(() => {
+  const neu = v => { liste = Array.isArray(v) ? v : []; if (!liste.some(x => x.id === antwortAuf)) antwortAuf = ""; zeichnen(); };
+  neu(WA.player.state.swMitteilungen);
+  WA.player.state.onVariableChange("swMitteilungen").subscribe(neu);
+});
+</script>
+</body>
+</html>

@@ -4,26 +4,31 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Namensschild</title>
-<!-- Namensschild im Büro (15.10.2026, Sam: „wenn man auf den Raum klickt, soll der Name erscheinen, damit man sieht, wer dort sitzt“).
-     Liegt als Webseite in der Karte (main.ts › namensschilder). Klein: Name. Klick: groß mit „Büro“, nach 4 s wieder klein. -->
+<!-- Namensschild im Büro, Layout N3 (15.10.2026, Sam): Kürzel + Status-Punkt oben links im Raum – grün = da, grau = nicht da,
+     lila = Fokus/abgeschlossen. Klick = ganzer Name, nach 4 s wieder Kürzel. Liegt als Webseite in der Karte (main.ts › namensschilder),
+     Status kommt über die Adresse (?s=da|weg|fokus), das Büro-Skript setzt sie neu, wenn er sich ändert. -->
 <style>
   html, body { margin:0; height:100%; background:transparent; overflow:hidden; font-family:system-ui,-apple-system,"Segoe UI",sans-serif; }
-  .s { height:100%; display:flex; align-items:center; justify-content:center; cursor:pointer; user-select:none; }
-  .s span { background:rgba(255,255,255,.88); color:#374151; border:1px solid rgba(17,24,39,.18); border-radius:999px; padding:0 8px; font-size:11px; font-weight:700; line-height:16px; white-space:nowrap; box-shadow:0 1px 2px rgba(0,0,0,.15); }
-  .s.leer span { color:#9ca3af; font-weight:600; }
-  .s.gross span { background:#0f766e; color:#fff; border-color:#0f766e; font-size:12px; }
+  .s { height:100%; display:flex; align-items:center; justify-content:flex-start; cursor:pointer; user-select:none; }
+  .s span { border-radius:999px; padding:0 7px; font-size:11px; font-weight:700; line-height:16px; white-space:nowrap; border:1px solid transparent; }
+  .da span { background:#dcfce7; color:#166534; border-color:#86efac; }
+  .weg span { background:#f1f5f9; color:#475569; border-color:#cbd5e1; }
+  .fokus span { background:#ede9fe; color:#5b21b6; border-color:#c4b5fd; }
+  .leer span { background:rgba(255,255,255,.7); color:#9ca3af; border-color:#e5e7eb; font-weight:600; }
 </style>
 </head>
 <body>
 <div class="s" id="s"><span id="t"></span></div>
 <script>
-const q = new URLSearchParams(location.search), n = q.get("n") || "", raum = q.get("raum") || "";
+const q = new URLSearchParams(location.search), n = q.get("n") || "", raum = q.get("raum") || "", st = q.get("s") || "weg";
+const kuerzel = n ? n.replace(/\./g, "").split(/\s+/).map(w => w[0] || "").join("").slice(0, 2).toUpperCase() : "";
+const TEXT = { da: "im Büro", weg: "nicht da", fokus: "Fokus – bitte anklopfen" };
 const s = document.getElementById("s"), t = document.getElementById("t");
-const klein = () => { s.classList.remove("gross"); t.textContent = n || "frei"; };
-if (!n) s.classList.add("leer");
+s.className = "s " + (n ? st : "leer");
+const klein = () => { t.textContent = n ? "● " + kuerzel : "frei"; };
 klein();
 let uhr = null;
-s.onclick = () => { s.classList.add("gross"); t.textContent = n ? "👤 " + n + " · Büro" : "Leeres Büro (" + raum + ")"; clearTimeout(uhr); uhr = setTimeout(klein, 4000); };
+s.onclick = () => { t.textContent = n ? "● " + n + " · " + (TEXT[st] || "") : "Leeres Büro (" + raum + ")"; clearTimeout(uhr); uhr = setTimeout(klein, 4000); };
 </script>
 </body>
 </html>

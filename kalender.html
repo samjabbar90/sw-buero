@@ -216,13 +216,13 @@ function formHtml() {
 }
 // Uhrzeit als zwei Auswahllisten (15.10.2026, Sam: „Zahlen bei der Uhrzeitwahl etwas versetzt“ – die eingebaute Uhrzeit-Auswahl des
 // Browsers verrutscht im Büro-Fenster). Stunde + Minute (5er-Schritte), Wert im versteckten Feld mit der alten id.
-// Uhrzeit (15.10.2026 abends, Sam: „selber reinschreiben können“): Eingabefeld mit Vorschlagsliste (15-Min-Schritte). Eingetippt geht
-// „930“, „9:30“, „9.30“ oder „9“ – beim Verlassen wird es zu „09:30“. „bis“ rückt automatisch 1 Std nach „von“, wenn es davor läge.
+// Uhrzeit (15.10.2026 abends, Sam: „Auswahl soll bleiben, nur zusätzlich selbst reinschreiben“): Eingabefeld + eigene Auswahlliste
+// (▾ oder Klick ins Feld, 15-Min-Schritte, scrollt zur aktuellen Zeit). Eingetippt geht „930“, „9:30“, „9.30“ oder „9“ → „09:30“.
+const ZEITEN = []; for (let h = 6; h <= 21; h++) for (const m of ["00", "15", "30", "45"]) ZEITEN.push(String(h).padStart(2, "0") + ":" + m);
 function zeitWahl(id, wert) {
-  if (!document.getElementById("zeiten")) { const dl = document.createElement("datalist"); dl.id = "zeiten";
-    for (let h = 6; h <= 21; h++) for (const m of ["00", "15", "30", "45"]) { const o = document.createElement("option"); o.value = String(h).padStart(2, "0") + ":" + m; dl.appendChild(o); }
-    document.body.appendChild(dl); }
-  return `<input id="${id}" list="zeiten" inputmode="numeric" autocomplete="off" maxlength="5" placeholder="09:00" value="${esc(wert || "")}" style="width:100%">`;
+  return `<div class="zw" style="position:relative;display:flex"><input id="${id}" inputmode="numeric" autocomplete="off" maxlength="5" placeholder="09:00" value="${esc(wert || "")}" style="width:100%;padding-right:30px">
+    <button type="button" class="leicht" data-zwauf="${id}" tabindex="-1" style="position:absolute;right:3px;top:3px;bottom:3px;padding:0 7px">▾</button>
+    <div class="zwliste" data-zwl="${id}" style="display:none;position:absolute;left:0;right:0;top:100%;z-index:9;max-height:190px;overflow:auto;background:#fff;color:#111827;border:1.5px solid #cbd5e1;border-radius:8px;margin-top:2px">${ZEITEN.map(z => `<div data-zwz="${z}" style="padding:6px 10px;cursor:pointer;font-size:13.5px">${z}</div>`).join("")}</div></div>`;
 }
 function zeitSauber(v) {
   const t = String(v || "").trim().replace(/[.,h ]/g, ":"); let h, m;
@@ -230,9 +230,15 @@ function zeitSauber(v) {
   return h <= 23 && m <= 59 ? String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0") : "";
 }
 function zeitWahlVerdrahten() {
+  const zu = () => document.querySelectorAll("[data-zwl]").forEach(l => l.style.display = "none");
+  const auf = id => { zu(); const l = document.querySelector(`[data-zwl="${id}"]`); l.style.display = "block"; const w = zeitSauber($(id).value) || "09:00";
+    const ziel = [...l.children].find(x => x.dataset.zwz >= w); if (ziel) { l.scrollTop = ziel.offsetTop - 40; ziel.style.background = "#ccfbf1"; } };
+  const setzen = (id, z) => { $(id).value = z; if (id === "fVon" && $("fBis") && (!$("fBis").value || $("fBis").value <= z)) $("fBis").value = String((+z.slice(0, 2) + 1) % 24).padStart(2, "0") + z.slice(2); };
   ["fVon", "fBis"].forEach(id => { const el = $(id); if (!el) return;
-    el.onchange = el.onblur = () => { const z = zeitSauber(el.value); if (z) el.value = z;
-      if (id === "fVon" && z && $("fBis") && (!$("fBis").value || $("fBis").value <= z)) $("fBis").value = String((+z.slice(0, 2) + 1) % 24).padStart(2, "0") + z.slice(2); }; });
+    el.onfocus = () => auf(id); el.oninput = () => zu();
+    el.onchange = el.onblur = () => { setTimeout(zu, 150); const z = zeitSauber(el.value); if (z) setzen(id, z); }; });
+  document.querySelectorAll("[data-zwauf]").forEach(b => b.onmousedown = ev => { ev.preventDefault(); const l = document.querySelector(`[data-zwl="${b.dataset.zwauf}"]`); l.style.display === "block" ? zu() : auf(b.dataset.zwauf); });
+  document.querySelectorAll("[data-zwz]").forEach(o => o.onmousedown = ev => { ev.preventDefault(); setzen(o.parentElement.dataset.zwl, o.dataset.zwz); zu(); });
 }
 function formAktivieren() {
   if (!S.form) return;
