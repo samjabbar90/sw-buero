@@ -33,7 +33,7 @@
   var mtAnzahl = -1;
   var mtLage = "";
   function mitteilung(m, autoWegMs = 0) {
-    if (HANDY) {
+    if (HANDY && !grundrissAn) {
       kurzMeldung((m.art === "klopfen" ? "\u270A " : m.art === "termin" ? "\u{1F4C5} " : "\u{1F4AC} ") + (m.von ? String(m.von).split(/\s+/)[0] + ": " : "") + (m.titel || m.kurz || m.text || ""), 12e3);
       return "";
     }
@@ -55,6 +55,7 @@
       await WA.player.state.saveVariable("swMitteilungen", mitteilungen, { public: false, persist: false });
     } catch {
     }
+    if (HANDY) return;
     let rechts = 12;
     if (glasOffen) {
       try {
@@ -1227,6 +1228,21 @@
     const nr = ++hinweisNr, cb = o && o.callback || (() => {
     }), knopf = String(cb).replace(/\s/g, "") !== "()=>{}";
     hinweisAkt = { nr, cb };
+    if (grundriss) {
+      try {
+        WA.player.state.saveVariable("swAppHinweis", { text: hinweisText(o && o.message), knopf, nr, t: Date.now() }, { public: false, persist: false });
+      } catch {
+      }
+      return { remove: () => {
+        if (hinweisAkt && hinweisAkt.nr === nr) {
+          hinweisAkt = null;
+          try {
+            WA.player.state.saveVariable("swAppHinweis", null, { public: false, persist: false });
+          } catch {
+          }
+        }
+      } };
+    }
     const url = SEITEN + "hinweis.html?nr=" + nr + (knopf ? "&knopf=1" : "") + "&text=" + encodeURIComponent(hinweisText(o && o.message));
     const alt = hinweisWeb;
     hinweisWeb = null;
@@ -1862,12 +1878,12 @@
     grundrissOeffnet = true;
     try {
       grundriss = await WA.ui.website.open({
-        url: SEITEN + "grundriss.html?v=2",
+        url: SEITEN + "app.html?v=1",
         allowApi: true,
         visible: true,
-        position: { vertical: "top", horizontal: "middle" },
-        size: { width: Math.round(screen.width || 390) + "px", height: "58vh" },
-        margin: { top: "104px" }
+        position: { vertical: "top", horizontal: "left" },
+        size: { width: Math.round(screen.width || 390) + "px", height: "100vh" },
+        margin: { top: "0px", left: "0px" }
       });
     } catch {
       grundriss = null;
@@ -1888,6 +1904,34 @@
     } catch {
     }
     grundrissZeigen();
+    klassikPruefen();
+  }
+  var klassik = [];
+  var klassikOeffnen = null;
+  var klassikOffen = false;
+  async function klassikPruefen() {
+    if (!HANDY) return;
+    const soll = !grundrissAn;
+    if (soll && !klassikOffen) {
+      klassikOffen = true;
+      try {
+        klassikOeffnen && await klassikOeffnen();
+      } catch {
+      }
+      try {
+        klassik.push(await WA.ui.website.open({ url: SEITEN + "handy-menue.html?v=3&appknopf=1", allowApi: true, visible: true, position: { vertical: "top", horizontal: "middle" }, size: { width: "120px", height: "40px" }, margin: { top: "64px" } }));
+      } catch {
+      }
+    }
+    if (!soll && klassikOffen) {
+      klassikOffen = false;
+      klassik.splice(0).forEach((h) => {
+        try {
+          h.close();
+        } catch {
+        }
+      });
+    }
   }
   async function arbeitenAuf() {
     handyBlattZu();
@@ -2438,29 +2482,44 @@
     if (!HANDY) wetterTakt();
     infoLaden();
     setInterval(infoLaden, 15e3);
+    let klassikLeiste = null;
     if (HANDY) {
-      try {
-        await WA.ui.website.open({
-          url: SEITEN + "info.html?v=6&teil=status" + (kzAktiv ? "&kz=1" : ""),
-          allowApi: true,
-          visible: true,
-          position: { vertical: "top", horizontal: "left" },
-          size: { width: "150px", height: "36px" },
-          margin: { top: "64px", left: "12px" }
-        });
-      } catch {
-      }
-      if (meineTuer()) try {
-        await WA.ui.website.open({
-          url: SEITEN + "info.html?v=6&teil=tuer",
-          allowApi: true,
-          visible: true,
-          position: { vertical: "top", horizontal: "right" },
-          size: { width: "92px", height: "36px" },
-          margin: { top: "64px", right: "12px" }
-        });
-      } catch {
-      }
+      klassikOeffnen = async () => {
+        try {
+          klassik.push(await WA.ui.website.open({
+            url: SEITEN + "info.html?v=6&teil=status" + (kzAktiv ? "&kz=1" : ""),
+            allowApi: true,
+            visible: true,
+            position: { vertical: "top", horizontal: "left" },
+            size: { width: "150px", height: "36px" },
+            margin: { top: "64px", left: "12px" }
+          }));
+        } catch {
+        }
+        if (meineTuer()) try {
+          klassik.push(await WA.ui.website.open({
+            url: SEITEN + "info.html?v=6&teil=tuer",
+            allowApi: true,
+            visible: true,
+            position: { vertical: "top", horizontal: "right" },
+            size: { width: "92px", height: "36px" },
+            margin: { top: "64px", right: "12px" }
+          }));
+        } catch {
+        }
+        try {
+          klassik.push(await WA.ui.website.open({
+            url: SEITEN + "blick.html?teil=karte&v=3",
+            allowApi: true,
+            visible: true,
+            position: { vertical: "bottom", horizontal: "right" },
+            size: { width: "130px", height: "99px" },
+            margin: { bottom: "158px", right: "14px" }
+          }));
+        } catch {
+        }
+        if (klassikLeiste) await klassikLeiste();
+      };
     } else try {
       infoLeiste = await WA.ui.website.open({
         url: "https://samjabbar90.github.io/sw-buero/info.html?v=8&flach=1" + (kzAktiv ? "&kz=1" : ""),
@@ -2546,7 +2605,7 @@
         size: { width: HANDY ? "96px" : "116px", height: HANDY ? "96px" : "116px" },
         margin: { bottom: HANDY ? "96px" : "20px", left: HANDY ? "8px" : "20px" }
       });
-      await w.open({
+      if (!HANDY) await w.open({
         url: SEITEN + "blick.html?teil=karte&v=3",
         allowApi: true,
         visible: true,
@@ -2597,12 +2656,14 @@
             leiste && leiste.close();
           } catch {
           }
+          if (!klassikOffen) return;
           try {
             leiste = await WA.ui.website.open({ url: SEITEN + "handy-leiste.html?v=3", allowApi: true, visible: true, ...opt });
+            klassik.push(leiste);
           } catch {
           }
         };
-        await leisteAuf();
+        klassikLeiste = leisteAuf;
         try {
           WA.player.state.onVariableChange("swLeisteLage").subscribe(() => leisteAuf());
         } catch {
@@ -2610,6 +2671,7 @@
       }
     } catch {
     }
+    if (HANDY) klassikPruefen();
     let menue = null, menueName = "";
     const menueZu = () => {
       if (menue) {
@@ -2691,7 +2753,8 @@
         if (ZIMMER_AKTIONEN[v.was]) return ZIMMER_AKTIONEN[v.was](v);
         if (v.was === "grundrissRaum") return grundrissRaum(String(v.name || ""));
         if (v.was === "grundrissPerson") return grundrissPerson(String(v.name || ""));
-        if (v.was === "grundrissAus") return grundrissUmschalten(false);
+        if (v.was === "grundrissAus" || v.was === "appAus") return grundrissUmschalten(false);
+        if (v.was === "appAn") return grundrissUmschalten(true);
         if (v.was === "arbeiten") return arbeitenOffen ? arbeitenZu() : arbeitenAuf();
         if (v.was === "arbeitenZu") return arbeitenZu();
         if (v.was === "arbeitenHin") {

@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<title>SW-Büro</title>
+<!-- Handy-App (15.10.2026, Sam: Variante A „wie eine App mit Tabs“, Startansicht B „Team zuerst“ wählbar).
+     Liegt am Handy im Vollbild über dem echten Büro (main.ts › appZeigen) – man ist eine echte Figur, die Kollegen sehen einen.
+     Tabs: Büro (Grundriss, Antippen = hingehen) · Team · Arbeiten · Chat · Ich. Im Gespräch blendet das Büro-Skript die App aus
+     (dann sieht man Video/Ton von WorkAdventure). Kommuniziert über swAktion (→ Büro-Skript) und swMitteilungen/swAppHinweis (← Büro-Skript). -->
+<style>
+  :root { --gruen:#0f766e; --text:#111827; --leise:#6b7280; --rand:rgba(17,24,39,.08); --flaeche:#f2f2f7; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { margin:0; height:100%; background:var(--flaeche); color:var(--text); font-family:-apple-system,system-ui,"SF Pro Text","Segoe UI",sans-serif; font-size:16px; overflow:hidden; }
+  #app { position:fixed; inset:0; display:flex; flex-direction:column; }
+  header { padding:calc(max(env(safe-area-inset-top), 10px) + 4px) 16px 8px; background:rgba(242,242,247,.94); backdrop-filter:blur(12px); display:flex; align-items:flex-end; gap:10px; border-bottom:.5px solid var(--rand); }
+  header h1 { margin:0; font-size:28px; font-weight:800; letter-spacing:-.5px; flex:1; }
+  header .status { font-size:13px; color:var(--leise); padding-bottom:6px; text-align:right; }
+  main { flex:1; min-height:0; overflow:auto; -webkit-overflow-scrolling:touch; position:relative; }
+  .seite { display:none; padding:12px 16px 24px; } .seite.an { display:block; }
+  #s-buero { padding:0; height:100%; position:relative; } #s-buero.an { display:block; }
+  nav { display:flex; background:rgba(249,249,249,.96); backdrop-filter:blur(12px); border-top:.5px solid rgba(0,0,0,.15); padding:6px 0 calc(max(env(safe-area-inset-bottom), 8px) + 2px); }
+  nav button { flex:1; border:0; background:none; display:flex; flex-direction:column; align-items:center; gap:2px; font:inherit; font-size:10.5px; color:#8e8e93; padding:2px 0; position:relative; min-height:48px; }
+  nav button span { font-size:23px; line-height:1.1; filter:grayscale(1) opacity(.65); } nav button.an { color:var(--gruen); font-weight:600; } nav button.an span { filter:none; }
+  nav .zahl { position:absolute; top:0; left:54%; min-width:18px; height:18px; border-radius:9px; background:#ff3b30; color:#fff; font-size:11px; font-weight:700; line-height:18px; padding:0 5px; }
+  /* Listen im iOS-Stil */
+  .gruppe { background:#fff; border-radius:12px; overflow:hidden; margin-bottom:18px; }
+  .gtitel { font-size:13px; color:var(--leise); text-transform:uppercase; margin:6px 4px 6px; letter-spacing:.3px; }
+  .zeile { display:flex; align-items:center; gap:12px; padding:10px 14px; min-height:54px; border-top:.5px solid var(--rand); } .zeile:first-child { border-top:0; }
+  .zeile .n { font-weight:600; } .zeile .w { font-size:13.5px; color:var(--leise); } .zeile .r { margin-left:auto; display:flex; gap:8px; align-items:center; }
+  .gesicht { width:40px; height:40px; border-radius:50%; flex:none; background:#8e8e93 center/cover no-repeat; color:#fff; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700; position:relative; }
+  .gesicht .p { position:absolute; right:-1px; bottom:-1px; width:12px; height:12px; border-radius:50%; background:#34c759; border:2px solid #fff; }
+  .k { border:0; border-radius:999px; padding:8px 14px; font:inherit; font-size:14.5px; font-weight:600; background:#e8f3f1; color:var(--gruen); min-height:36px; }
+  .k.voll { background:var(--gruen); color:#fff; } .k.grau { background:#eef0f3; color:#374151; }
+  .kacheln { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+  .kacheln button { background:#fff; border:0; border-radius:16px; padding:16px 4px 12px; display:flex; flex-direction:column; align-items:center; gap:8px; font:inherit; font-size:13px; color:var(--text); min-height:92px; }
+  .kacheln button span { font-size:30px; line-height:1; }
+  .karte { background:#fff; border-radius:14px; padding:12px 14px; margin-bottom:10px; border-left:5px solid var(--gruen); }
+  .karte.klopfen { border-left-color:#ea580c; } .karte.termin { border-left-color:#2563eb; } .karte.nachricht { border-left-color:#16a34a; } .karte.info { border-left-color:#8e8e93; }
+  .karte .kopf { display:flex; gap:6px; align-items:center; font-weight:700; } .karte .kopf .zeit { margin-left:auto; font-size:12px; color:var(--leise); font-weight:400; }
+  .karte .text { color:#374151; margin:4px 0 10px; } .karte .knoepfe { display:flex; gap:8px; flex-wrap:wrap; }
+  input.feld, select.feld { font:inherit; width:100%; padding:12px; border:0; border-radius:12px; background:#fff; color:var(--text); }
+  .leer { color:var(--leise); text-align:center; padding:28px 10px; }
+  .schalter { display:flex; background:#e4e4ea; border-radius:10px; padding:2px; } .schalter button { flex:1; border:0; background:none; font:inherit; font-size:14px; padding:8px 4px; border-radius:8px; color:#374151; }
+  .schalter button.an { background:#fff; font-weight:600; box-shadow:0 1px 3px rgba(0,0,0,.12); }
+  /* Grundriss */
+  #plan-rahmen { position:absolute; inset:0; overflow:auto; background:#d6f2d6; -webkit-overflow-scrolling:touch; }
+  .planknoepfe { position:absolute; right:12px; bottom:12px; display:flex; flex-direction:column; gap:8px; z-index:3; }
+  .planknoepfe button, .planoben button { width:44px; height:44px; border-radius:14px; border:0; background:rgba(255,255,255,.95); font-size:20px; box-shadow:0 2px 8px rgba(0,0,0,.18); }
+  .planoben { position:absolute; left:12px; top:12px; z-index:3; display:flex; gap:8px; } .planoben button { width:auto; padding:0 14px; font-size:14px; font-weight:600; color:#374151; }
+  #toast { position:fixed; left:12px; right:12px; top:calc(max(env(safe-area-inset-top), 10px) + 60px); z-index:20; background:rgba(28,28,30,.94); color:#fff; border-radius:16px; padding:12px 14px; display:none; gap:10px; align-items:center; font-size:15px; box-shadow:0 8px 24px rgba(0,0,0,.3); }
+  #toast b { flex:1; font-weight:500; } #toast button { border:0; border-radius:999px; background:#fff; color:#111; font:inherit; font-weight:700; font-size:14px; padding:8px 14px; }
+  #blatt { position:fixed; inset:0; z-index:30; background:#fff; display:none; flex-direction:column; }
+  #blatt .kopf { display:flex; align-items:center; gap:8px; padding:calc(max(env(safe-area-inset-top), 10px) + 4px) 12px 10px; border-bottom:.5px solid var(--rand); background:#f9f9f9; }
+  #blatt .kopf b { flex:1; font-size:17px; text-align:center; } #blatt .kopf button { border:0; background:none; color:var(--gruen); font:inherit; font-size:17px; font-weight:600; min-width:70px; text-align:left; }
+  #blatt iframe { flex:1; border:0; width:100%; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header><h1 id="titel">Büro</h1><div class="status" id="status"></div></header>
+  <main>
+    <section class="seite" id="s-buero"><div id="plan-rahmen"><svg id="plan" xmlns="http://www.w3.org/2000/svg"></svg></div>
+      <div class="planoben"><button id="zuMir">📍 Ich</button></div>
+      <div class="planknoepfe"><button id="plus" aria-label="Größer">＋</button><button id="minus" aria-label="Kleiner">－</button></div></section>
+    <section class="seite" id="s-team"></section>
+    <section class="seite" id="s-arbeiten"></section>
+    <section class="seite" id="s-chat"></section>
+    <section class="seite" id="s-ich"></section>
+  </main>
+  <nav id="nav"></nav>
+</div>
+<div id="toast"><b id="toastText"></b><button id="toastKnopf">Los</button></div>
+<div id="blatt"><div class="kopf"><button id="blattZu">‹ Zurück</button><b id="blattTitel"></b><span style="min-width:70px"></span></div><iframe id="blattRahmen" title="Büro-Fenster"></iframe></div>
+<script src="https://play.workadventu.re/iframe_api.js"></script>
+<script>
+const KEY = "a21b2aa2a42fe6189b05773c07bbc9ad78e38b34ba3bb6fe", B = "https://swdigitaltest.de/buero-praesenz";
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const aw = () => { try { return localStorage.getItem("swBueroAusweis") || ""; } catch { return ""; } };
+const H = () => ({ "X-Buero-Key": KEY, "X-Buero-Ausweis": aw(), "X-Buero-Name": encodeURIComponent((window.WA && WA.player && WA.player.name) || ""), "Content-Type": "application/json" });
+const aktion = (was, extra) => { try { WA.player.state.saveVariable("swAktion", { was, ...(extra || {}), t: Date.now() }, { public: false, persist: false }); } catch (e) { console.warn(e); } };
+const kurz = n => String(n || "").replace(/\./g, "").split(/\s+/).map(w => w[0] || "").join("").slice(0, 2).toUpperCase();
+const vor = n => String(n || "").split(/\s+/)[0];
+// Anzeige-Namen der Räume (wie Schnellreise)
+const PERSON = { "Zimmer 1": "Tanja R.", "Zimmer 2": "Christiane S.", "Zimmer 3": "Jana J.", "Zimmer 4": "Kubilay A.", "Zimmer 5": "Bin W.", "Zimmer 6": "Onur K.", "Zimmer 7": "Dilber A.", "Zimmer 8": "Fatih K.",
+  "Zimmer 9": "Kerstin C.", "Zimmer 10": "Angelika T.", "Zimmer 13": "Ilona S.", "Zimmer 14": "Julien M.", "Zimmer 15": "Bahjat D.", "Büro Leutrim": "Leutrim S.", "Büro Katharina": "Katharina K.",
+  "Büro Ferhat": "Ferhat F.", "Büro Angelina": "Angelina M.", "Büro Sam": "Sam J.", "Büro Noura": "Noura A.", "Büro Emre": "Emre A.", "Büro Kadir": "Kadir K.", "Büro Attila": "Attila K." };
+const NAME = { "Besprechung Glas": "Besprechung 1", "Besprechung 11": "Besprechung 2", "Pause": "Pausenraum", "Lernzimmer": "Schulung", "Termine mit Donna": "Empfang · Donna", "Mandanten-Flur": "" };
+const raumText = r => !r || r === "Flur" ? "im Flur" : r === "📱 Handy" ? "📱 am Handy" : PERSON[r] ? PERSON[r] + " Büro" : /^Zimmer \d+$/.test(r) ? "freies Zimmer" : (NAME[r] != null && NAME[r] !== "" ? NAME[r] : r);
+
+let ICH = "", tab = "buero", start = "buero", GES = [], da = [], weg = [], mitteilungen = [], gelesen = 0, online = null, meineTuer = null;
+function gesichtVon(name) { const n = String(name || "").toLowerCase().trim(); if (!n) return null;
+  const g = GES.find(x => String(x.kurz || "").toLowerCase() === n || String(x.name || "").toLowerCase() === n); if (g) return g.foto;
+  const t = GES.filter(x => String(x.name || "").toLowerCase().split(/\s+/)[0] === n.split(/\s+/)[0]); return t.length === 1 ? t[0].foto : null; }
+const gesicht = (name, punkt) => { const f = gesichtVon(name); return f ? `<span class="gesicht" style="background-image:url(&quot;${esc(f)}&quot;)">${punkt ? '<i class="p"></i>' : ""}</span>` : `<span class="gesicht">${esc(kurz(name))}${punkt ? '<i class="p"></i>' : ""}</span>`; };
+
+// ---------- Tabs ----------
+const TABS = { buero: ["🗺️", "Büro"], team: ["👥", "Team"], arbeiten: ["💼", "Arbeiten"], chat: ["💬", "Chat"], ich: ["👤", "Ich"] };
+function navMalen() {
+  const reihe = start === "team" ? ["team", "buero", "arbeiten", "chat", "ich"] : ["buero", "team", "arbeiten", "chat", "ich"];
+  const neu = mitteilungen.filter(m => m.t > gelesen).length;
+  $("nav").innerHTML = reihe.map(k => `<button data-tab="${k}" class="${k === tab ? "an" : ""}"><span>${TABS[k][0]}</span>${TABS[k][1]}${k === "chat" && neu ? `<i class="zahl">${neu}</i>` : ""}</button>`).join("");
+  document.querySelectorAll("[data-tab]").forEach(b => b.onclick = () => zeigeTab(b.dataset.tab));
+}
+function zeigeTab(k) {
+  tab = k; document.querySelectorAll(".seite").forEach(s => s.classList.toggle("an", s.id === "s-" + k));
+  $("titel").textContent = TABS[k][1] === "Büro" ? "Büro" : TABS[k][1];
+  if (k === "chat") { gelesen = Date.now(); }
+  if (k === "team") teamMalen(); if (k === "arbeiten") arbeitenMalen(); if (k === "chat") chatMalen(); if (k === "ich") ichMalen();
+  if (k === "buero") planZeichnen();
+  navMalen();
+}
+function statusMalen() {
+  let t = ""; if (online && online.start) { const j = Date.now() - (online.abw || 0), p = online.pauseMs || 0, m = Math.max(0, Math.floor((j - online.start - p) / 60000)); t = "online seit " + online.seit + " · " + Math.floor(m / 60) + ":" + String(m % 60).padStart(2, "0") + " h"; }
+  $("status").innerHTML = esc(t) + (meineTuer ? "<br>" + (meineTuer.fokus ? "🎯 Fokus" : "🟢 Tür frei") : "");
+}
+
+// ---------- Büro (Grundriss) ----------
+const X0 = 2, Y0 = 12, X1 = 116, Y1 = 84;
+let skala = 9, raeume = [], ich = null, zuerst = true;
+function art(n) { if (/^(Büro |Zimmer \d)/.test(n)) return "buero"; if (/^(Besprechung|Paris|Berlin|Lissabon|New York|Amsterdam|Moskau|Lernzimmer)/.test(n)) return "besprechung";
+  if (/^Pause|Fitness|Helpcenter/.test(n)) return "gemeinsam"; if (/Flur/.test(n)) return "flur"; return "anderes"; }
+const FARBE = { buero: ["#e5e9ef", "#b7c3d0"], besprechung: ["#eceefc", "#c3c8f0"], gemeinsam: ["#fbf1e8", "#ecd2b8"], flur: ["#ffffff", "#ffffff"], anderes: ["#eef6f0", "#bfd8c6"] };
+function planZeichnen() {
+  const s = skala, W = (X1 - X0) * s, Hh = (Y1 - Y0) * s, P = (v, o) => (v - o) * s, svg = $("plan");
+  svg.setAttribute("width", W); svg.setAttribute("height", Hh); svg.setAttribute("viewBox", `0 0 ${W} ${Hh}`);
+  let h = `<rect x="${P(3, X0)}" y="${P(13, Y0)}" width="${112 * s}" height="${59 * s}" rx="${s}" fill="#fff" stroke="#e5e7eb"/><rect x="${P(32, X0)}" y="${P(70, Y0)}" width="${30 * s}" height="${12 * s}" fill="#fff" stroke="#e5e7eb"/>`;
+  for (const r of raeume) {
+    const [f, st] = FARBE[art(r.name)], x = P(r.x, X0), y = P(r.y, Y0), w = r.w * s, hh = r.h * s;
+    const label = r.name in PERSON ? (PERSON[r.name] ? kurz(PERSON[r.name]) : "frei") : /^Zimmer \d+$/.test(r.name) ? "frei" : (r.name in NAME ? NAME[r.name] : r.name);
+    h += `<g data-raum="${esc(r.name)}"><rect x="${x}" y="${y}" width="${w}" height="${hh}" rx="${s * .5}" fill="${f}" stroke="${st}" stroke-width="1.5"/>`;
+    if (label) h += `<text x="${x + w / 2}" y="${y + Math.min(hh / 2, s * 1.7) + 5}" text-anchor="middle" font-size="${Math.max(10, Math.min(14, s * 1.5))}" font-weight="600" fill="#475569" font-family="-apple-system,system-ui">${esc(label)}</text>`;
+    h += `</g>`;
+  }
+  svg.innerHTML = h + '<g id="leute"></g>'; leuteMalen();
+}
+function leuteMalen() {
+  const g = $("leute"); if (!g) return; const s = skala; let h = "";
+  const leute = []; try { for (const p of WA.players.list()) if (p.position) leute.push({ name: p.name, x: p.position.x, y: p.position.y }); } catch {}
+  if (ich) leute.push({ name: ICH || (WA.player && WA.player.name), x: ich.x, y: ich.y, ich: true });
+  const R = Math.max(12, s * 1.7);
+  for (const p of leute) {
+    const cx = (p.x / 32 - X0) * s, cy = (p.y / 32 - Y0) * s, foto = gesichtVon(p.name), clip = "c" + Math.round(cx) + "_" + Math.round(cy);
+    h += `<g ${p.ich ? "" : `data-person="${esc(p.name)}"`}><circle cx="${cx}" cy="${cy}" r="${R + 3}" fill="${p.ich ? "#7c3aed" : "#fff"}"/>`;
+    h += foto ? `<clipPath id="${clip}"><circle cx="${cx}" cy="${cy}" r="${R}"/></clipPath><image href="${esc(foto)}" x="${cx - R}" y="${cy - R}" width="${2 * R}" height="${2 * R}" clip-path="url(#${clip})" preserveAspectRatio="xMidYMid slice"/>`
+      : `<circle cx="${cx}" cy="${cy}" r="${R}" fill="#8e8e93"/><text x="${cx}" y="${cy + 4}" text-anchor="middle" font-size="12" font-weight="800" fill="#fff">${esc(kurz(p.name))}</text>`;
+    const tag = p.ich ? "Ich" : vor(p.name), tw = tag.length * 7.5 + 16;
+    h += `<rect x="${cx - tw / 2}" y="${cy - R - 24}" width="${tw}" height="20" rx="10" fill="${p.ich ? "#7c3aed" : "#1c1c1e"}"/><text x="${cx}" y="${cy - R - 10}" text-anchor="middle" font-size="12" font-weight="700" fill="#fff" font-family="-apple-system,system-ui">${esc(tag)}</text></g>`;
+  }
+  g.innerHTML = h;
+  if (zuerst && ich && tab === "buero") { zuerst = false; zuMir(); }
+}
+function zuMir() { if (!ich) return; const r = $("plan-rahmen"); r.scrollLeft = (ich.x / 32 - X0) * skala - r.clientWidth / 2; r.scrollTop = (ich.y / 32 - Y0) * skala - r.clientHeight / 2; }
+function zoom(d) { const r = $("plan-rahmen"), mx = r.scrollLeft + r.clientWidth / 2, my = r.scrollTop + r.clientHeight / 2, alt = skala; skala = Math.max(4, Math.min(18, skala + d)); planZeichnen(); r.scrollLeft = mx * skala / alt - r.clientWidth / 2; r.scrollTop = my * skala / alt - r.clientHeight / 2; }
+$("plus").onclick = () => zoom(2); $("minus").onclick = () => zoom(-2); $("zuMir").onclick = zuMir;
+$("plan").addEventListener("click", ev => { const g = ev.target.closest("[data-person],[data-raum]"); if (!g) return;
+  if (g.dataset.person) { toast("🚶 Zu " + vor(g.dataset.person) + " …"); return aktion("grundrissPerson", { name: g.dataset.person }); }
+  toast("🚶 " + raumText(g.dataset.raum) + " …"); aktion("grundrissRaum", { name: g.dataset.raum }); });
+
+// ---------- Team ----------
+async function wer() { try { const r = await fetch(B + "/wer", { headers: H() }); if (!r.ok) return; const d = await r.json(); da = (d.da || []).filter(p => p.name !== ICH); weg = d.weg || []; if (tab === "team") teamMalen(); } catch {} }
+function teamMalen() {
+  let h = `<div class="gtitel">Im Büro · ${da.length}</div><div class="gruppe">` + (da.length ? da.map((p, i) => `<div class="zeile">${gesicht(p.name, true)}<div style="min-width:0"><div class="n">${esc(p.name)}</div><div class="w">${esc(raumText(p.bereich))}${p.telefoniert ? " · 📞" : ""}</div></div>
+    <div class="r"><button class="k grau" data-schreib="${i}" aria-label="Nachricht">💬</button>${p.bereich && p.bereich !== "📱 Handy" && p.bereich !== "Flur" ? `<button class="k voll" data-hin="${i}">Hin</button>` : ""}</div></div>`).join("") : '<div class="leer">Gerade ist niemand außer dir da.</div>') + "</div>";
+  if (weg.length) h += `<div class="gtitel">Nicht da · ${weg.length}</div><div class="gruppe">` + weg.slice(0, 40).map(p => `<div class="zeile">${gesicht(p.name)}<div><div class="n">${esc(p.name)}</div><div class="w">${p.zuletzt ? "zuletzt " + new Date(p.zuletzt).toLocaleString("de-DE", { weekday: "short", hour: "2-digit", minute: "2-digit" }) : "–"}</div></div>${p.durchwahl ? `<div class="r"><a class="k grau" href="tel:${esc(p.durchwahl)}" style="text-decoration:none">📞</a></div>` : ""}</div>`).join("") + "</div>";
+  $("s-team").innerHTML = h;
+  document.querySelectorAll("[data-hin]").forEach(b => b.onclick = () => { const p = da[+b.dataset.hin]; aktion("grundrissPerson", { name: p.name }); zeigeTab("buero"); toast("🚶 Zu " + vor(p.name) + " …"); });
+  document.querySelectorAll("[data-schreib]").forEach(b => b.onclick = () => { neueAn = da[+b.dataset.schreib].name; zeigeTab("chat"); });
+}
+
+// ---------- Arbeiten ----------
+const KACHELN = [["📅", "Kalender", "kalender.html"], ["💡", "Ideen", "ideen.html"], ["✅", "Tages-Check", "tagescheck.html"], ["⏰", "Arbeitszeit", "@arbeitszeit"],
+  ["❤️", "Health", "health.html"], ["👤", "Profil", "profil.html?ich=1"], ["💛", "Danke", "danke.html"], ["📰", "News", "news.html"],
+  ["🎓", "Schulung", "lernen.html"], ["🗓", "Donna", "ute.html"], ["🚀", "Schnellreise", "@reise"], ["🚪", "Feierabend", "@feierabend"]];
+function arbeitenMalen() { $("s-arbeiten").innerHTML = `<div class="kacheln">${KACHELN.map((k, i) => `<button data-k="${i}"><span>${k[0]}</span>${k[1]}</button>`).join("")}</div>`;
+  document.querySelectorAll("[data-k]").forEach(b => b.onclick = () => { const k = KACHELN[+b.dataset.k]; if (k[2][0] === "@") return aktion(k[2].slice(1)); blatt(k); }); }
+function blatt(k) { $("blattTitel").textContent = k[1]; $("blattRahmen").src = k[2] + (k[2].includes("?") ? "&" : "?") + "name=" + encodeURIComponent(ICH) + "&t=" + Date.now(); $("blatt").style.display = "flex"; }
+$("blattZu").onclick = () => { $("blatt").style.display = "none"; $("blattRahmen").src = "about:blank"; };
+
+// ---------- Chat (Mitteilungen + Nachricht schreiben) ----------
+let neueAn = "", antwortAuf = "";
+function chatMalen() {
+  const ICON = { klopfen: "✊", termin: "📅", nachricht: "💬", info: "👋" };
+  let h = mitteilungen.length ? mitteilungen.map(m => { const v = vor(m.von), zeit = new Date(m.t).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
+    const titel = m.art === "klopfen" ? v + " klopft an" : m.art === "nachricht" ? v : m.art === "termin" ? (m.titel || "Termin") : (v ? v + " " : "") + (m.kurz || "");
+    let k = "";
+    if (m.art === "klopfen") k = `<button class="k voll" data-a="mtReinlassen" data-id="${m.id}">Reinlassen</button><button class="k" data-a="mtGleich" data-id="${m.id}">Komme gleich</button>`;
+    if (m.art === "nachricht") k = antwortAuf === m.id ? `<input class="feld" id="antw" placeholder="Antwort an ${esc(v)} …" style="background:#f2f2f7"><button class="k voll" data-senden="${esc(m.von)}" data-id="${m.id}">Senden</button>` : `<button class="k voll" data-antw="${m.id}">Antworten</button>`;
+    if (m.art === "termin") k = (m.raum ? `<button class="k voll" data-a="mtHin" data-id="${m.id}">🚶 Hingehen</button>` : "");
+    return `<div class="karte ${esc(m.art)}"><div class="kopf">${ICON[m.art] || "🔔"} ${esc(titel)}<span class="zeit">${zeit}</span></div><div class="text">${esc(m.text || "")}</div><div class="knoepfe">${k}<button class="k grau" data-a="mtWeg" data-id="${m.id}">Erledigt</button></div></div>`; }).join("")
+    : '<div class="leer">Keine neuen Mitteilungen.</div>';
+  const alle = [...da.map(p => p.name), ...weg.map(p => p.name)];
+  h += `<div class="gtitel" style="margin-top:16px">Neue Nachricht</div><div class="gruppe" style="padding:10px;display:flex;flex-direction:column;gap:8px;background:#fff">
+    <select class="feld" id="an" style="background:#f2f2f7"><option value="">An wen?</option>${alle.map(n => `<option${n === neueAn ? " selected" : ""}>${esc(n)}</option>`).join("")}</select>
+    <input class="feld" id="neu" placeholder="Nachricht …" maxlength="300" style="background:#f2f2f7"><button class="k voll" id="neuSenden">Senden</button><div id="chatFe" class="w"></div></div>`;
+  $("s-chat").innerHTML = h;
+  document.querySelectorAll("[data-a]").forEach(b => b.onclick = () => aktion(b.dataset.a, { id: b.dataset.id }));
+  document.querySelectorAll("[data-antw]").forEach(b => b.onclick = () => { antwortAuf = b.dataset.antw; chatMalen(); $("antw") && $("antw").focus(); });
+  document.querySelectorAll("[data-senden]").forEach(b => b.onclick = async () => { if (await senden(b.dataset.senden, $("antw").value)) { antwortAuf = ""; aktion("mtWeg", { id: b.dataset.id }); } });
+  $("neuSenden").onclick = async () => { if (await senden($("an").value, $("neu").value)) { $("neu").value = ""; neueAn = ""; $("chatFe").textContent = "✓ gesendet"; } };
+}
+async function senden(an, text) {
+  if (!an || !String(text || "").trim()) return false;
+  try { const r = await fetch(B + "/wer/nachricht", { method: "POST", headers: H(), body: JSON.stringify({ an, text }) }); const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || "Fehler"); toast("✓ Nachricht an " + vor(an)); return true; }
+  catch (e) { toast("⚠️ " + e.message); return false; }
+}
+
+// ---------- Ich ----------
+function ichMalen() {
+  const t = meineTuer;
+  $("s-ich").innerHTML = `<div class="gruppe"><div class="zeile">${gesicht(ICH, true)}<div><div class="n">${esc(ICH)}</div><div class="w">${esc($("status").textContent || "im Büro")}</div></div></div></div>
+    ${t ? `<div class="gtitel">Meine Tür</div><div class="gruppe"><div class="zeile"><div><div class="n">${t.fokus ? "🎯 Fokus bis " + esc(t.bis) : "🟢 frei"}</div><div class="w">Fokus = 25 Min abgeschlossen, max. 3× am Tag</div></div><div class="r"><button class="k ${t.fokus ? "grau" : "voll"}" id="tuer">${t.fokus ? "Beenden" : "Fokus"}</button></div></div></div>` : ""}
+    <div class="gtitel">Startansicht der App</div><div class="gruppe" style="padding:10px"><div class="schalter"><button data-start="buero" class="${start === "buero" ? "an" : ""}">🗺️ Grundriss</button><button data-start="team" class="${start === "team" ? "an" : ""}">👥 Team-Liste</button></div></div>
+    <div class="gruppe"><div class="zeile" id="karte" style="cursor:pointer"><span style="font-size:22px">🎮</span><div><div class="n">Echte Büro-Karte anzeigen</div><div class="w">Mit Figur und Joystick wie am Laptop</div></div></div>
+      <div class="zeile" id="feier" style="cursor:pointer"><span style="font-size:22px">🚪</span><div class="n">Feierabend</div></div>
+      <div class="zeile" id="ab" style="cursor:pointer"><span style="font-size:22px">⏏️</span><div class="n" style="color:#ff3b30">Aus dem Büro abmelden</div></div></div>`;
+  if ($("tuer")) $("tuer").onclick = () => aktion("tuer");
+  document.querySelectorAll("[data-start]").forEach(b => b.onclick = () => { start = b.dataset.start; try { WA.player.state.saveVariable("swAppStart", start, { public: false, persist: true }); } catch {} ichMalen(); navMalen(); toast(start === "team" ? "App startet jetzt mit der Team-Liste" : "App startet jetzt mit dem Grundriss"); });
+  $("karte").onclick = () => aktion("appAus"); $("feier").onclick = () => aktion("feierabend");
+  $("ab").onclick = () => { if (confirm("Aus dem Büro abmelden?")) aktion("abmelden"); };
+}
+
+// ---------- Hinweise vom Büro (Leertaste-Aktionen) + Toast ----------
+let toastNr = 0;
+function toast(text, knopf, nr) { $("toastText").textContent = text; $("toastKnopf").style.display = knopf ? "" : "none"; $("toastKnopf").textContent = knopf || ""; $("toast").style.display = "flex"; toastNr = nr || 0;
+  clearTimeout(toast.u); if (!nr) toast.u = setTimeout(() => $("toast").style.display = "none", 2600); }
+$("toastKnopf").onclick = () => { if (toastNr) aktion("hinweisTipp", { nr: toastNr }); $("toast").style.display = "none"; };
+
+WA.onInit().then(async () => {
+  ICH = WA.player.name || "";
+  try { const s = WA.player.state.swAppStart; if (s === "team") { start = "team"; tab = "team"; } } catch {}
+  try { await WA.players.configureTracking({ players: true, movement: true }); } catch {}
+  try { let k = await (await fetch(WA.room.mapURL)).json(); if (!k.layers && k.mapUrl) k = await (await fetch(new URL(k.mapUrl, WA.room.mapURL).toString())).json();
+    const fl = (k.layers || []).find(l => l.name === "floorLayer"); const alle = (fl ? fl.objects : []).filter(o => o.name && o.width && o.name !== "start" && !o.name.startsWith("zu-")).map(o => ({ name: o.name, x: o.x / 32, y: o.y / 32, w: o.width / 32, h: o.height / 32 }));
+    raeume = alle.filter(a => !alle.some(b => b !== a && b.w * b.h > a.w * a.h && a.x >= b.x && a.y >= b.y && a.x + a.w <= b.x + b.w && a.y + a.h <= b.y + b.h)).filter(a => a.x < X1 && a.y < Y1).sort((a, b) => (art(a.name) === "flur" ? -1 : 0) - (art(b.name) === "flur" ? -1 : 0));
+    const ichV = vor(ICH).toLowerCase();
+    (function lauf(ls) { ls.forEach(l => { if (l.type === "group") lauf(l.layers || []); (l.objects || []).forEach(o => { const p = n => ((o.properties || []).find(x => x.name === n) || {}).value; if (p("tuerVariable") && String(p("besitzer")).toLowerCase() === ichV) meineTuer = { variable: p("tuerVariable") }; }); }); })(k.layers || []);
+  } catch (e) { console.warn(e); }
+  const tuerLesen = () => { if (!meineTuer) return; const v = String(WA.state[meineTuer.variable] || ""), bis = v.startsWith("fokus:") ? Number(v.slice(6)) || 0 : 0; meineTuer.fokus = bis > Date.now(); meineTuer.bis = bis ? new Date(bis).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" }) : ""; statusMalen(); if (tab === "ich") ichMalen(); };
+  if (meineTuer) { tuerLesen(); WA.state.onVariableChange(meineTuer.variable).subscribe(tuerLesen); setInterval(tuerLesen, 30000); }
+  try { ich = await WA.player.getPosition(); } catch {}
+  WA.player.onPlayerMove(e => { ich = { x: e.x, y: e.y }; });
+  const mtNeu = v => { const vorher = mitteilungen.length; mitteilungen = Array.isArray(v) ? v : []; if (mitteilungen.length > vorher && mitteilungen[0]) { const m = mitteilungen[0]; toast((m.art === "klopfen" ? "✊ " + vor(m.von) + " klopft an" : m.art === "termin" ? "📅 " + (m.titel || "Termin") : "💬 " + vor(m.von) + ": " + (m.text || "")).slice(0, 80)); } if (tab === "chat") { gelesen = Date.now(); chatMalen(); } navMalen(); };
+  mtNeu(WA.player.state.swMitteilungen); WA.player.state.onVariableChange("swMitteilungen").subscribe(mtNeu);
+  const hw = v => { if (v && v.text) toast(v.text, v.knopf ? "Los" : "", v.nr); else if (toastNr) { $("toast").style.display = "none"; toastNr = 0; } };
+  WA.player.state.onVariableChange("swAppHinweis").subscribe(hw);
+  zeigeTab(tab); setInterval(leuteMalen, 1000);
+  wer(); setInterval(wer, 20000);
+  const onl = async () => { try { const o = await (await fetch(B + "/online?name=" + encodeURIComponent(ICH), { headers: { "X-Buero-Key": KEY } })).json(); if (o && o.start) online = { ...o, abw: Date.now() - (o.jetzt || Date.now()) }; statusMalen(); } catch {} };
+  onl(); setInterval(onl, 60000); setInterval(statusMalen, 30000);
+  try { if (aw()) { const g = await fetch(B + "/gesichter", { headers: { "X-Buero-Key": KEY, "X-Buero-Ausweis": aw() } }); if (g.ok) { GES = await g.json(); planZeichnen(); if (tab === "team") teamMalen(); } } } catch {}
+});
+</script>
+</body>
+</html>

@@ -34,7 +34,11 @@
 const q = new URLSearchParams(location.search), KEY = "a21b2aa2a42fe6189b05773c07bbc9ad78e38b34ba3bb6fe";
 const aktion = was => { try { WA.player.state.saveVariable("swAktion", { was, t: Date.now() }, { public: false, persist: false }); } catch (e) { console.warn(e); } };
 const app = document.getElementById("app");
-if (q.has("knopf")) {
+if (q.has("appknopf")) { // 15.10.2026: zurück zur Handy-App (wenn man die echte Karte gewählt hat)
+  document.body.style.background = "transparent";
+  app.innerHTML = '<button id="k" style="width:100%;height:100%;border:0;border-radius:999px;background:#0f766e;color:#fff;font:700 15px system-ui,sans-serif;box-shadow:0 4px 12px rgba(0,0,0,.3)">📱 App</button>';
+  document.getElementById("k").onclick = () => aktion("appAn");
+} else if (q.has("knopf")) {
   app.innerHTML = '<div class="knopf" id="k">☰</div>';
   document.getElementById("k").onclick = () => aktion("handyMenue");
 } else {
