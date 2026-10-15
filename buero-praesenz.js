@@ -2214,12 +2214,25 @@
   }
   var AMPEL_START = Date.now();
   var AMPEL_KREUZUNGEN = [{ x: 115, y: 67 + DY, sv: 4, sh: 6 }, { x: 115, y: 84 + DY, sv: 4, sh: 4 }];
+  var editorAn = null;
+  function editorPruefen() {
+    if (!Array.isArray(info.editoren)) return;
+    const soll = info.editoren.includes(vorname(WA.player.name));
+    if (soll === editorAn) return;
+    editorAn = soll;
+    try {
+      const c = WA.controls;
+      soll ? c.restoreMapEditor?.() : c.disableMapEditor?.();
+    } catch {
+    }
+  }
   async function infoLaden() {
     try {
       info = await (await fetch(INFO, { headers: { "X-Buero-Key": BUERO_KEY } })).json();
     } catch {
       return;
     }
+    editorPruefen();
     try {
       const d = info.durchsage;
       if (d && d.id !== durchsageGezeigt) {
@@ -2416,7 +2429,7 @@
       const c = WA.controls;
       c.disableInviteButton?.();
       c.disableInviteUserButton?.();
-      if (!/^(sam|angelina)\b/i.test(String(WA.player.name || ""))) c.disableMapEditor?.();
+      c.disableMapEditor?.();
     } catch {
     }
     if (HANDY) try {
