@@ -42,7 +42,7 @@
 <body>
 <div class="mit" id="mit" hidden></div>
 <div class="l"><div class="t" id="t">💬 Gespräch …</div><div class="z" id="z">0:00</div>
-  <button id="mic" title="Gespräch mitschreiben (alle müssen zustimmen)">🎙</button><span class="pg" id="pg" hidden title="Ton von deinem Mikrofon"><i id="pgI"></i></span>
+  <button id="mic" title="Gespräch mitschreiben (alle müssen zustimmen)">🎙</button><span class="pg" id="pg" hidden title="Ton von deinem Mikrofon"><i id="pgI"></i></span><button id="stumm" hidden>🔇 Stumm</button>
   <button data-was="gespraechOeffnen" data-fokus="protokoll" title="Protokoll schreiben">📝 Notiz</button>
   <button data-was="gespraechOeffnen" data-fokus="aufgabe" title="Aufgabe für die Aufgaben Box">＋ Aufgabe</button>
   <button data-was="gespraechOeffnen" data-fokus="" title="Großes Fenster">⤢</button>
@@ -78,8 +78,13 @@ let rec = null, recSoll = false, zwischen = "", micFehler = "";
 const M = () => (G && G.mitschrift) || { status: "aus", zustimmung: {}, zeilen: [] };
 const ichZugestimmt = () => !!(M().zustimmung || {})[G && G.ich];
 async function mitAktion(aktion) { try { G = await api("/gespraeche/" + encodeURIComponent(ID) + "/mitschrift", { method: "POST", body: JSON.stringify({ aktion }) }); malen(); steuern(); } catch (e) { micFehler = e.message; mitMalen(); } }
+// Stumm (15.10.2026, Sam: „wer sein Mikro ausstellt, den soll die Mitschrift auch nicht hören“): WorkAdventure sagt Skripten nicht, ob
+// jemand stumm ist – darum eigener Knopf: schaltet das Mikro in WorkAdventure aus UND pausiert die eigene Mitschrift.
+let stumm = false;
 function mitMalen() {
   const m = M(), box = $("mit"), aktiv = m.status !== "aus";
+  $("stumm").hidden = !(m.status === "laeuft" && ichZugestimmt()); $("stumm").textContent = stumm ? "🎙 Sprechen" : "🔇 Stumm"; $("stumm").classList.toggle("an", stumm);
+  $("stumm").title = stumm ? "Wieder sprechen – Mitschrift hört dich wieder (Mikro in WorkAdventure bitte auch wieder einschalten)" : "Stumm: Mikro aus und die Mitschrift hört dich nicht";
   $("mic").textContent = m.status === "laeuft" ? "🔴" : "🎙"; $("mic").classList.toggle("an", m.status === "laeuft");
   $("mic").title = m.status === "aus" ? "Gespräch mitschreiben (alle müssen zustimmen)" : !ichZugestimmt() ? "Mitmachen – ich stimme zu" : "Mitschreiben läuft – beenden über „✕ Beenden“";
   // Größe: aktiv → hohe Leiste (Text über der Leiste), sonst wieder schmal — das Büro-Skript öffnet sie dafür neu
@@ -93,7 +98,7 @@ function mitMalen() {
   } else {
     const zeilen = (m.zeilen || []).slice(-25).map(z => `<div class="${z.id === G.ich ? "ich" : ""}"><b>${esc(z.name)}:</b> ${esc(z.text)}</div>`).join("")
       + (zwischen ? `<div class="ich grau"><b>${esc(String(window.__waName || "Ich").split(/\s+/)[0])}:</b> ${esc(zwischen)} …</div>` : "");
-    const ok = SR ? (micFehler ? '<span class="warn">⚠️ ' + esc(micFehler) + "</span>" : ichZugestimmt() ? (m.status === "laeuft" && recSoll ? (recLaeuft ? '<span class="hoert"></span> Dein Mikrofon wird mitgeschrieben' : '<span class="hoert nein"></span> Spracherkennung startet neu …') : "") :"⚠️ Du hast noch nicht zugestimmt – du wirst nicht mitgeschrieben. <button id=\"mJa\" class=\"gruen\">Ja</button>")
+    const ok = stumm ? '<span class="warn">🔇 Du bist stumm – die Mitschrift hört dich nicht. Zum Sprechen „🎙 Sprechen“ tippen und das Mikro in WorkAdventure wieder einschalten.</span>' : SR ? (micFehler ? '<span class="warn">⚠️ ' + esc(micFehler) + "</span>" : ichZugestimmt() ? (m.status === "laeuft" && recSoll ? (recLaeuft ? '<span class="hoert"></span> Dein Mikrofon wird mitgeschrieben' : '<span class="hoert nein"></span> Spracherkennung startet neu …') : "") :"⚠️ Du hast noch nicht zugestimmt – du wirst nicht mitgeschrieben. <button id=\"mJa\" class=\"gruen\">Ja</button>")
       : '<span class="warn">⚠️ ' + (BRAVE ? BRAVE_TEXT : "Dein Browser kann nicht mitschreiben (nur Chrome/Edge) – die anderen schreiben weiter.") + "</span>";
     if (BRAVE && !braveGemeldet && ichZugestimmt()) { braveGemeldet = true; api("/gespraeche/" + encodeURIComponent(ID) + "/mitschrift/stoerung", { method: "POST", body: JSON.stringify({ art: "brave", text: BRAVE_TEXT }) }).catch(() => {}); }
     box.innerHTML = `<div class="kopf">${m.status === "laeuft" ? '<span class="p"></span> Mitschreiben läuft' : "⏸ Mitschreiben pausiert"} · ${m.anzahl || 0} Sätze<span class="sp"></span>`
@@ -162,7 +167,7 @@ async function pegelAn() {
 }
 function pegelAus() { if (!pegel) return; clearInterval(pegel.iv); try { pegel.s.getTracks().forEach(t => t.stop()); pegel.ctx.close(); } catch {} pegel = null; $("pg").hidden = true; }
 function steuern() {
-  const soll = !!(SR && HOCH && G && G.status === "laeuft" && !G.zeitEnde && M().status === "laeuft" && ichZugestimmt());
+  const soll = !!(SR && HOCH && G && G.status === "laeuft" && !G.zeitEnde && M().status === "laeuft" && ichZugestimmt() && !stumm);
   if (soll === recSoll) return; recSoll = soll;
   if (!soll) { clearInterval(waechter); waechter = null; try { rec && (rec.onend = null, rec.stop()); } catch {} if (zwischen && M().status !== "aus") zeileSenden(zwischen); zwischen = ""; recLaeuft = false; pegelAus(); mitMalen(); return; }
   micFehler = ""; recStarten(); pegelAn();
@@ -182,6 +187,7 @@ async function laden() {
   document.querySelectorAll("button[data-was]").forEach(b => b.onclick = () => { buero({ was: b.dataset.was, fokus: b.dataset.fokus || "" }); try { b.blur(); window.blur(); } catch {} });
   // 13.10.2026 (Sam): 🎙 heißt „mitmachen“ – startet, wenn aus; stimmt zu, wenn ich noch nicht zugestimmt habe; setzt sonst nichts zurück.
   // Beenden nur über „✕ Beenden“ (vorher hat ein zweiter Klick alles gestoppt und die Zustimmungen gelöscht)
+  $("stumm").onclick = () => { stumm = !stumm; if (stumm) { try { WA.controls.turnOffMicrophone(); } catch (e) { /* ältere Version */ } } steuern(); mitMalen(); };
   $("mic").onclick = () => { const s = M().status;
     if (s === "aus") return mitAktion("start");
     if (!ichZugestimmt()) return mitAktion("ja");
