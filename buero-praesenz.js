@@ -1835,6 +1835,68 @@
       }
     }
   }
+  var grundriss = null;
+  var grundrissAn = true;
+  var imGespraech = false;
+  async function grundrissZeigen() {
+    if (!HANDY) return;
+    const soll = grundrissAn && !imGespraech && !gesperrt;
+    if (!soll) {
+      if (grundriss) {
+        try {
+          grundriss.close();
+        } catch {
+        }
+        grundriss = null;
+      }
+      return;
+    }
+    if (grundriss) return;
+    try {
+      grundriss = await WA.ui.website.open({
+        url: SEITEN + "grundriss.html?v=1",
+        allowApi: true,
+        visible: true,
+        position: { vertical: "top", horizontal: "middle" },
+        size: { width: Math.round(screen.width || 390) + "px", height: "58vh" },
+        margin: { top: "104px" }
+      });
+    } catch {
+      grundriss = null;
+    }
+  }
+  function grundrissUmschalten(an) {
+    grundrissAn = an === void 0 ? !grundrissAn : an;
+    try {
+      WA.player.state.saveVariable("swGrundriss", grundrissAn, { public: false, persist: true });
+    } catch {
+    }
+    grundrissZeigen();
+  }
+  async function grundrissRaum(name) {
+    const t = tueren.find((x) => x.raum === name);
+    if (t && t.draussen) {
+      WA.player.teleport(t.draussen[0] * 32 + 16, t.draussen[1] * 32 + 16);
+      if (tuerStatus(t) === "frei" || istBesitzer(t)) {
+        const [rx, ry, rw, rh] = t.rechteck;
+        setTimeout(() => WA.player.moveTo((rx + rw / 2) * 32, (ry + rh / 2) * 32, 10).catch(() => {
+        }), 300);
+      }
+      return;
+    }
+    zuRaum(name);
+  }
+  async function grundrissPerson(name) {
+    try {
+      const p = [...WA.players.list()].find((x) => String(x.name || "") === name);
+      if (p && p.position) {
+        WA.player.teleport(p.position.x, p.position.y + 32);
+        return;
+      }
+    } catch {
+    }
+    kurzMeldung("\u{1F6B6} " + name.split(/\s+/)[0] + " ist gerade nicht im B\xFCro", 5e3);
+  }
   var raumVon = (px, py) => {
     const fx2 = px / 32, fy = py / 32;
     const t = tueren.find((x) => {
@@ -2209,6 +2271,8 @@
           letzteAktivitaet = Date.now();
           schlossMerken(true);
           fertig();
+          grundriss = null;
+          grundrissZeigen();
         });
       } catch {
         gesperrt = false;
@@ -2388,6 +2452,14 @@
     if (!HANDY) hundStarten();
     profilKarten();
     wandGespraeche();
+    if (HANDY) {
+      try {
+        const v = WA.player.state.swGrundriss;
+        if (v === false) grundrissAn = false;
+      } catch {
+      }
+      grundrissZeigen();
+    }
     kernzeitStarten();
     const breite = 116 * 32, hoehe = (62 + DY) * 32;
     void karte;
@@ -2572,6 +2644,15 @@
         if (v.was === "hinweisTipp") return hinweisGetippt(Number(v.nr) || 0);
         if (v.was === "team") return HANDY ? handyBlattUmschalten("team", SEITEN + "wer.html?sheet=1&t=" + Date.now(), "78vh") : glasFenster(SEITEN + "wer.html?t=" + Date.now());
         if (ZIMMER_AKTIONEN[v.was]) return ZIMMER_AKTIONEN[v.was](v);
+        if (v.was === "grundrissRaum") return grundrissRaum(String(v.name || ""));
+        if (v.was === "grundrissPerson") return grundrissPerson(String(v.name || ""));
+        if (v.was === "grundrissAus") return grundrissUmschalten(false);
+        if (v.was === "karte" && HANDY) {
+          menueZu();
+          handyMenueZu();
+          handyBlattZu();
+          return grundrissUmschalten();
+        }
         if (MT_AKTIONEN[v.was]) {
           const m = mitteilungen.find((x) => x.id === v.id);
           return m ? MT_AKTIONEN[v.was](m) : void 0;
@@ -2641,6 +2722,14 @@
         c.restoreMicrophone?.();
       } catch {
       }
+      pm.onJoin().subscribe(() => {
+        imGespraech = true;
+        grundrissZeigen();
+      });
+      pm.onLeave().subscribe(() => {
+        imGespraech = false;
+        setTimeout(grundrissZeigen, 800);
+      });
       pm.onJoin().subscribe((leute) => {
         gespraech.clear();
         (leute || []).forEach((p) => p && p.name && gespraech.add(p.name));

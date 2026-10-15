@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>Grundriss</title>
+<!-- Handy-Grundriss (15.10.2026, Sam: „mit meiner Figur online, bewegen, reden – aber am Handy sieht es einfach aus“).
+     Liegt am Handy über dem echten Büro (main.ts › grundrissAuf). Räume aus der Karte (floorLayer), Kollegen live als Fotos an ihrer
+     echten Position (WA.players), ich selbst lila umrandet. Antippen: Raum → hingehen (Büro mit Tür: vor die Tür, dann rein bzw.
+     anklopfen), Foto → zu der Person. „Echte Karte“ blendet den Grundriss aus. Im Gespräch blendet das Büro-Skript ihn aus. -->
+<style>
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { margin:0; height:100%; background:#d6f2d6; font-family:system-ui,-apple-system,"Segoe UI",sans-serif; overflow:hidden; }
+  #rahmen { position:absolute; inset:0; overflow:auto; -webkit-overflow-scrolling:touch; }
+  svg { display:block; }
+  .raum { cursor:pointer; }
+  .knoepfe { position:absolute; right:8px; bottom:8px; display:flex; flex-direction:column; gap:6px; z-index:3; }
+  .knoepfe button, .oben button { width:40px; height:40px; border-radius:12px; border:1px solid rgba(17,24,39,.15); background:#fff; font-size:18px; box-shadow:0 2px 6px rgba(0,0,0,.15); }
+  .oben { position:absolute; left:8px; top:8px; display:flex; gap:6px; z-index:3; }
+  .oben button { width:auto; padding:0 12px; font-size:13px; font-weight:700; color:#374151; }
+  #info { position:absolute; left:50%; transform:translateX(-50%); bottom:10px; background:rgba(17,24,39,.85); color:#fff; border-radius:999px; padding:6px 14px; font-size:13px; z-index:3; display:none; white-space:nowrap; }
+</style>
+</head>
+<body>
+<div id="rahmen"><svg id="plan" xmlns="http://www.w3.org/2000/svg"></svg></div>
+<div class="oben"><button id="zuMir">📍 Ich</button><button id="echt">🗺 Echte Karte</button></div>
+<div class="knoepfe"><button id="plus" aria-label="Größer">＋</button><button id="minus" aria-label="Kleiner">－</button></div>
+<div id="info"></div>
+<script src="https://play.workadventu.re/iframe_api.js"></script>
+<script>
+const KEY = "a21b2aa2a42fe6189b05773c07bbc9ad78e38b34ba3bb6fe";
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+// Ausschnitt der Karte (Felder): das Haus mit Mandanten-Etage und Anbau
+const X0 = 2, Y0 = 12, X1 = 116, Y1 = 84;
+const PERSON = { "Zimmer 1": "Tanja R.", "Zimmer 2": "Christiane S.", "Zimmer 3": "Jana J.", "Zimmer 4": "Kubilay A.", "Zimmer 5": "Bin W.", "Zimmer 6": "Onur K.", "Zimmer 7": "Dilber A.", "Zimmer 8": "Fatih K.",
+  "Zimmer 9": "Kerstin C.", "Zimmer 10": "Angelika T.", "Zimmer 13": "Ilona S.", "Zimmer 14": "Julien M.", "Zimmer 15": "Bahjat D.", "Büro Leutrim": "Leutrim S.", "Büro Katharina": "Katharina K.",
+  "Büro Ferhat": "Ferhat F.", "Büro Angelina": "Angelina M.", "Büro Sam": "Sam J.", "Büro Noura": "Noura A.", "Büro Emre": "Emre A.", "Büro Kadir": "Kadir K.", "Büro Attila": "Attila K." };
+const NAME = { "Besprechung Glas": "Besprechung 1", "Besprechung 11": "Besprechung 2", "Pause": "Pausenraum", "Lernzimmer": "Schulung", "Termine mit Donna": "Empfang · Donna", "Mandanten-Flur": "" };
+const kurz = n => String(n || "").replace(/\./g, "").split(/\s+/).map(w => w[0] || "").join("").slice(0, 2).toUpperCase();
+let skala = 7, raeume = [], tueren = {}, GES = [], ich = null, ichName = "", zuerst = true;
+function gesichtVon(name) { const n = String(name || "").toLowerCase().trim(); if (!n) return null;
+  const g = GES.find(x => String(x.kurz || "").toLowerCase() === n || String(x.name || "").toLowerCase() === n); if (g) return g.foto;
+  const v = n.split(/\s+/)[0], t = GES.filter(x => String(x.name || "").toLowerCase().split(/\s+/)[0] === v); return t.length === 1 ? t[0].foto : null; }
+function art(n) {
+  if (/^(Büro |Zimmer \d)/.test(n)) return "buero";
+  if (/^(Besprechung|Paris|Berlin|Lissabon|New York|Amsterdam|Moskau|Lernzimmer)/.test(n)) return "besprechung";
+  if (/^Pause|Fitness|Helpcenter/.test(n)) return "gemeinsam";
+  if (/Flur/.test(n)) return "flur";
+  return "anderes";
+}
+const FARBE = { buero: ["#dfe5ec", "#a9b8c8"], besprechung: ["#eceefc", "#c3c8f0"], gemeinsam: ["#fbf1e8", "#ecd2b8"], flur: ["#ffffff", "#ffffff"], anderes: ["#eef6f0", "#bfd8c6"] };
+function zeichnen() {
+  const s = skala, W = (X1 - X0) * s, H = (Y1 - Y0) * s, P = (v, o) => (v - o) * s;
+  const svg = $("plan"); svg.setAttribute("width", W); svg.setAttribute("height", H); svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  let h = `<rect x="${P(3, X0)}" y="${P(13, Y0)}" width="${112 * s}" height="${59 * s}" rx="${s}" fill="#ffffff" stroke="#e5e7eb"/>`;
+  h += `<rect x="${P(32, X0)}" y="${P(70, Y0)}" width="${30 * s}" height="${12 * s}" fill="#ffffff" stroke="#e5e7eb"/>`;
+  for (const r of raeume) {
+    const a = art(r.name), [f, st] = FARBE[a], x = P(r.x, X0), y = P(r.y, Y0), w = r.w * s, hh = r.h * s;
+    const label = r.name in PERSON ? (PERSON[r.name] ? kurz(PERSON[r.name]) : "frei") : (r.name in NAME ? NAME[r.name] : r.name);
+    h += `<g class="raum" data-raum="${esc(r.name)}"><rect x="${x}" y="${y}" width="${w}" height="${hh}" rx="${s * 0.4}" fill="${f}" stroke="${st}" stroke-width="1.5"/>`;
+    if (label) h += `<text x="${x + w / 2}" y="${y + Math.min(hh / 2, s * 1.6) + 4}" text-anchor="middle" font-size="${Math.max(9, Math.min(13, s * 1.6))}" font-weight="600" fill="#475569">${esc(label)}</text>`;
+    if (tueren[r.name]) h += `<text x="${x + w - s * 0.9}" y="${y + s * 1.2}" font-size="${Math.max(9, s * 1.2)}" text-anchor="middle">🚪</text>`;
+    h += `</g>`;
+  }
+  svg.innerHTML = h + '<g id="leute"></g>'; leuteMalen();
+}
+// Kollegen + ich: jede Sekunde nur diese Ebene neu (Räume bleiben stehen → Antippen klappt zuverlässig)
+function leuteMalen() {
+  const s = skala; let h = "";
+  const leute = []; try { for (const p of WA.players.list()) if (p.position) leute.push({ name: p.name, x: p.position.x, y: p.position.y, id: p.playerId }); } catch {}
+  if (ich) leute.push({ name: ichName, x: ich.x, y: ich.y, ich: true });
+  const R = Math.max(11, s * 1.6);
+  for (const p of leute) {
+    const cx = (p.x / 32 - X0) * s, cy = (p.y / 32 - Y0) * s, foto = gesichtVon(p.name), clip = "c" + Math.round(cx) + "_" + Math.round(cy);
+    h += `<g class="raum" ${p.ich ? "" : `data-person="${esc(p.name)}"`}><circle cx="${cx}" cy="${cy}" r="${R + 2.5}" fill="${p.ich ? "#7c3aed" : "#ffffff"}"/>`;
+    h += foto ? `<clipPath id="${clip}"><circle cx="${cx}" cy="${cy}" r="${R}"/></clipPath><image href="${esc(foto)}" x="${cx - R}" y="${cy - R}" width="${2 * R}" height="${2 * R}" clip-path="url(#${clip})" preserveAspectRatio="xMidYMid slice"/>`
+      : `<circle cx="${cx}" cy="${cy}" r="${R}" fill="#475569"/><text x="${cx}" y="${cy + 4}" text-anchor="middle" font-size="11" font-weight="800" fill="#fff">${esc(kurz(p.name))}</text>`;
+    h += `<circle cx="${cx + R * 0.75}" cy="${cy + R * 0.75}" r="4" fill="#22c55e" stroke="#fff" stroke-width="1.5"/>`;
+    const tag = p.ich ? "Ich" : String(p.name).split(/\s+/)[0], tw = tag.length * 7 + 14;
+    h += `<rect x="${cx - tw / 2}" y="${cy - R - 22}" width="${tw}" height="18" rx="9" fill="${p.ich ? "#7c3aed" : "#111827"}"/><text x="${cx}" y="${cy - R - 9}" text-anchor="middle" font-size="11.5" font-weight="700" fill="#fff">${esc(tag)}</text></g>`;
+  }
+  $("leute").innerHTML = h;
+  if (zuerst && ich) { zuerst = false; zuMir(); }
+}
+function zuMir() { if (!ich) return; const r = $("rahmen"); r.scrollLeft = (ich.x / 32 - X0) * skala - r.clientWidth / 2; r.scrollTop = (ich.y / 32 - Y0) * skala - r.clientHeight / 2; }
+function info(t) { const i = $("info"); i.textContent = t; i.style.display = "block"; clearTimeout(info.u); info.u = setTimeout(() => i.style.display = "none", 2500); }
+const aktion = (was, extra) => { try { WA.player.state.saveVariable("swAktion", { was, ...(extra || {}), t: Date.now() }, { public: false, persist: false }); } catch (e) { console.warn(e); } };
+$("plan").addEventListener("click", ev => {
+  const g = ev.target.closest("[data-person],[data-raum]"); if (!g) return;
+  if (g.dataset.person) { info("🚶 Zu " + g.dataset.person.split(/\s+/)[0] + " …"); return aktion("grundrissPerson", { name: g.dataset.person }); }
+  const n = g.dataset.raum; info("🚶 " + (n in PERSON ? (PERSON[n] || n) + (PERSON[n] ? " Büro" : "") : (NAME[n] || n)) + " …"); aktion("grundrissRaum", { name: n });
+});
+$("plus").onclick = () => { const r = $("rahmen"), mx = r.scrollLeft + r.clientWidth / 2, my = r.scrollTop + r.clientHeight / 2, alt = skala; skala = Math.min(16, skala + 2); zeichnen(); r.scrollLeft = mx * skala / alt - r.clientWidth / 2; r.scrollTop = my * skala / alt - r.clientHeight / 2; };
+$("minus").onclick = () => { const r = $("rahmen"), mx = r.scrollLeft + r.clientWidth / 2, my = r.scrollTop + r.clientHeight / 2, alt = skala; skala = Math.max(3, skala - 2); zeichnen(); r.scrollLeft = mx * skala / alt - r.clientWidth / 2; r.scrollTop = my * skala / alt - r.clientHeight / 2; };
+$("zuMir").onclick = zuMir;
+$("echt").onclick = () => aktion("grundrissAus");
+WA.onInit().then(async () => {
+  ichName = WA.player.name || "";
+  try { await WA.players.configureTracking({ players: true, movement: true }); } catch {}
+  try { let k = await (await fetch(WA.room.mapURL)).json(); if (!k.layers && k.mapUrl) k = await (await fetch(new URL(k.mapUrl, WA.room.mapURL).toString())).json();
+    const fl = (k.layers || []).find(l => l.name === "floorLayer"); const alle = (fl ? fl.objects : []).filter(o => o.name && o.width && o.name !== "start" && !o.name.startsWith("zu-"))
+      .map(o => ({ name: o.name, x: o.x / 32, y: o.y / 32, w: o.width / 32, h: o.height / 32 }));
+    // Plätze innerhalb eines Raums (Mina, IT-Olga …) sind keine eigenen Räume
+    raeume = alle.filter(a => !alle.some(b => b !== a && b.w * b.h > a.w * a.h && a.x >= b.x && a.y >= b.y && a.x + a.w <= b.x + b.w && a.y + a.h <= b.y + b.h))
+      .filter(a => a.x < X1 && a.y < Y1).sort((a, b) => (art(a.name) === "flur" ? -1 : 0) - (art(b.name) === "flur" ? -1 : 0));
+    (function lauf(ls) { ls.forEach(l => { if (l.type === "group") lauf(l.layers || []); (l.objects || []).forEach(o => { if ((o.properties || []).some(p => p.name === "tuerVariable")) tueren[o.name] = true; }); }); })(k.layers || []);
+  } catch (e) { console.warn(e); }
+  try { ich = await WA.player.getPosition(); } catch {}
+  WA.player.onPlayerMove(e => { ich = { x: e.x, y: e.y }; });
+  zeichnen(); setInterval(leuteMalen, 1000);
+  try { const aw = localStorage.getItem("swBueroAusweis") || ""; if (aw) { const g = await fetch("https://swdigitaltest.de/buero-praesenz/gesichter", { headers: { "X-Buero-Key": KEY, "X-Buero-Ausweis": aw } }); if (g.ok) { GES = await g.json(); zeichnen(); } } } catch {}
+});
+</script>
+</body>
+</html>
