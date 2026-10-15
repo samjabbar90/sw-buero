@@ -1188,6 +1188,7 @@
   var BW = () => Math.round(screen.width || 390) + "px";
   var handyBlatt = null;
   function handyBlattZu() {
+    const war = handyBlatt && handyBlatt.name;
     if (handyBlatt) {
       try {
         handyBlatt.h.close();
@@ -1195,6 +1196,10 @@
       }
     }
     handyBlatt = null;
+    if (war === "arbeiten") {
+      arbeitenOffen = false;
+      grundrissZeigen();
+    }
   }
   async function handyBlattUmschalten(name, url, hoehe) {
     const war = handyBlatt && handyBlatt.name;
@@ -1835,12 +1840,14 @@
       }
     }
   }
+  var grundrissOeffnet = false;
   var grundriss = null;
   var grundrissAn = true;
   var imGespraech = false;
+  var arbeitenOffen = false;
   async function grundrissZeigen() {
     if (!HANDY) return;
-    const soll = grundrissAn && !imGespraech && !gesperrt;
+    const soll = grundrissAn && !imGespraech && !gesperrt && !arbeitenOffen;
     if (!soll) {
       if (grundriss) {
         try {
@@ -1851,10 +1858,11 @@
       }
       return;
     }
-    if (grundriss) return;
+    if (grundriss || grundrissOeffnet) return;
+    grundrissOeffnet = true;
     try {
       grundriss = await WA.ui.website.open({
-        url: SEITEN + "grundriss.html?v=1",
+        url: SEITEN + "grundriss.html?v=2",
         allowApi: true,
         visible: true,
         position: { vertical: "top", horizontal: "middle" },
@@ -1864,6 +1872,14 @@
     } catch {
       grundriss = null;
     }
+    grundrissOeffnet = false;
+    if (grundriss && !(grundrissAn && !imGespraech && !gesperrt && !arbeitenOffen)) {
+      try {
+        grundriss.close();
+      } catch {
+      }
+      grundriss = null;
+    }
   }
   function grundrissUmschalten(an) {
     grundrissAn = an === void 0 ? !grundrissAn : an;
@@ -1871,6 +1887,35 @@
       WA.player.state.saveVariable("swGrundriss", grundrissAn, { public: false, persist: true });
     } catch {
     }
+    grundrissZeigen();
+  }
+  async function arbeitenAuf() {
+    handyBlattZu();
+    arbeitenOffen = true;
+    grundrissZeigen();
+    try {
+      glasOffen && glasOffen.handle && glasOffen.handle.close();
+    } catch {
+    }
+    glasOffen = null;
+    try {
+      const h = await WA.ui.website.open({
+        url: SEITEN + "handy.html?imBuero=1&t=" + Date.now(),
+        allowApi: true,
+        visible: true,
+        position: { vertical: "top", horizontal: "middle" },
+        size: { width: Math.round(screen.width || 390) + "px", height: "78vh" },
+        margin: { top: "104px" }
+      });
+      handyBlatt = { name: "arbeiten", h };
+    } catch {
+      arbeitenOffen = false;
+      grundrissZeigen();
+    }
+  }
+  function arbeitenZu() {
+    if (handyBlatt && handyBlatt.name === "arbeiten") handyBlattZu();
+    arbeitenOffen = false;
     grundrissZeigen();
   }
   async function grundrissRaum(name) {
@@ -2553,7 +2598,7 @@
           } catch {
           }
           try {
-            leiste = await WA.ui.website.open({ url: SEITEN + "handy-leiste.html?v=2", allowApi: true, visible: true, ...opt });
+            leiste = await WA.ui.website.open({ url: SEITEN + "handy-leiste.html?v=3", allowApi: true, visible: true, ...opt });
           } catch {
           }
         };
@@ -2608,7 +2653,7 @@
       if (handyBlatt && handyBlatt.name === "mehr") handyBlattZu();
     };
     const handyMenueUmschalten = async () => {
-      return handyBlattUmschalten("mehr", SEITEN + "handy-menue.html?v=2" + (tcAktiv ? "&tc=1" : "") + (kzAktiv ? "&kz=1" : "") + (meineTuer() ? "&tuer=1" : ""), Math.min(520, Math.round((screen.height || 800) * 0.7)) + "px");
+      return handyBlattUmschalten("mehr", SEITEN + "handy-menue.html?v=3" + (tcAktiv ? "&tc=1" : "") + (kzAktiv ? "&kz=1" : "") + (meineTuer() ? "&tuer=1" : ""), Math.min(520, Math.round((screen.height || 800) * 0.7)) + "px");
       if (handyMenue) return handyMenueZu();
       try {
         handyMenue = await WA.ui.website.open({
@@ -2647,6 +2692,12 @@
         if (v.was === "grundrissRaum") return grundrissRaum(String(v.name || ""));
         if (v.was === "grundrissPerson") return grundrissPerson(String(v.name || ""));
         if (v.was === "grundrissAus") return grundrissUmschalten(false);
+        if (v.was === "arbeiten") return arbeitenOffen ? arbeitenZu() : arbeitenAuf();
+        if (v.was === "arbeitenZu") return arbeitenZu();
+        if (v.was === "arbeitenHin") {
+          arbeitenZu();
+          return grundrissRaum(String(v.name || ""));
+        }
         if (v.was === "karte" && HANDY) {
           menueZu();
           handyMenueZu();

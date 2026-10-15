@@ -24,7 +24,7 @@
 </head>
 <body>
 <div id="rahmen"><svg id="plan" xmlns="http://www.w3.org/2000/svg"></svg></div>
-<div class="oben"><button id="zuMir">📍 Ich</button><button id="echt">🗺 Echte Karte</button></div>
+<div class="oben"><button id="zuMir">📍 Ich</button><button id="arbeiten" style="background:#0f766e;color:#fff;border-color:#0f766e">💼 Arbeiten</button><button id="echt">🗺 Karte</button></div>
 <div class="knoepfe"><button id="plus" aria-label="Größer">＋</button><button id="minus" aria-label="Kleiner">－</button></div>
 <div id="info"></div>
 <script src="https://play.workadventu.re/iframe_api.js"></script>
@@ -95,6 +95,7 @@ $("plus").onclick = () => { const r = $("rahmen"), mx = r.scrollLeft + r.clientW
 $("minus").onclick = () => { const r = $("rahmen"), mx = r.scrollLeft + r.clientWidth / 2, my = r.scrollTop + r.clientHeight / 2, alt = skala; skala = Math.max(3, skala - 2); zeichnen(); r.scrollLeft = mx * skala / alt - r.clientWidth / 2; r.scrollTop = my * skala / alt - r.clientHeight / 2; };
 $("zuMir").onclick = zuMir;
 $("echt").onclick = () => aktion("grundrissAus");
+$("arbeiten").onclick = () => aktion("arbeiten"); // 15.10.2026: Arbeits-Ansicht (handy.html?imBuero=1) als Blatt im Büro
 WA.onInit().then(async () => {
   ichName = WA.player.name || "";
   try { await WA.players.configureTracking({ players: true, movement: true }); } catch {}

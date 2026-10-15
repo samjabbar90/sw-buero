@@ -19,9 +19,9 @@
 <body>
 <div class="l" id="l"></div>
 <script>
-const ALLE = { karte: ["🗺", "Karte"], zumir: ["📍", "Zu mir"], team: ["👥", "Team"], reise: ["🚀", "Reise"], news: ["📰", "News"], kalender: ["📅", "Kalender"],
+const ALLE = { karte: ["🗺", "Karte"], arbeiten: ["💼", "Arbeiten"], zumir: ["📍", "Zu mir"], team: ["👥", "Team"], reise: ["🚀", "Reise"], news: ["📰", "News"], kalender: ["📅", "Kalender"],
   ideen: ["💡", "Ideen"], meinProfil: ["👤", "Profil"], tagescheck: ["✅", "Check"], arbeitszeit: ["⏰", "Zeit"], tuer: ["🔁", "Tür"] };
-const STANDARD = ["karte", "team", "reise"];
+const STANDARD = ["karte", "arbeiten", "team", "reise"]; // 15.10.2026: „Arbeiten“ = Arbeits-Ansicht im Büro
 function aktion(was) { try { WA.player.state.saveVariable("swAktion", { was, t: Date.now() }, { public: false, persist: false }); } catch (e) { console.warn(e); } }
 function malen(liste) {
   const k = (Array.isArray(liste) && liste.length ? liste : STANDARD).filter(x => ALLE[x]).slice(0, 4);

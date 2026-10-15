@@ -45,10 +45,16 @@
 <body>
 <header><h1>🏢 SW-Büro <span class="u" id="unter">am Handy · ohne Karte</span></h1><button id="ab" style="display:none">Abmelden</button></header>
 <main id="inhalt"><div class="leer">Lädt …</div></main>
+<script src="https://play.workadventu.re/iframe_api.js"></script>
 <div id="blatt"><div class="kopf"><b id="blattTitel"></b><button id="blattZu">✕ Schließen</button></div><iframe id="blattRahmen" title="Büro-Fenster"></iframe></div>
 <script>
 const KEY = "a21b2aa2a42fe6189b05773c07bbc9ad78e38b34ba3bb6fe", B = "https://swdigitaltest.de/buero-praesenz";
 const BUERO = "https://play.workadventu.re/@/swdigitaltax/sw-digital-tax/buero";
+// Modus „im Büro“ (15.10.2026, Sam: Knopf „💼 Arbeiten“ im Grundriss): dieselbe Ansicht als Blatt IM Büro – keine eigene Präsenz
+// (die Figur ist ja online), „Hingehen“ läuft über das Büro-Skript, oben „Zurück zum Grundriss“.
+const IM = new URLSearchParams(location.search).has("imBuero");
+const buero = (was, extra) => { try { WA.player.state.saveVariable("swAktion", { was, ...(extra || {}), t: Date.now() }, { public: false, persist: false }); } catch (e) { console.warn(e); } };
+document.addEventListener("click", e => { const a = e.target.closest && e.target.closest('a[href*="#ziel="]'); if (!IM || !a) return; e.preventDefault(); buero("arbeitenHin", { name: decodeURIComponent(a.href.split("#ziel=")[1] || "") }); });
 const SITZUNG = Math.random().toString(36).slice(2) + Date.now().toString(36), HIER = "📱 Handy";
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -66,7 +72,7 @@ const initialen = n => String(n || "?").split(/\s+/).map(w => w[0] || "").join("
 
 // ---------- Präsenz: alle 30 s melden (so sehen die Kollegen „📱 am Handy“) ----------
 async function melden(event) {
-  if (!ICH) return;
+  if (!ICH || IM) return;
   try {
     const r = await fetch(B + "/melden", { method: "POST", headers: { "Content-Type": "application/json", "X-Buero-Key": KEY }, keepalive: true,
       body: JSON.stringify({ name: ICH, bereich: HIER, event, sitzung: SITZUNG, start: !gestartet && event !== "verlassen", handy: true, ruhe: 0, gespraech: [], pos: null }) });
@@ -91,10 +97,10 @@ async function laden() {
 // ---------- Anzeige ----------
 function zeichnen() {
   if (!ICH) return;
-  $("unter").textContent = ICH.split(" ")[0] + " · am Handy" + (seit ? " · online seit " + seit : "");
-  $("ab").style.display = "";
+  $("unter").textContent = ICH.split(" ")[0] + (IM ? " · im Büro · Arbeiten" : " · am Handy") + (seit ? " · online seit " + seit : "");
+  $("ab").style.display = IM ? "none" : "";
   const jetzt = new Date().toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
-  let h = `<button class="gross" id="karte">🗺 Ins Büro gehen (Karte)</button>`;
+  let h = IM ? `<button class="gross" id="karte">⬅ Zurück zum Grundriss</button>` : `<button class="gross" id="karte">🗺 Ins Büro gehen (Karte)</button>`;
   h += meldungen.map((m, i) => `<div class="meldung${m.klopfen ? " klopfen" : ""}"><div><b>${esc(String(m.von).split(" ")[0])}</b> ${esc(m.text)}</div><div class="zeile">
     ${m.klopfen && m.raum ? `<a class="k voll" href="${BUERO}#ziel=${encodeURIComponent(m.raum)}">🚶 Hingehen</a>` : ""}${m.von !== "System" ? `<button class="k" data-antw="${i}">💬 Antworten</button>` : ""}<button class="k" data-weg="${i}">OK</button></div>
     ${offen === "a" + i ? `<div class="eingabe"><input id="txt" placeholder="Antwort an ${esc(String(m.von).split(" ")[0])} …" maxlength="300"><button class="k voll" data-senden="${esc(m.von)}">Senden</button></div>` : ""}</div>`).join("");
@@ -109,7 +115,7 @@ function zeichnen() {
     <div id="fe"></div></div>`;
   if (weg.length) h += `<div class="karte"><details><summary>Nicht im Büro (${weg.length})</summary>${weg.map(p => `<div class="p"><span class="gesicht" style="background:#cbd5e1">${esc(initialen(p.name))}</span><div><div class="n">${esc(p.name)}</div><div class="w">${p.zuletzt ? "zuletzt " + new Date(p.zuletzt).toLocaleString("de-DE", { weekday: "short", hour: "2-digit", minute: "2-digit" }) : "–"}</div></div>${p.durchwahl ? `<div class="akt"><a class="k" href="tel:${esc(p.durchwahl)}">📞</a></div>` : ""}</div>`).join("")}</details></div>`;
   $("inhalt").innerHTML = h;
-  $("karte").onclick = () => { melden("verlassen"); location.href = BUERO; };
+  $("karte").onclick = () => { if (IM) return buero("arbeitenZu"); melden("verlassen"); location.href = BUERO; };
   document.querySelectorAll("[data-k]").forEach(b => b.onclick = () => blatt(KACHELN[+b.dataset.k]));
   document.querySelectorAll("[data-weg]").forEach(b => b.onclick = () => { meldungen.splice(+b.dataset.weg, 1); offen = ""; zeichnen(); });
   document.querySelectorAll("[data-antw]").forEach(b => b.onclick = () => { offen = offen === "a" + b.dataset.antw ? "" : "a" + b.dataset.antw; zeichnen(); $("txt") && $("txt").focus(); });

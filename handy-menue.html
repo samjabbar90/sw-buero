@@ -38,7 +38,7 @@ if (q.has("knopf")) {
   app.innerHTML = '<div class="knopf" id="k">☰</div>';
   document.getElementById("k").onclick = () => aktion("handyMenue");
 } else {
-  const P = [["handyListe", "📋", "Liste"], ["karte", "🗺", "Übersicht"], ["zumir", "📍", "Zu mir"], ["reise", "🚀", "Reise"], ["team", "👥", "Team"], // 15.10.2026: „Liste“ = Handy-Büro ohne Karte
+  const P = [["arbeiten", "💼", "Arbeiten"], ["handyListe", "📋", "Liste"], ["karte", "🗺", "Übersicht"], ["zumir", "📍", "Zu mir"], ["reise", "🚀", "Reise"], ["team", "👥", "Team"], // 15.10.2026: „Liste“ = Handy-Büro ohne Karte
     ["news", "📰", "News"], ["kalender", "📅", "Kalender"], ["ideen", "💡", "Ideen"], ["meinProfil", "👤", "Profil"]]
     .concat(q.has("tc") ? [["tagescheck", "✅", "Tages-Check"]] : [], q.has("kz") ? [["arbeitszeit", "⏰", "Arbeitszeit"], ["feierabend", "🚪", "Feierabend"]] : [],
       q.has("tuer") ? [["tuer", "🔁", "Tür"]] : []);
