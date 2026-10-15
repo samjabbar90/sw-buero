@@ -519,12 +519,8 @@
   var hm = (d) => d.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin" });
   var infoLeiste = null;
   var hinweiseOffen = 0;
-  var LEISTE_UNTEN = "2px";
+  var LEISTE_UNTEN = "0px";
   function leisteVerschieben() {
-    try {
-      if (infoLeiste) infoLeiste.margin = { bottom: hinweiseOffen > 0 ? "150px" : LEISTE_UNTEN };
-    } catch {
-    }
   }
   function hinweiseUeberwachen() {
     try {
@@ -1804,7 +1800,8 @@
     if (HANDY) return;
     for (const t of tueren) {
       const [rx, ry, rw] = t.rechteck, n = t.raum in SCHILD_PERSON ? SCHILD_PERSON[t.raum] : t.besitzer ? t.besitzer.charAt(0).toUpperCase() + t.besitzer.slice(1) : "";
-      const w = Math.min(rw - 0.3, 4.2), st = schildStatus(t);
+      const st = schildStatus(t);
+      void rw;
       try {
         const h = await WA.room.website.create({
           name: "schild-" + t.variable,
@@ -1813,7 +1810,7 @@
           allowApi: false,
           origin: "map",
           scale: 1,
-          position: { x: Math.round((rx + 0.15) * 32), y: Math.round((ry + 0.1) * 32), width: Math.round(w * 32), height: 20 }
+          position: { x: Math.round((rx + 0.05) * 32), y: Math.round((ry - 2.35) * 32), width: 46, height: 16 }
         });
         schilder.set(t.variable, { h, n, s: st });
       } catch {
@@ -2352,12 +2349,12 @@
       }
     } else try {
       infoLeiste = await WA.ui.website.open({
-        url: "https://samjabbar90.github.io/sw-buero/info.html?v=5" + (kzAktiv ? "&kz=1" : ""),
+        url: "https://samjabbar90.github.io/sw-buero/info.html?v=6&flach=1" + (kzAktiv ? "&kz=1" : ""),
         allowApi: true,
         visible: true,
         // genau so groß wie die Leiste (kein weißer Rand): mit eigener Tür breiter (Tür + Fokus), sonst nur Uhrzeit + Kollegen
         position: { vertical: HANDY ? "top" : "bottom", horizontal: "middle" },
-        size: { width: HANDY ? Math.max(300, (screen.width || 390) - 16) + "px" : 400 + (meineTuer() ? 150 : 0) + (kzAktiv ? 130 : 0) + "px", height: "40px" },
+        size: { width: HANDY ? Math.max(300, (screen.width || 390) - 16) + "px" : 400 + (meineTuer() ? 150 : 0) + (kzAktiv ? 130 : 0) + "px", height: HANDY ? "40px" : "24px" },
         margin: HANDY ? { top: "64px" } : { bottom: LEISTE_UNTEN }
       });
     } catch {
