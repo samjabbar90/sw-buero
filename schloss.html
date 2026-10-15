@@ -35,15 +35,15 @@
 
   <div class="v" id="v-start">
     <button type="button" id="msLos" style="display:none;background:#2563eb">🪟 Mit Microsoft anmelden (Firmen-Laptop)</button>
-    <button type="button" data-zu="mail">✉️ Code per E-Mail</button>
-    <button type="button" class="zwei" data-zu="anmelden">🔑 Mit Passwort (nach einer Pause)</button>
-    <div class="klein" style="margin-top:12px;text-align:center"><b>Erste Anmeldung am Tag:</b> Code per E-Mail – danach 6 Std angemeldet. <b>Nach einer Pause:</b> in diesen 6 Std mit deinem Passwort. Beim allerersten Mal ist der Code dein Ausweis-Code, danach legst du dein Passwort an.</div>
+    <button type="button" class="zwei" data-zu="anmelden">🔢 Mit PIN / Passwort (nach einer Pause)</button>
+    <button type="button" class="zwei" data-zu="mail" style="font-size:13px;opacity:.85">✉️ Code per E-Mail (nur wenn für dich freigegeben)</button>
+    <div class="klein" style="margin-top:12px;text-align:center"><b>Firmen-Laptop:</b> morgens „Mit Microsoft anmelden“ – danach 6 Std angemeldet. <b>Nach einer Pause</b> (10 Min ohne Aktivität): mit deiner 6-stelligen PIN. Die PIN legst du nach der ersten Microsoft-Anmeldung einmal fest.</div>
   </div>
 
   <form class="v" id="v-anmelden" autocomplete="on">
     <label for="ben">Benutzername oder E-Mail</label><input id="ben" autocomplete="username" autocapitalize="none" required>
-    <label for="pw">Büro-Passwort</label><input id="pw" type="password" autocomplete="current-password" required>
-    <div class="klein">Geht nur innerhalb von 6 Stunden nach deiner Anmeldung mit Code.</div>
+    <label for="pw">Büro-PIN bzw. Büro-Passwort</label><input id="pw" type="password" autocomplete="current-password" required>
+    <div class="klein">Geht nur innerhalb von 6 Stunden nach deiner Anmeldung (Microsoft bzw. Code) und mit Microsoft nur auf demselben Laptop.</div>
     <button type="submit">🔓 Entsperren</button><a class="zur" data-zu="vergessen">Passwort vergessen?</a><a class="zur" data-zu="start">← zurück</a>
   </form>
 
@@ -80,8 +80,15 @@
 const KEY = "a21b2aa2a42fe6189b05773c07bbc9ad78e38b34ba3bb6fe", API = "https://swdigitaltest.de/buero-praesenz";
 const $ = id => document.getElementById(id), q = new URLSearchParams(location.search), SITZUNG = q.get("sitzung") || "", PAUSE = q.get("grund") === "pause" || q.get("grund") === "rechner";
 const merk = { holen: k => { try { return localStorage.getItem(k) || ""; } catch { return ""; } }, setzen: (k, v) => { try { localStorage.setItem(k, v); } catch {} } };
-if (q.get("grund") === "pause") $("unter").textContent = "Du warst 30 Minuten inaktiv – das Büro wurde zur Sicherheit gesperrt.";
-if (q.get("grund") === "rechner") $("unter").textContent = "Du warst 15 Minuten nicht am Rechner – du wirst nicht mehr als anwesend angezeigt. Zum Weitermachen entsperren.";
+if (q.get("grund") === "pause") $("unter").textContent = "Du warst eine Weile inaktiv – das Büro wurde zur Sicherheit gesperrt. Weiter mit deiner PIN.";
+if (q.get("grund") === "rechner") $("unter").textContent = "Du warst nicht am Rechner – du wirst nicht mehr als anwesend angezeigt. Weiter mit deiner PIN.";
+// PIN anlegen nach Microsoft (15.10.2026): Formular „anlegen“ auf 6 Ziffern umstellen
+function pinModus() {
+  document.querySelector("#v-anlegen p.u").innerHTML = "<b>Einmalig:</b> Leg deine 6-stellige Büro-PIN fest. Damit kommst du nach einer Pause wieder rein, ohne dich neu bei Microsoft anzumelden.";
+  document.querySelector("label[for=p1]").textContent = "Neue PIN (genau 6 Ziffern)";
+  ["p1", "p2"].forEach(id => { const i = $(id); i.maxLength = 6; i.minLength = 6; i.pattern = "[0-9]{6}"; i.inputMode = "numeric"; });
+  document.querySelector("#v-anlegen button[type=submit]").textContent = "PIN speichern und ins Büro";
+}
 let ausweis = "";
 function zeige(n, fehler = "", ok = "") {
   document.querySelectorAll(".v").forEach(v => v.classList.toggle("an", v.id === "v-" + n));
@@ -93,7 +100,7 @@ async function post(pfad, daten, mitAusweis) {
   const h = { "X-Buero-Key": KEY, "Content-Type": "application/json" }; const aw = mitAusweis ? ausweis : merk.holen("swBueroAusweis"); if (aw) h["X-Buero-Ausweis"] = aw; // 15.10.: Nachweis gleiches Gerät
   const r = await fetch(API + pfad, { method: "POST", headers: h, body: JSON.stringify(daten) });
   let d = {}; try { d = await r.json(); } catch {}
-  if (!r.ok) { const e = new Error(d.error || (r.status === 429 ? "Zu viele Versuche. Bitte 15 Minuten warten." : "Fehler " + r.status)); e.codeNoetig = d.codeNoetig; throw e; }
+  if (!r.ok) { const e = new Error(d.error || (r.status === 429 ? "Zu viele Versuche. Bitte 15 Minuten warten." : "Fehler " + r.status)); e.codeNoetig = d.codeNoetig; e.nurMicrosoft = d.nurMicrosoft; throw e; }
   return d;
 }
 async function oeffnen(name) {
@@ -118,6 +125,7 @@ async function entsperren(benutzer, geheim, knopf) {
   } catch (e) {
     knopf.disabled = false;
     if (e.codeNoetig) { $("mail").value = /@/.test(benutzer) ? benutzer : ""; return zeige("mail", e.message); }
+    if (e.nurMicrosoft) { zeige("start", e.message); return; } // 15.10.2026: Firmen-Laptop → zurück zu „Mit Microsoft anmelden“
     $("fe").textContent = e.message;
   }
 }
@@ -148,7 +156,9 @@ $("msLos").onclick = () => { $("fe").textContent = ""; const f = window.open("ht
 window.addEventListener("message", async (e) => {
   if (e.origin !== "https://swdigitaltest.de" || !e.data) return;
   if (e.data.swMsFehler) { $("ok").textContent = ""; $("fe").textContent = e.data.swMsFehler; return; }
-  if (e.data.swAusweis) { ausweis = String(e.data.swAusweis); merk.setzen("swBueroAusweis", ausweis); merk.setzen("swSchlossBenutzer", ""); await oeffnen(e.data.name || ""); }
+  if (e.data.swAusweis) { ausweis = String(e.data.swAusweis); merk.setzen("swBueroAusweis", ausweis); merk.setzen("swSchlossBenutzer", "");
+    if (e.data.pinFehlt) { pinModus(); return zeige("anlegen", "", "Mit Microsoft angemeldet ✓ – jetzt einmal deine PIN festlegen."); }
+    await oeffnen(e.data.name || ""); }
 });
 // Start: wer zuletzt mit Büro-Passwort kam, landet direkt dort; sonst Auswahl mit vorausgefüllter E-Mail
 const bekannt = merk.holen("swSchlossBenutzer");

@@ -2403,6 +2403,7 @@
   function wegVomRechner() {
     if (beendet) return;
     beendet = true;
+    schlossMerken(false);
     rausZu(SEITEN + "weg.html");
   }
   function schlossWache() {
