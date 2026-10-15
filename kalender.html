@@ -226,7 +226,7 @@ function zeitWahl(id, wert) {
 }
 function zeitSauber(v) {
   const t = String(v || "").trim().replace(/[.,h ]/g, ":"); let h, m;
-  if (/^d{1,2}$/.test(t)) { h = +t; m = 0; } else if (/^d{3,4}$/.test(t)) { h = +t.slice(0, -2); m = +t.slice(-2); } else { const x = /^(d{1,2}):(d{1,2})$/.exec(t); if (!x) return ""; h = +x[1]; m = +x[2]; }
+  if (/^\d{1,2}$/.test(t)) { h = +t; m = 0; } else if (/^\d{3,4}$/.test(t)) { h = +t.slice(0, -2); m = +t.slice(-2); } else { const x = /^(\d{1,2}):(\d{1,2})$/.exec(t); if (!x) return ""; h = +x[1]; m = +x[2]; }
   return h <= 23 && m <= 59 ? String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0") : "";
 }
 function zeitWahlVerdrahten() {
