@@ -860,7 +860,7 @@
     } catch {
     }
     const SW = screen.availWidth || 1600, SH = screen.availHeight || 900, zw = (v, a, z) => Math.min(z, Math.max(a, v));
-    const b = Math.round(zw(Number(e.b) || Math.min(780, SW * 0.44), 340, Math.min(1100, SW - 40))), hv = Math.round(zw(Number(e.hv) || 78, 30, 88));
+    const b = Math.round(zw(Number(e.b) || Math.min(780, SW * 0.44), 340, SW - 40)), hv = Math.round(zw(Number(e.hv) || 78, 30, 92));
     e = { ...e, r: zw(Number(e.r ?? 14) || 0, 0, Math.min(360, Math.max(0, SW - b - 20))), o: zw(Number(e.o ?? 70) || 0, 0, 160) };
     if (HANDY) return { position: { vertical: "bottom", horizontal: "middle" }, size: { width: Math.round(screen.width || 390) + "px", height: "76vh" }, margin: { bottom: "0px" } };
     if (e.voll) return { position: { vertical: "top", horizontal: "middle" }, size: { width: Math.round(screen.availWidth * 0.94) + "px", height: "90vh" }, margin: { top: "40px" } };
