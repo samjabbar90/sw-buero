@@ -32,7 +32,8 @@
   body.teil-status .teil:has(#uhr), body.teil-status #tuer, body.teil-status #fokus, body.teil-status #feierabend, body.teil-status #news, body.teil-status .lang { display:none !important; }
   body.teil-tuer .teil:not(#tuer) { display:none !important; } body.teil-tuer #tuer { border-left:0 !important; }
   /* flache Leiste am PC (15.10.2026 spät): 24 px hoch, ganz unten */
-  body.flach .pille { font-size:11px; border-radius:999px; padding:0 2px; } body.flach .teil { height:15px; padding:0 8px; gap:4px; } body.flach button.teil { padding:0 9px; line-height:15px; } body.flach #news .zahl { top:-3px; min-width:13px; height:13px; line-height:13px; font-size:9px; }
+  /* 15.10.2026 spät (Sam: „größer“): 38 px, Schrift 15 px – die Leiste blendet sich bei Leertaste-Hinweisen ohnehin aus */
+  body.flach .pille { font-size:15px; border-radius:999px; padding:0 4px; } body.flach .teil { height:30px; padding:0 14px; gap:7px; } body.flach button.teil { padding:0 14px; }
   body.teil-status .pille, body.teil-tuer .pille { font-size:13px; padding:0 2px; background:rgba(20,24,34,.88); border:1px solid rgba(255,255,255,.14); } body.teil-status .teil { padding:0 8px; } body.teil-status { cursor:pointer; }
 </style>
 </head>

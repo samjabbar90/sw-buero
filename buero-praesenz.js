@@ -2354,12 +2354,12 @@
       }
     } else try {
       infoLeiste = await WA.ui.website.open({
-        url: "https://samjabbar90.github.io/sw-buero/info.html?v=7&flach=1" + (kzAktiv ? "&kz=1" : ""),
+        url: "https://samjabbar90.github.io/sw-buero/info.html?v=8&flach=1" + (kzAktiv ? "&kz=1" : ""),
         allowApi: true,
         visible: true,
         // genau so groß wie die Leiste (kein weißer Rand): mit eigener Tür breiter (Tür + Fokus), sonst nur Uhrzeit + Kollegen
         position: { vertical: HANDY ? "top" : "bottom", horizontal: "middle" },
-        size: { width: HANDY ? Math.max(300, (screen.width || 390) - 16) + "px" : 400 + (meineTuer() ? 150 : 0) + (kzAktiv ? 130 : 0) + "px", height: HANDY ? "40px" : "18px" },
+        size: { width: HANDY ? Math.max(300, (screen.width || 390) - 16) + "px" : 520 + (meineTuer() ? 170 : 0) + (kzAktiv ? 160 : 0) + "px", height: HANDY ? "40px" : "38px" },
         margin: HANDY ? { top: "64px" } : { bottom: LEISTE_UNTEN }
       });
     } catch {
