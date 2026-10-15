@@ -2492,22 +2492,12 @@
     try {
       const pm = WA.player.proximityMeeting;
       const neu = () => melden("heartbeat");
-      const c = WA.controls, medien = (an) => {
-        if (HANDY) return;
-        try {
-          if (an) {
-            c.restoreWebcam?.();
-            c.restoreMicrophone?.();
-          } else {
-            c.disableWebcam?.();
-            c.disableMicrophone?.();
-          }
-        } catch {
-        }
-      };
-      medien(false);
-      pm.onJoin().subscribe(() => medien(true));
-      pm.onLeave().subscribe(() => medien(false));
+      try {
+        const c = WA.controls;
+        c.restoreWebcam?.();
+        c.restoreMicrophone?.();
+      } catch {
+      }
       pm.onJoin().subscribe((leute) => {
         gespraech.clear();
         (leute || []).forEach((p) => p && p.name && gespraech.add(p.name));

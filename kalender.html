@@ -197,10 +197,11 @@ function zeichnen() {
   if ($("dHin")) $("dHin").onclick = () => { try { WA.player.state.saveVariable("swAktion", { was: "zuRaum", name: t.ort, t: Date.now() }, { public: false, persist: false }); } catch {} };
   formAktivieren();
 }
+const RAUM_NAME = { "Besprechung Glas": "Besprechungszimmer 1", "Besprechung 11": "Besprechungszimmer 2", Paris: "Paris (Mandanten-Etage)", Berlin: "Berlin (Mandanten-Etage)", Lissabon: "Lissabon (Mandanten-Etage)", "New York": "New York (Mandanten-Etage)", Amsterdam: "Amsterdam (Mandanten-Etage)", Moskau: "Moskau (Mandanten-Etage)" };
 function formHtml() {
   const f = S.form;
   if (f.art === "raum") return `<div class="box"><b>🚪 Raum buchen</b>
-    <label>Raum</label><select id="fRaum" style="width:100%">${(f.raeume || []).map(r => `<option>${esc(r)}</option>`).join("")}</select>
+    <label>Raum</label><select id="fRaum" style="width:100%">${(f.raeume || []).map(r => `<option value="${esc(r)}">${esc(RAUM_NAME[r] || r)}</option>`).join("")}</select>
     <div class="reihe3"><div><label>Datum</label><input id="fDatum" type="date" value="${iso(S.basis) < heuteIso() ? heuteIso() : iso(S.basis)}" style="width:100%"></div><div><label>von</label>${zeitWahl("fVon", "10:00")}</div><div><label>bis</label>${zeitWahl("fBis", "11:00")}</div></div>
     <label>Thema</label><input id="fThema" maxlength="80" style="width:100%" placeholder="z. B. Team-Besprechung">
     <div class="fehler" id="fFe"></div><div style="display:flex;gap:6px;margin-top:8px"><button id="fOk">Buchen</button><button class="leicht" id="fAbbr">Abbrechen</button></div>
@@ -215,30 +216,36 @@ function formHtml() {
 }
 // Uhrzeit als zwei Auswahllisten (15.10.2026, Sam: „Zahlen bei der Uhrzeitwahl etwas versetzt“ – die eingebaute Uhrzeit-Auswahl des
 // Browsers verrutscht im Büro-Fenster). Stunde + Minute (5er-Schritte), Wert im versteckten Feld mit der alten id.
+// Uhrzeit (15.10.2026 abends, Sam: „selber reinschreiben können“): Eingabefeld mit Vorschlagsliste (15-Min-Schritte). Eingetippt geht
+// „930“, „9:30“, „9.30“ oder „9“ – beim Verlassen wird es zu „09:30“. „bis“ rückt automatisch 1 Std nach „von“, wenn es davor läge.
 function zeitWahl(id, wert) {
-  const [h, m] = String(wert || "09:00").split(":"), mins = [...Array(12).keys()].map(i => String(i * 5).padStart(2, "0"));
-  if (!mins.includes(m)) mins.push(m); mins.sort();
-  const opt = (l, w) => l.map(x => `<option${x === w ? " selected" : ""}>${x}</option>`).join("");
-  return `<div style="display:flex;gap:4px;align-items:center"><select data-zw="${id}" data-t="h" style="flex:1">${opt([...Array(24).keys()].map(i => String(i).padStart(2, "0")), h)}</select><b>:</b><select data-zw="${id}" data-t="m" style="flex:1">${opt(mins, m)}</select><input type="hidden" id="${id}" value="${esc(h + ":" + m)}"></div>`;
+  if (!document.getElementById("zeiten")) { const dl = document.createElement("datalist"); dl.id = "zeiten";
+    for (let h = 6; h <= 21; h++) for (const m of ["00", "15", "30", "45"]) { const o = document.createElement("option"); o.value = String(h).padStart(2, "0") + ":" + m; dl.appendChild(o); }
+    document.body.appendChild(dl); }
+  return `<input id="${id}" list="zeiten" inputmode="numeric" autocomplete="off" maxlength="5" placeholder="09:00" value="${esc(wert || "")}" style="width:100%">`;
+}
+function zeitSauber(v) {
+  const t = String(v || "").trim().replace(/[.,h ]/g, ":"); let h, m;
+  if (/^d{1,2}$/.test(t)) { h = +t; m = 0; } else if (/^d{3,4}$/.test(t)) { h = +t.slice(0, -2); m = +t.slice(-2); } else { const x = /^(d{1,2}):(d{1,2})$/.exec(t); if (!x) return ""; h = +x[1]; m = +x[2]; }
+  return h <= 23 && m <= 59 ? String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0") : "";
 }
 function zeitWahlVerdrahten() {
-  document.querySelectorAll("[data-zw]").forEach(s => s.onchange = () => { const id = s.dataset.zw, w = t => document.querySelector(`[data-zw="${id}"][data-t="${t}"]`).value; $(id).value = w("h") + ":" + w("m");
-    // „bis“ automatisch eine Stunde nach „von“, wenn es sonst davor läge
-    if (id === "fVon" && $("fBis") && $("fBis").value <= $("fVon").value) { const n = (+w("h") + 1) % 24, hh = String(n).padStart(2, "0"); $("fBis").value = hh + ":" + w("m");
-      const b = t => document.querySelector(`[data-zw="fBis"][data-t="${t}"]`); b("h").value = hh; b("m").value = w("m"); } });
+  ["fVon", "fBis"].forEach(id => { const el = $(id); if (!el) return;
+    el.onchange = el.onblur = () => { const z = zeitSauber(el.value); if (z) el.value = z;
+      if (id === "fVon" && z && $("fBis") && (!$("fBis").value || $("fBis").value <= z)) $("fBis").value = String((+z.slice(0, 2) + 1) % 24).padStart(2, "0") + z.slice(2); }; });
 }
 function formAktivieren() {
   if (!S.form) return;
   zeitWahlVerdrahten();
   $("fAbbr").onclick = () => { S.form = null; zeichnen(); };
   if (S.form.art === "raum") {
-    $("fOk").onclick = async () => { try { await api("/buero-reservierungen", { method: "POST", body: JSON.stringify({ raum: $("fRaum").value, datum: $("fDatum").value, von: $("fVon").value, bis: $("fBis").value, thema: $("fThema").value }) }); S.form = null; laden(); } catch (e) { $("fFe").textContent = e.message; } };
+    $("fOk").onclick = async () => { try { await api("/buero-reservierungen", { method: "POST", body: JSON.stringify({ raum: $("fRaum").value, datum: $("fDatum").value, von: zeitSauber($("fVon").value), bis: zeitSauber($("fBis").value), thema: $("fThema").value }) }); S.form = null; laden(); } catch (e) { $("fFe").textContent = e.message; } };
     document.querySelectorAll("[data-loesch]").forEach(a => a.onclick = async ev => { ev.preventDefault(); try { await api("/buero-reservierungen/" + encodeURIComponent(a.dataset.loesch), { method: "DELETE" }); raumForm(); } catch (e) { $("fFe").textContent = e.message; } });
     return;
   }
   const t = S.form.t || {};
   $("fOk").onclick = async () => {
-    const b = { titel: $("fTitel").value, datum: $("fDatum").value, bis: $("fDatum").value, von: $("fVon").value, ende: $("fBis").value, ganztag: $("fGanz").checked, privat: $("fPrivat").checked, ort: $("fOrt").value };
+    const b = { titel: $("fTitel").value, datum: $("fDatum").value, bis: $("fDatum").value, von: zeitSauber($("fVon").value), ende: zeitSauber($("fBis").value), ganztag: $("fGanz").checked, privat: $("fPrivat").checked, ort: $("fOrt").value };
     try { if (t.id) await api("/kalender/termine/" + encodeURIComponent(t.id), { method: "PUT", body: JSON.stringify(b) }); else await api("/kalender/" + encodeURIComponent(S.wer) + "/termine", { method: "POST", body: JSON.stringify(b) });
       S.form = null; laden(); } catch (e) { $("fFe").textContent = e.message; }
   };
@@ -249,7 +256,8 @@ async function raumForm() {
     const ich = S.personen[0] ? S.personen[0].name : "";
     // 15.10.2026 (Sam): nur die Besprechungszimmer auf der Mandanten-Etage buchen (Städte-Räume oben)
     // (feste Liste: /buero-raeume kennt nur Räume, in denen schon mal jemand war)
-    void raeume; S.form = { art: "raum", raeume: ["Paris", "Berlin", "Lissabon", "New York", "Amsterdam", "Moskau"], meine: alle.filter(r => r.name === ich) }; zeichnen(); }
+    // 15.10.2026 abends (Sam): dazu die zwei Besprechungszimmer im Büro
+    void raeume; S.form = { art: "raum", raeume: ["Besprechung Glas", "Besprechung 11", "Paris", "Berlin", "Lissabon", "New York", "Amsterdam", "Moskau"], meine: alle.filter(r => r.name === ich) }; zeichnen(); }
   catch (e) { if (e.message === "ausweis") return anmelden(); alert(e.message); }
 }
 // ===== Anträge (10.10.2026, Sam: Layout A „Reiter im Kalender“) — dieselben Anträge wie im SW-internen Portal, nur die eigenen =====
