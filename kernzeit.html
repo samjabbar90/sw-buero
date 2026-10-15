@@ -79,7 +79,14 @@ function zeigen(d) {
   if (!d.aktiv) { $("inhalt").innerHTML = '<div class="box"><div class="titel">Keine Kernarbeitszeit hinterlegt</div><div class="m">Für dich ist keine Kernarbeitszeit eingerichtet. Schönen Feierabend!</div></div>'; return; }
   if (d.freierTag) { $("inhalt").innerHTML = '<div class="box gruen"><div class="titel">Heute ist kein Arbeitstag für dich</div><div class="m">Schönen Feierabend!</div></div>'; return; }
   const k = d.kernzeit, t = d.heute || {};
-  let h = `<div class="box"><div class="titel">Heute · Kernzeit ${esc(k.von)}–${esc(k.bis)}</div><div class="zahlen">
+  let h;
+  if (d.art === "woche") { // 16.10.2026: nur Mindeststunden pro Woche
+    const w = d.woche || {}, pz = w.soll ? Math.min(100, Math.round((w.ist || 0) / w.soll * 100)) : 100;
+    h = `<div class="box"><div class="titel">Diese Woche · mindestens ${std(k.wochenStd)} Std</div><div class="zahlen">
+      <div class="zahl"><span>Ist</span><b>${std(w.ist)}</b></div><div class="zahl"><span>Soll diese Woche</span><b>${std(w.soll)}</b></div><div class="zahl"><span>Noch offen</span><b>${std(Math.max(0, (w.soll || 0) - (w.ist || 0)))}</b></div><div class="zahl"><span>Guthaben</span><b>${std(d.guthabenStd)}</b></div></div>
+      <div style="height:8px;background:rgba(127,127,127,.2);border-radius:4px;margin-top:8px;overflow:hidden"><i style="display:block;height:100%;width:${pz}%;background:#0d9488"></i></div>
+      <div class="m" style="margin-top:6px">Keine festen Zeiten – zählt nur, dass die Woche voll wird.${(w.abzug || []).length ? " Soll gesenkt: " + esc(w.abzug.join(", ")) + "." : ""}</div></div>`;
+  } else h = `<div class="box"><div class="titel">Heute · Kernzeit ${esc(k.von)}–${esc(k.bis)}</div><div class="zahlen">
     <div class="zahl"><span>Kommen</span><b>${esc(t.kommen || "–")}</b></div><div class="zahl"><span>Ist / Soll</span><b>${std(t.istStd)} / ${std(t.soll != null ? t.soll : k.soll)}</b></div>
     <div class="zahl"><span>Pause</span><b>${t.pauseMin != null ? t.pauseMin : "–"} Min</b></div><div class="zahl"><span>Guthaben</span><b>${std(d.guthabenStd)}</b></div></div>
     ${t.pauseMin != null && t.pauseMin < k.pauseMin ? `<div class="m" style="margin-top:6px">☕ Pflichtpause: mindestens ${k.pauseMin} Min (Pausenraum im Büro).</div>` : ""}</div>`;
@@ -90,7 +97,9 @@ function zeigen(d) {
   }
   for (const o of d.offen || []) {
     const f = o.frage, tag = o.datum === new Date().toLocaleDateString("sv-SE") ? "heute" : "am " + tagDE(o.datum);
-    const kopf = `<div class="titel">Arbeitszeit ${tag} nicht erfüllt</div><div class="m">${esc(o.kommen || "?")}–${esc(o.gehen || "?")} · ${std(o.istStd)} von ${std(o.soll)} Std · fehlen ${std(f.fehltStd)}</div>`;
+    const kopf = o.woche
+      ? `<div class="titel">Wochenstunden ${tagDE(o.wocheVon)}–${tagDE(o.datum)} nicht erfüllt</div><div class="m">${std(o.wochenIst)} von ${std(o.wochenSoll)} Std · fehlen ${std(f.fehltStd)}</div>`
+      : `<div class="titel">Arbeitszeit ${tag} nicht erfüllt</div><div class="m">${esc(o.kommen || "?")}–${esc(o.gehen || "?")} · ${std(o.istStd)} von ${std(o.soll)} Std · fehlen ${std(f.fehltStd)}</div>`;
     h += f.fall === 1
       ? `<div class="box warn">${kopf}<div style="margin-top:8px;font-size:14px">Du hast <b>${std(f.guthabenStd)} Std</b> Überstunden. Willst du <b>${std(f.fehltStd)} Std</b> davon nehmen?</div>
          <div class="reihe"><button data-a="ja" data-d="${o.datum}">Ja, Überstunden nehmen</button></div><div class="m" style="margin-top:6px">Es wird automatisch ein Überstunden-Antrag angelegt.</div></div>`
