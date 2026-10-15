@@ -7,7 +7,7 @@
 <style>
   * { box-sizing:border-box; }
   body { margin:0; background:#f8fafc; color:#0f172a; font-family:system-ui,-apple-system,"Segoe UI",sans-serif; }
-  header { position:sticky; top:0; background:#0f766e; color:#fff; padding:14px 16px; }
+  header { position:sticky; top:0; z-index:2; background:#0f766e; color:#fff; padding:14px 16px; }
   header h1 { margin:0; font-size:18px; }
   header .unter { font-size:12.5px; opacity:.85; margin-top:2px; }
   main { padding:14px; display:flex; flex-direction:column; gap:12px; }
@@ -20,42 +20,116 @@
   h2 { font-size:14px; margin:0 0 8px; }
   .aufgabe { display:flex; gap:10px; align-items:flex-start; padding:8px 0; border-top:1px solid #f1f5f9; }
   .aufgabe:first-of-type { border-top:0; }
-  .haken { width:22px; height:22px; border-radius:50%; border:2px solid #cbd5e1; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:12px; color:#fff; }
-  .aufgabe.fertig .haken { background:#0d9488; border-color:#0d9488; }
+  button.haken { width:26px; height:26px; border-radius:50%; border:2px solid #94a3b8; background:#fff; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:13px; color:#fff; cursor:pointer; padding:0; font-weight:700; }
+  button.haken:hover:not(:disabled) { border-color:#0d9488; }
+  button.haken.an { background:#0d9488; border-color:#0d9488; cursor:default; }
+  button.haken:disabled:not(.an) { opacity:.5; cursor:wait; }
   .aufgabe.fertig .t { text-decoration:line-through; color:#64748b; }
   .t { font-size:14px; font-weight:600; } .h { font-size:12px; color:#64748b; }
   .p { margin-left:auto; font-size:12px; font-weight:700; color:#0f766e; white-space:nowrap; }
-  a.knopf { display:block; text-align:center; background:#0d9488; color:#fff; text-decoration:none; font-weight:700; border-radius:10px; padding:11px; }
+  button.k { font:inherit; font-size:14px; font-weight:700; border-radius:10px; padding:11px; cursor:pointer; border:0; background:#0d9488; color:#fff; width:100%; }
+  button.k.leicht { background:#fff; color:#0f766e; border:1.5px solid #0d9488; }
+  a.neben { display:block; text-align:center; font-size:12px; color:#64748b; margin-top:2px; }
   .leer { color:#64748b; text-align:center; padding:28px 0; }
+  .fehler { color:#b91c1c; font-size:13px; font-weight:600; }
+  .ok { color:#047857; font-size:13px; font-weight:700; }
+  label { display:block; font-size:12px; font-weight:700; color:#475569; margin:8px 0 3px; }
+  input { font:inherit; font-size:14px; width:100%; padding:8px 10px; border:1.5px solid #cbd5e1; border-radius:8px; }
+  /* helle Optik wie Mein Profil (15.10.2026) */
+  html.glas.hell button.haken:not(.an) { background:#fff !important; border-color:#94a3b8 !important; color:#0f766e !important; }
+  html.glas.hell button.haken.an { background:#0f766e !important; border-color:#0f766e !important; color:#fff !important; }
+  html.glas.hell .aufgabe { border-top-color:rgba(17,24,39,.08) !important; } html.glas.hell .gross { color:#0f766e !important; }
+  html.glas.hell .balken { background:rgba(17,24,39,.12) !important; } html.glas.hell .h { color:#4b5563 !important; } html.glas.hell .p { color:#0f766e !important; }
+  html.glas.hell a.neben { color:#4b5563 !important; }
 </style>
 <script src="glas.js?v=1792073655"></script>
+<link rel="stylesheet" href="hell.css?v=2"><script>document.documentElement.classList.add("hell"); /* 15.10.2026: wie Mein Profil */</script>
 </head>
 <body>
 <header><h1>❤️ Health &amp; Wellbeing</h1><div class="unter" id="unter">Fitnessraum</div></header>
 <main id="inhalt"><div class="leer">Lade …</div></main>
+<input type="file" id="datei" accept="image/*,application/pdf" style="display:none">
+<script src="https://play.workadventu.re/iframe_api.js"></script>
 <script>
-// Health & Wellbeing am Empfang im Fitnessraum (08.10.2026, Sam) — zeigt den eigenen Stand aus dem SW-internen Portal
-// (nur lesen). Abhaken passiert im SW-internen Portal, weil die Punkte zu einer Prämie führen.
-const KEY = "a21b2aa2a42fe6189b05773c07bbc9ad78e38b34ba3bb6fe";
-const NAME = new URLSearchParams(location.search).get("name") || "";
+// Health & Wellbeing am Empfang im Fitnessraum (08.10.2026, Sam). Seit 15.10.2026 (Sam: „nicht ins SW-Portal weiterleiten“) direkt hier:
+// Challenge starten, Aufgaben abhaken (bei Nachweis-Pflicht mit Foto/Screenshot), Prämien-Code an die Geschäftsführung senden.
+// Angemeldet über den Büro-Ausweis; Server = dieselben Routen wie im SW-internen Portal (/buero-praesenz/hw → routes/health.js).
+const KEY = "a21b2aa2a42fe6189b05773c07bbc9ad78e38b34ba3bb6fe", B = "https://swdigitaltest.de/buero-praesenz", API = B + "/hw";
+const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-const DASH = '<a class="knopf" href="https://swdigitaltest.de/dashboard.html" target="_blank" rel="noopener">Im SW-internen Portal abhaken ↗</a>';
-const liste = (titel, a) => a.length ? `<div class="karte"><h2>${titel}</h2>${a.map(x => `<div class="aufgabe${x.erledigt ? " fertig" : ""}"><div class="haken">${x.erledigt ? "✓" : ""}</div>
-  <div><div class="t">${esc(x.titel)}${x.uebungDesTages ? " ⭐" : ""}</div><div class="h">${esc(x.hinweis || "")}${x.nachweis ? " · 📷 mit Nachweis" : ""}</div></div><div class="p">+${x.punkte}</div></div>`).join("")}</div>` : "";
-(async () => {
+const ausweis = () => { try { return localStorage.getItem("swBueroAusweis") || ""; } catch { return ""; } };
+let S = null, meldung = "", fehler = "", wartet = "";
+async function api(pfad, opt = {}) {
+  const h = { "X-Buero-Key": KEY, "X-Buero-Ausweis": ausweis(), "X-Buero-Name": encodeURIComponent(window.__waName || "") };
+  if (opt.body && !(opt.body instanceof FormData)) h["Content-Type"] = "application/json";
+  const r = await fetch(API + pfad, { ...opt, headers: h });
+  const d = await r.json().catch(() => ({}));
+  if (r.status === 401 && /ausweis/.test(d.error || "")) { try { localStorage.removeItem("swBueroAusweis"); } catch {} throw new Error("ausweis"); }
+  if (!r.ok) throw new Error(d.error || "Fehler " + r.status); return d;
+}
+const zeile = x => `<div class="aufgabe${x.erledigt ? " fertig" : ""}"><button class="haken${x.erledigt ? " an" : ""}" data-id="${esc(x.id)}" data-nw="${x.nachweis ? 1 : ""}" ${x.erledigt || wartet ? "disabled" : ""} title="${x.erledigt ? "erledigt" : x.nachweis ? "Abhaken – Foto/Screenshot auswählen" : "Abhaken"}">${x.erledigt ? "✓" : wartet === x.id ? "…" : ""}</button>
+  <div><div class="t">${esc(x.titel)}${x.uebungDesTages ? " ⭐" : ""}</div><div class="h">${esc(x.hinweis || "")}${x.nachweis ? " · 📷 Nachweis nötig" : ""}</div></div><div class="p">+${x.punkte}</div></div>`;
+const liste = (titel, a) => a.length ? `<div class="karte"><h2>${titel}</h2>${a.map(zeile).join("")}</div>` : "";
+const NEBEN = '<a class="neben" href="https://swdigitaltest.de/dashboard.html" target="_blank" rel="noopener">auch im SW-internen Portal ↗</a>';
+function zeichnen() {
+  const s = S, info = (fehler ? `<div class="fehler">${esc(fehler)}</div>` : "") + (meldung ? `<div class="ok">${esc(meldung)}</div>` : "");
+  if (!s.aktiv) { $("inhalt").innerHTML = `<div class="karte"><div class="t">Du hast die 6-Monats-Challenge noch nicht gestartet.</div>
+    <div class="klein">Jeden Tag kleine Übungen, Punkte sammeln – ab ${s.zielProzent} % wartet eine Prämie.</div></div>${info}<button class="k" id="start">▶ Challenge jetzt starten</button>${NEBEN}`;
+    $("start").onclick = async () => { $("start").disabled = true; try { S = await api("/health/start", { method: "POST" }); meldung = "Los geht's – viel Erfolg! 💪"; fehler = ""; } catch (e) { return fehlerZeigen(e); } zeichnen(); };
+    return; }
+  const offen = s.heute.filter(a => !a.erledigt).length;
+  $("inhalt").innerHTML = `<div class="karte"><div class="gross">${s.prozent.toLocaleString("de-DE")} %</div>
+    <div class="balken"><div style="width:${Math.min(100, s.prozent)}%"></div><span class="ziel" style="left:${s.zielProzent}%"></span></div>
+    <div class="klein">${s.punkte} von ${s.maxPunkte} Punkten · Tag ${s.tag} von ${s.gesamtTage} · Ziel ${s.zielProzent} % ${s.freigeschaltet ? "· 🎉 Prämie freigeschaltet!" : ""}</div></div>
+    ${s.freigeschaltet ? `<div class="karte"><div class="t">🏆 Geschafft! Dein Prämien-Code: <b>${esc(s.code || "")}</b></div>${s.codeGesendet ? '<div class="klein">✓ an die Geschäftsführung gesendet</div>' : '<button class="k" id="code" style="margin-top:10px">Code an die Geschäftsführung senden</button>'}</div>` : ""}
+    ${info}
+    ${s.beendet ? '<div class="karte"><div class="t">Deine Challenge ist beendet.</div></div>' : `<div class="klein" style="margin:0 2px">${offen ? `Heute noch ${offen} Aufgabe${offen === 1 ? "" : "n"} offen – Kreis antippen zum Abhaken.` : "Heute ist alles erledigt – stark! 💪"}</div>`}
+    ${liste("Heute", s.heute)}${liste("Diese Woche", s.wochenziele)}${NEBEN}`;
+  document.querySelectorAll("button.haken[data-id]:not(.an)").forEach(b => b.onclick = () => abhaken(b.dataset.id, !!b.dataset.nw));
+  if ($("code")) $("code").onclick = async () => { $("code").disabled = true; try { await api("/health/code-senden", { method: "POST" }); S.codeGesendet = true; meldung = "Code ist an die Geschäftsführung gegangen."; fehler = ""; } catch (e) { return fehlerZeigen(e); } zeichnen(); };
+}
+let fuerId = "";
+function abhaken(id, nachweis) {
+  meldung = ""; fehler = "";
+  if (nachweis) { fuerId = id; $("datei").value = ""; $("datei").click(); return; }
+  senden(id, null);
+}
+$("datei").onchange = () => { const f = $("datei").files[0]; if (f && fuerId) senden(fuerId, f); };
+async function senden(id, datei) {
+  wartet = id; zeichnen();
   try {
-    const r = await fetch("https://swdigitaltest.de/buero-praesenz/health?name=" + encodeURIComponent(NAME), { headers: { "X-Buero-Key": KEY } });
-    const s = await r.json(); if (!r.ok) throw new Error(s.error || "Fehler");
-    document.getElementById("unter").textContent = "Fitnessraum" + (s.vorname ? " · " + s.vorname : "");
-    if (!s.aktiv) { document.getElementById("inhalt").innerHTML = `<div class="karte"><div class="t">Du hast die 6-Monats-Challenge noch nicht gestartet.</div>
-      <div class="klein">Tägliche Übungen, Punkte sammeln – ab ${s.zielProzent} % wartet eine Prämie.</div></div><a class="knopf" href="https://swdigitaltest.de/dashboard.html" target="_blank" rel="noopener">Im SW-internen Portal starten ↗</a>`; return; }
-    const offen = s.heute.filter(a => !a.erledigt).length;
-    document.getElementById("inhalt").innerHTML = `<div class="karte"><div class="gross">${s.prozent.toLocaleString("de-DE")} %</div>
-      <div class="balken"><div style="width:${Math.min(100, s.prozent)}%"></div><span class="ziel" style="left:${s.zielProzent}%"></span></div>
-      <div class="klein">${s.punkte} von ${s.maxPunkte} Punkten · Tag ${s.tag} von ${s.gesamtTage} · Ziel ${s.zielProzent} % ${s.freigeschaltet ? "· 🎉 Prämie freigeschaltet!" : ""}</div></div>
-      ${s.beendet ? '<div class="karte"><div class="t">Deine Challenge ist beendet.</div></div>' : `<div class="klein" style="margin:0 2px">${offen ? `Heute noch ${offen} Aufgabe${offen === 1 ? "" : "n"} offen.` : "Heute ist alles erledigt – stark! 💪"}</div>`}
-      ${liste("Heute", s.heute)}${liste("Diese Woche", s.wochenziele)}${DASH}`;
-  } catch (e) { document.getElementById("inhalt").innerHTML = '<div class="leer">' + esc(e.message) + "</div>"; }
+    let body; if (datei) { body = new FormData(); body.append("id", id); body.append("nachweis", datei); } else body = JSON.stringify({ id });
+    S = await api("/health/erledigt", { method: "POST", body }); meldung = "✓ Abgehakt" + (datei ? " – Nachweis gespeichert" : "");
+  } catch (e) { wartet = ""; return fehlerZeigen(e); }
+  wartet = ""; zeichnen();
+}
+function fehlerZeigen(e) { if (e.message === "ausweis") return anmelden("Bitte kurz neu anmelden."); fehler = e.message; meldung = ""; wartet = ""; if (S) zeichnen(); else $("inhalt").innerHTML = '<div class="leer">' + esc(e.message) + "</div>"; }
+// Anmelden im Fenster (wie Gespräch/Kalender): Büro-Passwort/PIN oder Code per E-Mail → Büro-Ausweis
+function anmelden(text) {
+  let ben = ""; try { ben = localStorage.getItem("swSchlossBenutzer") || localStorage.getItem("swSchlossMail") || ""; } catch {}
+  $("inhalt").innerHTML = `<div class="karte"><b>Kurz anmelden</b><div class="klein" style="margin-top:2px">Damit deine Punkte dir zugeordnet werden.</div>
+    <label>Benutzername oder E-Mail</label><input id="aBen" value="${esc(ben)}" autocomplete="username">
+    <label>Büro-Passwort, PIN oder Code aus der E-Mail</label><input id="aPin" type="password" autocomplete="current-password">
+    <div class="fehler" id="aFe" style="margin-top:6px">${esc(text || "")}</div>
+    <div style="display:flex;gap:6px;margin-top:10px"><button class="k" id="aLos">Weiter</button><button class="k leicht" id="aMail">✉️ Code per E-Mail</button></div></div>`;
+  $("aMail").onclick = async () => { const m = $("aBen").value.trim(); if (!/@/.test(m)) return $("aFe").textContent = "Für den Code bitte oben deine dienstliche E-Mail eintragen.";
+    try { const r = await fetch(B + "/ausweis/mailcode", { method: "POST", headers: { "X-Buero-Key": KEY, "Content-Type": "application/json" }, body: JSON.stringify({ benutzer: m }) }); const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || "Fehler");
+      $("aFe").className = "ok"; $("aFe").textContent = "Code an " + m + " geschickt – unten eintragen."; } catch (e) { $("aFe").className = "fehler"; $("aFe").textContent = e.message; } };
+  $("aLos").onclick = async () => { $("aLos").disabled = true;
+    try { const r = await fetch(B + "/ausweis", { method: "POST", headers: { "X-Buero-Key": KEY, "Content-Type": "application/json" }, body: JSON.stringify({ benutzer: $("aBen").value.trim(), pin: $("aPin").value, pause: true }) });
+      const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || (r.status === 429 ? "Zu viele Versuche – bitte 15 Minuten warten." : "Fehler"));
+      try { localStorage.setItem("swBueroAusweis", d.token); } catch {} start(); }
+    catch (e) { $("aFe").className = "fehler"; $("aFe").textContent = e.message; $("aLos").disabled = false; } };
+}
+async function start() {
+  if (!ausweis()) return anmelden();
+  try { S = await api("/health/status"); } catch (e) { return fehlerZeigen(e); }
+  zeichnen();
+}
+(async () => {
+  for (let i = 0; i < 30 && typeof WA === "undefined"; i++) await new Promise(r => setTimeout(r, 100));
+  try { await Promise.race([WA.onInit(), new Promise(r => setTimeout(r, 2500))]); window.__waName = WA.player.name || ""; $("unter").textContent = "Fitnessraum · " + String(window.__waName).split(/\s+/)[0]; } catch {}
+  start();
 })();
 </script>
 </body>
