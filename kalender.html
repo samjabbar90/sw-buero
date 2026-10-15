@@ -232,12 +232,12 @@ function zeitSauber(v) {
 function zeitWahlVerdrahten() {
   const zu = () => document.querySelectorAll("[data-zwl]").forEach(l => l.style.display = "none");
   const auf = id => { zu(); const l = document.querySelector(`[data-zwl="${id}"]`); l.style.display = "block"; const w = zeitSauber($(id).value) || "09:00";
-    const ziel = [...l.children].find(x => x.dataset.zwz >= w); if (ziel) { l.scrollTop = ziel.offsetTop - 40; ziel.style.background = "#ccfbf1"; } };
+    [...l.children].forEach(x => x.style.background = ""); const ziel = [...l.children].find(x => x.dataset.zwz >= w); if (ziel) { l.scrollTop = ziel.offsetTop - 40; ziel.style.background = "#ccfbf1"; } };
   const setzen = (id, z) => { $(id).value = z; if (id === "fVon" && $("fBis") && (!$("fBis").value || $("fBis").value <= z)) $("fBis").value = String((+z.slice(0, 2) + 1) % 24).padStart(2, "0") + z.slice(2); };
   ["fVon", "fBis"].forEach(id => { const el = $(id); if (!el) return;
-    el.onfocus = () => auf(id); el.oninput = () => zu();
+    el.onfocus = el.onclick = () => auf(id); el.oninput = () => zu();
     el.onchange = el.onblur = () => { setTimeout(zu, 150); const z = zeitSauber(el.value); if (z) setzen(id, z); }; });
-  document.querySelectorAll("[data-zwauf]").forEach(b => b.onmousedown = ev => { ev.preventDefault(); const l = document.querySelector(`[data-zwl="${b.dataset.zwauf}"]`); l.style.display === "block" ? zu() : auf(b.dataset.zwauf); });
+  document.querySelectorAll("[data-zwauf]").forEach(b => { b.onmousedown = ev => ev.preventDefault(); b.onclick = ev => { ev.preventDefault(); const l = document.querySelector(`[data-zwl="${b.dataset.zwauf}"]`); l.style.display === "block" ? zu() : auf(b.dataset.zwauf); }; });
   document.querySelectorAll("[data-zwz]").forEach(o => o.onmousedown = ev => { ev.preventDefault(); setzen(o.parentElement.dataset.zwl, o.dataset.zwz); zu(); });
 }
 function formAktivieren() {
