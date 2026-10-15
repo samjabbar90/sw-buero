@@ -17,9 +17,16 @@
     beendet = true;
     WA.ui.displayActionMessage({
       message: "Du bist an einem anderen Ort ins B\xFCro gegangen \u2013 diese Sitzung wird beendet.",
-      callback: () => WA.nav.goToPage(DASHBOARD)
+      callback: () => rausZu(DASHBOARD)
     });
-    setTimeout(() => WA.nav.goToPage(DASHBOARD), 4e3);
+    setTimeout(() => rausZu(DASHBOARD), 4e3);
+  }
+  function rausZu(url) {
+    try {
+      WA.player.state.saveVariable("swGehtRaus", Date.now(), { public: false, persist: false });
+    } catch {
+    }
+    setTimeout(() => WA.nav.goToPage(url), 150);
   }
   var nachrichtHinweis = null;
   function nachrichtZeigen(m) {
@@ -74,6 +81,7 @@
     }).then((r) => r.json()).then((d) => {
       if (d && typeof d.system === "boolean") mitSystemZeit = d.system;
       if (d && Array.isArray(d.nachrichten)) for (const m of d.nachrichten) nachrichtZeigen(m);
+      if (d && Array.isArray(d.termine)) termineErinnern(d.termine);
       if (d && d.inaktiv) return wegVomRechner();
       if (d && d.abgeloest) beenden();
     }).catch(() => {
@@ -147,7 +155,7 @@
   function autoZu(t) {
     const wer = vorname(t.besitzer), gleich = (n) => String(n).toLowerCase() === wer;
     if ((info.telefoniert || []).some(gleich)) return "telefoniert";
-    if ((info.imTermin || []).some(gleich)) return "hat einen Termin";
+    if ((info.imTermin || []).some(gleich) && (!info.imTerminRaum || info.imTerminRaum[wer] === t.raum)) return "hat einen Termin";
     if ((info.zuRaeume || []).includes(t.raum)) return "hat Besuch";
     return "";
   }
@@ -190,7 +198,7 @@
   }
   function tuerAnwenden(t) {
     const s = tuerStatus(t);
-    const darfDurch = istBesitzer(t) || (freigabe.get(t.variable) || 0) > Date.now() || !!t.offen && aktuellerBereich === t.raum;
+    const darfDurch = istBesitzer(t) || (freigabe.get(t.variable) || 0) > Date.now() || aktuellerBereich === t.raum;
     const kacheln = t.felder.map(([x, y]) => ({ x, y, tile: (s === "zu" || s === "fokus") && !darfDurch ? kollisionGid : null, layer: "collisions" }));
     const sg = (t.senk ? schildGidsSenk : schildGids)[s] || null;
     t.schild.forEach(([x, y], i) => kacheln.push({ x, y, tile: sg ? sg[i] : null, layer: "furniture/labels" }));
@@ -383,6 +391,7 @@
   }
   var zimmerWeg = /* @__PURE__ */ new Map();
   function zimmerRein(raum) {
+    for (const x of tueren) if (!x.offen && x.raum === raum) tuerAnwenden(x);
     const t = tueren.find((x) => x.offen && x.raum === raum);
     if (!t) return;
     clearTimeout(zimmerWeg.get(raum));
@@ -390,6 +399,10 @@
     zimmerKnopf();
   }
   function zimmerRaus(raum) {
+    for (const x of tueren) if (!x.offen && x.raum === raum) {
+      freigabe.delete(x.variable);
+      setTimeout(() => tuerAnwenden(x), 600);
+    }
     const t = tueren.find((x) => x.offen && x.raum === raum);
     if (!t) return;
     tuerAnwenden(t);
@@ -415,9 +428,10 @@
   var hm = (d) => d.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin" });
   var infoLeiste = null;
   var hinweiseOffen = 0;
+  var LEISTE_UNTEN = "2px";
   function leisteVerschieben() {
     try {
-      if (infoLeiste) infoLeiste.margin = { bottom: hinweiseOffen > 0 ? "150px" : "14px" };
+      if (infoLeiste) infoLeiste.margin = { bottom: hinweiseOffen > 0 ? "150px" : LEISTE_UNTEN };
     } catch {
     }
   }
@@ -425,16 +439,24 @@
     try {
       const orig = WA.ui.displayActionMessage.bind(WA.ui);
       WA.ui.displayActionMessage = (o) => {
-        const m = orig(o);
-        hinweiseOffen++;
-        leisteVerschieben();
         let weg = false;
-        return { ...m, remove: () => {
+        const fertig = () => {
           if (!weg) {
             weg = true;
             hinweiseOffen = Math.max(0, hinweiseOffen - 1);
             leisteVerschieben();
           }
+        };
+        const cb = o && o.callback;
+        const m = orig({ ...o, callback: () => {
+          fertig();
+          return cb && cb();
+        } });
+        hinweiseOffen++;
+        leisteVerschieben();
+        setTimeout(fertig, 6e4);
+        return { ...m, remove: () => {
+          fertig();
           try {
             return m.remove();
           } catch {
@@ -1240,7 +1262,7 @@
   var zimmerHinweis = null;
   var zimmerZurueck = null;
   var zimmerAndere = /* @__PURE__ */ new Set();
-  var istBueroRaum = (n) => !!n && /^Büro\s+/i.test(n);
+  var istBueroRaum = (n) => !!n && /^(Büro\s+|Zimmer\s+\d+$)/i.test(n);
   function zimmerSagen(was, raum, id = "") {
     try {
       WA.event.broadcast("sw-zimmer", { was, raum, id, wer: WA.player.name });
@@ -1392,6 +1414,7 @@
     try {
       WA.event.on("sw-zimmer").subscribe((ev) => {
         const d = ev && ev.data || {}, wer = String(d.wer || ""), raum = String(d.raum || "");
+        if (d.was === "raus" || d.was === "ende") setTimeout(infoLaden, 1500);
         if (!wer || wer === WA.player.name || raum !== aktuellerBereich) return;
         if (d.was === "rein") {
           zimmerAndere.add(wer);
@@ -1604,7 +1627,7 @@
   }
   async function zuPerson(name) {
     try {
-      await WA.players.configureTracking({ players: true, movement: false });
+      await WA.players.configureTracking({ players: true, movement: true });
       const p = [...WA.players.list()].find((x) => String(x.name || "").toLowerCase() === name.toLowerCase());
       if (p && p.position) {
         await WA.player.moveTo(p.position.x, p.position.y + 32, 10);
@@ -1627,6 +1650,136 @@
     } catch {
     }
     kurzMeldung("\u{1F4CD} \u201E" + ort + "\u201C ist kein Raum im B\xFCro", 5e3);
+  }
+  var SCHILD_PERSON = {
+    "Zimmer 1": "Tanja R.",
+    "Zimmer 2": "Christiane S.",
+    "Zimmer 3": "Jana J.",
+    "Zimmer 4": "Kubilay A.",
+    "Zimmer 5": "Bin W.",
+    "Zimmer 6": "Onur K.",
+    "Zimmer 7": "Dilber A.",
+    "Zimmer 8": "Fatih K.",
+    "Zimmer 9": "Kerstin C.",
+    "Zimmer 10": "Angelika T.",
+    "Zimmer 11": "",
+    "Zimmer 12": "",
+    "Zimmer 13": "Ilona S.",
+    "Zimmer 14": "Julien M.",
+    "Zimmer 15": "Bahjat D.",
+    "Zimmer 16": "",
+    "B\xFCro Leutrim": "Leutrim S.",
+    "B\xFCro Katharina": "Katharina K.",
+    "B\xFCro Ferhat": "Ferhat F.",
+    "B\xFCro Angelina": "Angelina M.",
+    "B\xFCro Sam": "Sam J.",
+    "B\xFCro Noura": "Noura A.",
+    "B\xFCro Emre": "Emre A.",
+    "B\xFCro Kadir": "Kadir K.",
+    "B\xFCro Attila": "Attila K."
+  };
+  function namensschilder() {
+    if (HANDY) return;
+    for (const t of tueren) {
+      const [rx, ry, rw] = t.rechteck, n = t.raum in SCHILD_PERSON ? SCHILD_PERSON[t.raum] : t.besitzer ? t.besitzer.charAt(0).toUpperCase() + t.besitzer.slice(1) : "";
+      const w = Math.min(rw - 0.4, 4.2);
+      try {
+        WA.room.website.create({
+          name: "schild-" + t.variable,
+          url: SEITEN + "schild.html?n=" + encodeURIComponent(n) + "&raum=" + encodeURIComponent(t.raum),
+          visible: true,
+          allowApi: false,
+          origin: "map",
+          scale: 1,
+          position: { x: Math.round((rx + (rw - w) / 2) * 32), y: Math.round((ry + 0.05) * 32), width: Math.round(w * 32), height: 20 }
+        });
+      } catch {
+      }
+    }
+  }
+  var raumVon = (px, py) => {
+    const fx2 = px / 32, fy = py / 32;
+    const t = tueren.find((x) => {
+      const [rx, ry, rw, rh] = x.rechteck;
+      return fx2 >= rx && fx2 < rx + rw && fy >= ry && fy < ry + rh;
+    });
+    return t ? t.raum : "";
+  };
+  function wandGespraeche() {
+    let aus = false;
+    const c = WA.controls;
+    if (!c.disablePlayerProximityMeeting) return;
+    try {
+      WA.players.configureTracking({ players: true, movement: true });
+    } catch {
+    }
+    setInterval(async () => {
+      if (gesperrt) return;
+      try {
+        const ich = await WA.player.getPosition(), meinRaum = raumVon(ich.x, ich.y);
+        const nah = [...WA.players.list()].filter((p) => p.position && Math.hypot(p.position.x - ich.x, p.position.y - ich.y) < 160);
+        const fremd = nah.filter((p) => raumVon(p.position.x, p.position.y) !== meinRaum);
+        const sperren = fremd.length > 0 && fremd.length === nah.length;
+        if (sperren && !aus) {
+          aus = true;
+          c.disablePlayerProximityMeeting();
+        } else if (!sperren && aus) {
+          aus = false;
+          c.restorePlayerProximityMeeting();
+        }
+      } catch {
+      }
+    }, 700);
+  }
+  var terminGezeigt = /* @__PURE__ */ new Map();
+  var terminHinweis = null;
+  function raumFuerOrt(ort) {
+    const q = String(ort || "").toLowerCase().trim();
+    if (!q || !karte) return null;
+    const alle = ((karte.layers || []).find((l) => l.name === "floorLayer") || { objects: [] }).objects.filter((o) => o.name && o.width && o.height);
+    const r = alle.find((o) => o.name.toLowerCase() === q) || alle.find((o) => q.includes(o.name.toLowerCase()) || o.name.toLowerCase().includes(q));
+    return r ? r.name : null;
+  }
+  function termineErinnern(liste) {
+    if (gesperrt) return;
+    const jetzt = hm(/* @__PURE__ */ new Date());
+    const minBis = (z) => {
+      const [h, m] = String(z).split(":").map(Number), n = /* @__PURE__ */ new Date();
+      return h * 60 + m - (n.getHours() * 60 + n.getMinutes());
+    };
+    for (const t of liste) {
+      const schon = terminGezeigt.get(t.id) || /* @__PURE__ */ new Set();
+      terminGezeigt.set(t.id, schon);
+      const raum = raumFuerOrt(t.ort), dort = !!raum && aktuellerBereich === raum, rest = minBis(t.von);
+      const stufe = t.von > jetzt && rest <= 5 ? "vorher" : t.von <= jetzt && !dort ? "beginn" : "";
+      if (!stufe || schon.has(stufe)) continue;
+      schon.add(stufe);
+      if (stufe === "beginn" && !raum) continue;
+      try {
+        terminHinweis && terminHinweis.remove();
+      } catch {
+      }
+      const text = (stufe === "vorher" ? `\u{1F4C5} In ${Math.max(1, rest)} Min: ` : "\u{1F4C5} Dein Termin hat begonnen: ") + t.titel + (t.ort ? " \xB7 " + t.ort : "") + (raum && !dort ? " \xB7 Leertaste = hinlaufen" : "");
+      ton("klingel");
+      terminHinweis = WA.ui.displayActionMessage({ message: text, callback: () => {
+        terminHinweis = null;
+        if (raum && aktuellerBereich !== raum) zuRaum(raum);
+      } });
+      const h = terminHinweis;
+      setTimeout(() => {
+        try {
+          if (terminHinweis === h) {
+            h.remove();
+            terminHinweis = null;
+          }
+        } catch {
+        }
+      }, 6e4);
+      try {
+        WA.ui.banner.openBanner({ id: "sw-termin", text, bgColor: "#1d4ed8", textColor: "#ffffff", closable: true, timeToClose: 3e4 });
+      } catch {
+      }
+    }
   }
   var FUSSBALL = {
     tore: [
@@ -1891,7 +2044,7 @@
     const sperrWache = setTimeout(() => {
       if (gesperrt && !beendet) {
         beendet = true;
-        WA.nav.goToPage(SEITEN + "weg.html?grund=gesperrt");
+        rausZu(SEITEN + "weg.html?grund=gesperrt");
       }
     }, 10 * 60 * 1e3);
     try {
@@ -1953,7 +2106,7 @@
   function wegVomRechner() {
     if (beendet) return;
     beendet = true;
-    WA.nav.goToPage(SEITEN + "weg.html");
+    rausZu(SEITEN + "weg.html");
   }
   function schlossWache() {
     setInterval(async () => {
@@ -2014,6 +2167,7 @@
     } catch {
     }
     await tuerenStarten();
+    namensschilder();
     let kzAktiv = false, tcAktiv = false;
     try {
       const r = await fetch(ENDPOINT.replace(/melden$/, "kernzeit/hinweis"), { method: "POST", headers: { "Content-Type": "application/json", "X-Buero-Key": BUERO_KEY }, body: JSON.stringify({ name: WA.player.name }) });
@@ -2064,7 +2218,7 @@
         // genau so groß wie die Leiste (kein weißer Rand): mit eigener Tür breiter (Tür + Fokus), sonst nur Uhrzeit + Kollegen
         position: { vertical: HANDY ? "top" : "bottom", horizontal: "middle" },
         size: { width: HANDY ? Math.max(300, (screen.width || 390) - 16) + "px" : 400 + (meineTuer() ? 150 : 0) + (kzAktiv ? 130 : 0) + "px", height: "40px" },
-        margin: HANDY ? { top: "64px" } : { bottom: "14px" }
+        margin: HANDY ? { top: "64px" } : { bottom: LEISTE_UNTEN }
       });
     } catch {
     }
@@ -2092,6 +2246,7 @@
     klingel();
     hundStarten();
     profilKarten();
+    wandGespraeche();
     kernzeitStarten();
     const breite = 116 * 32, hoehe = (62 + DY) * 32;
     void karte;
@@ -2279,13 +2434,13 @@
         if (v.was === "feierabendGehen") {
           return melden("verlassen").then(() => {
             beendet = true;
-            WA.nav.goToPage(SEITEN + "weg.html?grund=feierabend");
+            rausZu(SEITEN + "weg.html?grund=feierabend");
           });
         }
         if (v.was === "abmelden") {
           return melden("verlassen").then(() => {
             beendet = true;
-            WA.nav.goToPage(SEITEN + "weg.html?grund=abgemeldet");
+            rausZu(SEITEN + "weg.html?grund=abgemeldet");
           });
         }
         menueZu();
@@ -2331,6 +2486,22 @@
     try {
       const pm = WA.player.proximityMeeting;
       const neu = () => melden("heartbeat");
+      const c = WA.controls, medien = (an) => {
+        if (HANDY) return;
+        try {
+          if (an) {
+            c.restoreWebcam?.();
+            c.restoreMicrophone?.();
+          } else {
+            c.disableWebcam?.();
+            c.disableMicrophone?.();
+          }
+        } catch {
+        }
+      };
+      medien(false);
+      pm.onJoin().subscribe(() => medien(true));
+      pm.onLeave().subscribe(() => medien(false));
       pm.onJoin().subscribe((leute) => {
         gespraech.clear();
         (leute || []).forEach((p) => p && p.name && gespraech.add(p.name));

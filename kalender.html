@@ -40,6 +40,7 @@
   .raster .jetzt { position:absolute; left:42px; right:0; border-top:2px solid #ef4444; z-index:2; }
   .blk { position:absolute; border-radius:7px; padding:3px 7px; font-size:12px; overflow:hidden; cursor:pointer; background:#e0e7ff; border-left:4px solid #6366f1; color:#1e1b4b; box-sizing:border-box; }
   .blk.google { background:#cffafe; border-left-color:#0891b2; color:#164e63; } .blk.besetzt { background:#e2e8f0; border-left-color:#94a3b8; color:#334155; }
+  .blk.frist, .t.frist { background:#fef3c7; border-left-color:#d97706; color:#78350f; } /* Abgabefristen-Vermerk (15.10.2026) */
   .blk.gew { outline:2px solid #f59e0b; z-index:3; } .blk .m { font-size:11px; opacity:.8; }
   html.glas .raster .std { border-color:rgba(255,255,255,.12) !important; color:rgba(255,255,255,.55) !important; }
   html.glas .blk { background:rgba(99,102,241,.45) !important; color:#fff !important; } html.glas .blk.google { background:rgba(8,145,178,.45) !important; } html.glas .blk.besetzt { background:rgba(255,255,255,.14) !important; }
@@ -56,8 +57,8 @@
   html.glas .t { background:rgba(99,102,241,.22) !important; } html.glas .t.google { background:rgba(8,145,178,.22) !important; } html.glas .t.besetzt { background:rgba(255,255,255,.08) !important; }
   html.glas .t .z, html.glas .tag { color:#e2e8f0 !important; } html.glas .t .m, html.glas .leer { color:rgba(255,255,255,.7) !important; } html.glas .tag.heute { color:#5eead4 !important; }
 </style>
-<script src="glas.js?v=1791917122"></script>
-<link rel="stylesheet" href="hell.css?v=1"><script>document.documentElement.classList.add("hell"); /* 14.10.2026 (Sam): Optik wie Mein Profil */</script>
+<script src="glas.js?v=1792073655"></script>
+<link rel="stylesheet" href="hell.css?v=2"><script>document.documentElement.classList.add("hell"); /* 14.10.2026 (Sam): Optik wie Mein Profil */</script>
 </head>
 <body>
 <header><h1 style="display:flex;gap:6px;align-items:center">📅 <button class="an" id="rKal">Kalender</button><button class="leicht" id="rAntr">📝 Anträge</button></h1>
@@ -118,7 +119,7 @@ async function laden() {
 }
 function terminHtml(t) {
   const zeit = t.ganztag ? "ganztägig" : (t.von || "") + "–" + (t.ende || "");
-  const cls = t.besetzt ? "besetzt" : t.quelle === "google" ? "google" : "";
+  const cls = t.besetzt ? "besetzt" : t.quelle === "google" ? "google" : t.quelle === "frist" ? "frist" : "";
   return `<div class="t ${cls}" data-id="${esc(t.id)}"><div class="z">${esc(zeit)}</div><div><div class="ti">${esc(t.titel || "Termin")}</div>${t.ort ? `<div class="m">📍 ${esc(t.ort)}</div>` : ""}${t.privat ? '<div class="m">🔒 privat</div>' : ""}</div></div>`;
 }
 // ---- Tag-Ansicht (10.10.2026, Sam: Layout 1): Mini-Monat links (Tag wählen, Punkt = Termine), Stundenraster mit Blöcken
@@ -146,7 +147,7 @@ function rasterHtml(tag) {
   sort.forEach(x => { if (x.a >= gruppeEnde) abschliessen(); let s = spalten.findIndex(ende => ende <= x.a); if (s < 0) { s = spalten.length; spalten.push(0); }
     spalten[s] = x.e; x.s = s; gruppe.push(x); gruppeEnde = Math.max(gruppeEnde, x.e); });
   abschliessen();
-  let h = ganz.length ? '<div style="margin-bottom:6px">' + ganz.map(t => `<div class="blk ${t.besetzt ? "besetzt" : t.quelle === "google" ? "google" : ""}${S.auswahl === t.id ? " gew" : ""}" data-id="${esc(t.id)}" style="position:static;margin-bottom:3px">ganztägig · ${esc(t.titel)}</div>`).join("") + "</div>" : "";
+  let h = ganz.length ? '<div style="margin-bottom:6px">' + ganz.map(t => `<div class="blk ${t.besetzt ? "besetzt" : t.quelle === "google" ? "google" : t.quelle === "frist" ? "frist" : ""}${S.auswahl === t.id ? " gew" : ""}" data-id="${esc(t.id)}" style="position:static;margin-bottom:3px">ganztägig · ${esc(t.titel)}</div>`).join("") + "</div>" : "";
   h += `<div class="raster" style="height:${(RASTER_BIS - RASTER_AB) * PX_STD}px">`;
   for (let s = RASTER_AB; s < RASTER_BIS; s++) h += `<div class="std" style="top:${(s - RASTER_AB) * PX_STD}px">${String(s).padStart(2, "0")}:00</div>`;
   if (tag === heuteIso()) { const j = new Date(), m = j.getHours() * 60 + j.getMinutes(); if (m >= RASTER_AB * 60 && m < RASTER_BIS * 60) h += `<div class="jetzt" style="top:${(m - RASTER_AB * 60) / 60 * PX_STD}px"></div>`; }
@@ -167,6 +168,7 @@ function detailHtml() {
   if (t.quelle === "google") h += '<div style="margin-bottom:4px">🔁 aus dem Google-Kalender</div>';
   if (t.privat) h += '<div style="margin-bottom:4px">🔒 privat (andere sehen nur „Besetzt“)</div>';
   if (t.notiz) h += `<div style="margin:6px 0;white-space:pre-wrap;font-size:13px">${esc(t.notiz)}</div>`;
+  if (t.vermerk) return h + '<div class="leer">Gesetzliche Abgabefrist – Vermerk für alle, nicht änderbar.</div>';
   h += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">' + (d.darfEintragen ? '<button id="dAendern">✎ Ändern</button><button class="leicht" id="dLoesch" style="color:#b91c1c;border-color:#b91c1c">🗑</button>' : "")
     + (t.ort ? '<button class="leicht" id="dHin">🚶 Hingehen</button>' : "") + "</div>";
   return h;
@@ -199,20 +201,35 @@ function formHtml() {
   const f = S.form;
   if (f.art === "raum") return `<div class="box"><b>🚪 Raum buchen</b>
     <label>Raum</label><select id="fRaum" style="width:100%">${(f.raeume || []).map(r => `<option>${esc(r)}</option>`).join("")}</select>
-    <div class="reihe3"><div><label>Datum</label><input id="fDatum" type="date" value="${iso(S.basis) < heuteIso() ? heuteIso() : iso(S.basis)}" style="width:100%"></div><div><label>von</label><input id="fVon" type="time" value="10:00" style="width:100%"></div><div><label>bis</label><input id="fBis" type="time" value="11:00" style="width:100%"></div></div>
+    <div class="reihe3"><div><label>Datum</label><input id="fDatum" type="date" value="${iso(S.basis) < heuteIso() ? heuteIso() : iso(S.basis)}" style="width:100%"></div><div><label>von</label>${zeitWahl("fVon", "10:00")}</div><div><label>bis</label>${zeitWahl("fBis", "11:00")}</div></div>
     <label>Thema</label><input id="fThema" maxlength="80" style="width:100%" placeholder="z. B. Team-Besprechung">
     <div class="fehler" id="fFe"></div><div style="display:flex;gap:6px;margin-top:8px"><button id="fOk">Buchen</button><button class="leicht" id="fAbbr">Abbrechen</button></div>
     ${(f.meine || []).length ? '<label style="margin-top:12px">Deine Buchungen</label>' + f.meine.map(r => `<div class="leer">${esc(r.datum.split("-").reverse().join("."))} ${esc(r.von)}–${esc(r.bis)} · ${esc(r.raum)} ${esc(r.thema || "")} <a href="#" data-loesch="${esc(r.id)}">löschen</a></div>`).join("") : ""}</div>`;
   const t = f.t || {};
   return `<div class="box"><b>${t.id ? "Termin ändern" : "Neuer Termin"}</b>
     <label>Titel</label><input id="fTitel" maxlength="160" value="${esc(t.titel || "")}" style="width:100%" placeholder="z. B. Mandant Müller">
-    <div class="reihe3"><div><label>Datum</label><input id="fDatum" type="date" value="${esc(t.datum || iso(S.basis))}" style="width:100%"></div><div><label>von</label><input id="fVon" type="time" value="${esc(t.von || "09:00")}" style="width:100%"></div><div><label>bis</label><input id="fBis" type="time" value="${esc(t.ende || "10:00")}" style="width:100%"></div></div>
+    <div class="reihe3"><div><label>Datum</label><input id="fDatum" type="date" value="${esc(t.datum || iso(S.basis))}" style="width:100%"></div><div><label>von</label>${zeitWahl("fVon", t.von || "09:00")}</div><div><label>bis</label>${zeitWahl("fBis", t.ende || "10:00")}</div></div>
     <div class="reihe"><label style="display:flex;gap:6px;align-items:center"><input id="fGanz" type="checkbox" ${t.ganztag ? "checked" : ""}> ganztägig</label><label style="display:flex;gap:6px;align-items:center"><input id="fPrivat" type="checkbox" ${t.privat ? "checked" : ""}> privat (andere sehen nur „Besetzt“)</label></div>
     <label>Ort</label><input id="fOrt" maxlength="120" value="${esc(t.ort || "")}" style="width:100%" placeholder="z. B. Besprechung 10 oder Telefon">
     <div class="fehler" id="fFe"></div><div style="display:flex;gap:6px;margin-top:8px"><button id="fOk">Speichern</button><button class="leicht" id="fAbbr">Abbrechen</button>${t.id ? '<span style="flex:1"></span><button class="leicht" id="fLoesch" style="color:#b91c1c;border-color:#b91c1c">Löschen</button>' : ""}</div></div>`;
 }
+// Uhrzeit als zwei Auswahllisten (15.10.2026, Sam: „Zahlen bei der Uhrzeitwahl etwas versetzt“ – die eingebaute Uhrzeit-Auswahl des
+// Browsers verrutscht im Büro-Fenster). Stunde + Minute (5er-Schritte), Wert im versteckten Feld mit der alten id.
+function zeitWahl(id, wert) {
+  const [h, m] = String(wert || "09:00").split(":"), mins = [...Array(12).keys()].map(i => String(i * 5).padStart(2, "0"));
+  if (!mins.includes(m)) mins.push(m); mins.sort();
+  const opt = (l, w) => l.map(x => `<option${x === w ? " selected" : ""}>${x}</option>`).join("");
+  return `<div style="display:flex;gap:4px;align-items:center"><select data-zw="${id}" data-t="h" style="flex:1">${opt([...Array(24).keys()].map(i => String(i).padStart(2, "0")), h)}</select><b>:</b><select data-zw="${id}" data-t="m" style="flex:1">${opt(mins, m)}</select><input type="hidden" id="${id}" value="${esc(h + ":" + m)}"></div>`;
+}
+function zeitWahlVerdrahten() {
+  document.querySelectorAll("[data-zw]").forEach(s => s.onchange = () => { const id = s.dataset.zw, w = t => document.querySelector(`[data-zw="${id}"][data-t="${t}"]`).value; $(id).value = w("h") + ":" + w("m");
+    // „bis“ automatisch eine Stunde nach „von“, wenn es sonst davor läge
+    if (id === "fVon" && $("fBis") && $("fBis").value <= $("fVon").value) { const n = (+w("h") + 1) % 24, hh = String(n).padStart(2, "0"); $("fBis").value = hh + ":" + w("m");
+      const b = t => document.querySelector(`[data-zw="fBis"][data-t="${t}"]`); b("h").value = hh; b("m").value = w("m"); } });
+}
 function formAktivieren() {
   if (!S.form) return;
+  zeitWahlVerdrahten();
   $("fAbbr").onclick = () => { S.form = null; zeichnen(); };
   if (S.form.art === "raum") {
     $("fOk").onclick = async () => { try { await api("/buero-reservierungen", { method: "POST", body: JSON.stringify({ raum: $("fRaum").value, datum: $("fDatum").value, von: $("fVon").value, bis: $("fBis").value, thema: $("fThema").value }) }); S.form = null; laden(); } catch (e) { $("fFe").textContent = e.message; } };
@@ -230,7 +247,9 @@ function formAktivieren() {
 async function raumForm() {
   try { const [raeume, alle] = await Promise.all([api("/buero-raeume"), api("/buero-reservierungen")]);
     const ich = S.personen[0] ? S.personen[0].name : "";
-    S.form = { art: "raum", raeume: raeume.filter(r => !/^Büro /.test(r)), meine: alle.filter(r => r.name === ich) }; zeichnen(); }
+    // 15.10.2026 (Sam): nur die Besprechungszimmer auf der Mandanten-Etage buchen (Städte-Räume oben)
+    // (feste Liste: /buero-raeume kennt nur Räume, in denen schon mal jemand war)
+    void raeume; S.form = { art: "raum", raeume: ["Paris", "Berlin", "Lissabon", "New York", "Amsterdam", "Moskau"], meine: alle.filter(r => r.name === ich) }; zeichnen(); }
   catch (e) { if (e.message === "ausweis") return anmelden(); alert(e.message); }
 }
 // ===== Anträge (10.10.2026, Sam: Layout A „Reiter im Kalender“) — dieselben Anträge wie im SW-internen Portal, nur die eigenen =====

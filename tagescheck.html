@@ -42,9 +42,14 @@
   html.glas .p { background:rgba(10,11,14,.55) !important; border-color:rgba(255,255,255,.18) !important; } html.glas .p .i { color:rgba(255,255,255,.7) !important; }
   html.glas .p.dran { border-color:#f59e0b !important; } html.glas .p.rot { border-color:#ef4444 !important; }
   html.glas .p textarea { background:rgba(255,255,255,.1) !important; color:#fff !important; }
+  /* helle Optik (15.10.2026): Karten hell, Schrift dunkel */
+  html.glas.hell .p { background:rgba(255,255,255,.55) !important; border-color:rgba(255,255,255,.7) !important; color:#111827 !important; } html.glas.hell body:hover .p { background:rgba(255,255,255,.95) !important; }
+  html.glas.hell .p .i { color:#4b5563 !important; } html.glas.hell .p textarea { background:#fff !important; color:#111827 !important; border-color:rgba(17,24,39,.2) !important; }
+  html.glas.hell .p.dran { border-color:#f59e0b !important; } html.glas.hell .p.rot { border-color:#ef4444 !important; } html.glas.hell .b-leicht { background:#3f4651 !important; }
   label { display:block; font-size:12px; font-weight:700; margin:8px 0 4px; } input { width:100%; font:inherit; padding:8px 10px; border-radius:8px; border:1.5px solid #cbd5e1; }
 </style>
-<script src="glas.js?v=1791917122"></script>
+<script src="glas.js?v=1792073655"></script>
+<link rel="stylesheet" href="hell.css?v=2"><script>document.documentElement.classList.add("hell"); /* 15.10.2026 (Sam: „Check-Liste noch in der alten Optik“): wie Mein Profil */</script>
 </head>
 <body>
 <div id="app"></div>

@@ -41,14 +41,17 @@
   .chips { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 6px; } .chips button { font-size: 11.5px; border-width: 1px; border-color: #9fe1cb; border-radius: 999px; }
   .fehler { color: #b91c1c; font-size: 12.5px; }
   /* im Büro: helles Glas wie das Profil (G4) */
-  :root.glas body { background: rgba(255, 255, 255, .15) !important; color: #111827 !important; text-shadow: none !important; }
-  :root.glas body:hover, :root.glas body:focus-within { background: rgba(255, 255, 255, .88) !important; }
+  /* 15.10.2026 (Sam: „Donnas Schrift kann man in der hellen Version nicht lesen“): Hintergrund immer fast deckend, Schrift dunkel – auch ohne Maus über dem Fenster */
+  :root.glas body { background: rgba(255, 255, 255, .93) !important; color: #111827 !important; text-shadow: none !important; }
+  :root.glas body * { text-shadow: none !important; } :root.glas a, :root.glas h1, :root.glas h2 { color: #111827 !important; } :root.glas .b.ute { background: #f1f5f9 !important; color: #111827 !important; } :root.glas .b.du { color: #04342c !important; }
+  :root.glas body:hover, :root.glas body:focus-within { background: rgba(255, 255, 255, .97) !important; }
+  :root.glas body:hover .karte, :root.glas body:focus-within .karte { background: rgba(255, 255, 255, .7) !important; }
   :root.glas header { background: rgba(255, 255, 255, .45) !important; color: #111827 !important; }
   :root.glas .karte { background: rgba(255, 255, 255, .5) !important; color: #111827 !important; }
   :root.glas small, :root.glas .m { color: #4b5563 !important; }
   :root.glas textarea { background: rgba(255, 255, 255, .8) !important; color: #111827 !important; border-color: rgba(17, 24, 39, .2) !important; color-scheme: light; }
 </style>
-<script src="glas.js?v=1791917122"></script>
+<script src="glas.js?v=1792073655"></script>
 </head>
 <body>
 <header><div class="av" id="av"><img src="donna.jpg" alt="Donna"></div><h1>Donna · Terminassistentin<span class="u">findet freie Zeiten, bucht Termine und Meeting-Räume</span></h1></header>

@@ -45,7 +45,7 @@
   html.glas .box, html.glas .arten button { background:rgba(255,255,255,.07) !important; border-color:rgba(255,255,255,.15) !important; color:#f1f5f9 !important; }
   html.glas label, html.glas h3 { color:rgba(255,255,255,.75) !important; } html.glas .arten span, html.glas .leer, html.glas .hin { color:rgba(255,255,255,.65) !important; }
 </style>
-<script src="glas.js?v=1791917122"></script>
+<script src="glas.js?v=1792073655"></script>
 </head>
 <body>
 <header><h1 id="titel">💬 Gespräch</h1><div class="u" id="unter"></div></header>
@@ -159,8 +159,8 @@ function zeichnen() {
   if (gestoppt) $("unter").textContent = $("unter").textContent.replace(/^läuft · /, "Zeit gestoppt · ");
   if (zeit && g.status === "laeuft") $("titel").textContent = (gestoppt ? "✓ Gespräch beendet" : "💬 Gespräch") + " · " + (g.felder.thema || a.name) + (g.mandant ? " · " + g.mandant.name : "");
   let h = (gestoppt ? '<div class="box" style="border-color:#f59e0b"><b>Kurz festhalten und speichern</b><div class="hin">Die Zeit ist gestoppt. Protokoll und Aufgaben ergänzen – „Speichern“ legt die Aufgaben in der Aufgaben Box an. Ohne Speichern wird es nach 30 Min automatisch abgelegt.</div></div>' : "")
-    + `<div class="box">${zeit ? '<div class="zeit" id="zeit" style="margin-bottom:8px"></div>' : ""}<div class="chips"><b style="font-size:12.5px;margin-right:4px">Teilnehmer:</b>${g.teilnehmer.map(t => `<span class="chip">${esc(t.name)}${t.id === g.gestartetVon.id ? " (führt)" : ""}</span>`).join("")}
-    ${darf && !g.istLeitung ? `<select id="plus" style="width:auto;font-size:12px;padding:3px 6px"><option value="">+ hinzufügen</option>${PERSONEN.filter(p => !g.teilnehmer.some(t => t.id === p.id)).map(p => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join("")}</select>` : ""}</div>`;
+    + `<div class="box">${zeit ? '<div class="zeit" id="zeit" style="margin-bottom:8px"></div>' : ""}<div class="chips"><b style="font-size:12.5px;margin-right:4px">Teilnehmer:</b>${g.teilnehmer.map(t => `<span class="chip">${esc(t.name)}${t.id === g.gestartetVon.id ? " (führt)" : darf && !(g.betrifft && g.betrifft.id === t.id) ? ` <a href="#" data-tweg="${esc(t.id)}" title="aus dem Gespräch nehmen" style="color:inherit;text-decoration:none;font-weight:700">✕</a>` : ""}</span>`).join("")}
+    ${darf ? `<select id="plus" style="width:auto;font-size:12px;padding:3px 6px"><option value="">+ hinzufügen</option>${PERSONEN.filter(p => !g.teilnehmer.some(t => t.id === p.id)).map(p => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join("")}</select>` : ""}</div>`;
   if (a.mandant) h += `<label>${g.art === "mandant" ? "Mandant" : "Mandant (optional – dann steht es beim Mandanten unter „Gespräche intern“)"}</label>${g.mandant ? `<div class="chips"><span class="chip">${esc(g.mandant.nr ? g.mandant.nr + " · " : "")}${esc(g.mandant.name)}</span>${darf ? '<a href="#" id="mWeg" style="font-size:12px">ändern</a>' : ""}</div>` : (darf ? '<input id="mSuche" placeholder="Name oder Mandantennummer …"><div id="mTreffer"></div>' : '<div class="leer">–</div>')}`;
   h += a.felder.map(f => feldHtml(f, (g.felder || {})[f.k], darf)).join("") + "</div>";
   h += kiHtml(g, darf);
@@ -225,6 +225,8 @@ function verdrahten(darf) {
   if ($("zStop")) $("zStop").onclick = async () => { try { G = await api("/gespraeche/" + G.id + "/zeit", { method: "POST", body: JSON.stringify({ stop: true }) }); zeichnen(); buero({ was: "zimmerLeisteZu", id: G.id }); } catch (e) { $("fe").textContent = e.message; } };
   document.querySelectorAll("[data-cl]").forEach(c => c.onchange = () => { const k = c.dataset.cl; G.felder[k] = [...document.querySelectorAll(`[data-cl="${k}"]:checked`)].map(x => x.value); speichern({ felder: { [k]: G.felder[k] } }); });
   if ($("plus")) $("plus").onchange = () => { if (!$("plus").value) return; speichern({ teilnehmerIds: [...G.teilnehmer.map(t => t.id), $("plus").value] }, true); };
+  // 15.10.2026 (Sam): Teilnehmer selbst wählen – nicht nur, wer tatsächlich im Raum stand
+  document.querySelectorAll("[data-tweg]").forEach(a => a.onclick = ev => { ev.preventDefault(); speichern({ teilnehmerIds: G.teilnehmer.map(t => t.id).filter(id => id !== a.dataset.tweg) }, true); });
   if ($("mWeg")) $("mWeg").onclick = ev => { ev.preventDefault(); speichern({ mandantId: "" }, true); };
   if ($("mSuche")) $("mSuche").oninput = async () => { const s = $("mSuche").value; if (s.length < 2) return $("mTreffer").innerHTML = "";
     try { const l = await api("/gespraeche/mandanten?q=" + encodeURIComponent(s)); $("mTreffer").innerHTML = l.map(m => `<div><a href="#" data-m="${esc(m.id)}">${esc(m.nr ? m.nr + " · " : "")}${esc(m.name)}</a></div>`).join("") || '<div class="leer">kein Treffer</div>';

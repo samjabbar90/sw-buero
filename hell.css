@@ -33,3 +33,5 @@
 :root.glas.hell .tag { background: #ccfbf1 !important; color: #0f766e !important; }
 /* Ziehstellen dunkel statt weiß */
 :root.glas.hell #glas-rand { filter: invert(1) opacity(.6); } :root.glas.hell #glas-ecke { filter: invert(1) opacity(.6); }
+/* Abgabefristen-Vermerk im Kalender (15.10.2026) */
+:root.glas.hell :is(.blk.frist, .t.frist) { background: #fef3c7 !important; color: #78350f !important; border-left-color: #d97706 !important; }

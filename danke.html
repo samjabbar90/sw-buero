@@ -30,8 +30,14 @@
   .form .k2 { display:flex; gap:6px; margin-top:10px; } .form button { font:inherit; font-weight:700; font-size:13px; border-radius:8px; padding:8px 14px; cursor:pointer; border:0; background:#0d9488; color:#fff; }
   .form button.leicht { background:#fff; color:#6b4423; border:1.5px solid #d6c7a1; }
   .leer { color:#fff8e7; font-size:13.5px; text-align:center; padding:30px 10px; } .fehler { color:#b91c1c; font-weight:600; font-size:13px; margin-top:6px; }
+  /* helle Optik wie Mein Profil (15.10.2026, Sam: „Pinwand auch in der hellen Optik, Schrift dunkelgrau“) */
+  html.glas.hell .wand { background:rgba(255,255,255,.55) !important; border:1px solid rgba(255,255,255,.7) !important; }
+  html.glas.hell :is(.n, .n .t, .n .k, .n .f, .leer) { color:#374151 !important; text-shadow:none !important; } html.glas.hell .n .k { background:none !important; border:0 !important; } html.glas.hell .z { background:none !important; border:0 !important; }
+  html.glas.hell .top button:not(.an):not(.neu) { background:rgba(17,24,39,.08) !important; color:#374151 !important; } html.glas.hell .top button.an { background:#3f4651 !important; color:#fff !important; }
+  html.glas.hell .form { background:rgba(255,255,255,.85) !important; color:#374151 !important; } html.glas.hell .form label { color:#374151 !important; }
 </style>
-<script src="glas.js?v=1791917122"></script>
+<script src="glas.js?v=1792073655"></script>
+<link rel="stylesheet" href="hell.css?v=2"><script>document.documentElement.classList.add("hell"); /* 15.10.2026 (Sam): helle Optik */</script>
 </head>
 <body>
 <div class="wand">

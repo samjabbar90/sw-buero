@@ -12,6 +12,17 @@
     try { WA.player.state.saveVariable("swAktiv", j, { public: false, persist: false }); } catch { /* ohne API */ } };
   ["keydown", "mousedown", "wheel", "touchstart", "input"].forEach(ev => document.addEventListener(ev, aktiv, { passive: true, capture: true }));
 })();
+// Büro nicht ohne Rückfrage schließen (15.10.2026, Sam: „lässt sich immer noch per X schließen“): Der Browser fragt nur, wenn der Rahmen,
+// der fragt, vorher angeklickt wurde – das Büro-Skript selbst bekommt nie Klicks. Darum fragt jedes Büro-Fenster mit.
+// Nicht nach dem Feierabend-Knopf und nicht, wenn das Büro selbst weiterleitet (Abmelden, Sperre: Variable swGehtRaus).
+window.addEventListener("beforeunload", (e) => {
+  try {
+    if (typeof WA === "undefined" || /Android|iPhone|iPod|Mobile/i.test(navigator.userAgent)) return;
+    const s = WA.player.state, heute = new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Berlin" });
+    if (s.swFeierabendTag === heute || Date.now() - Number(s.swGehtRaus || 0) < 60000) return;
+    e.preventDefault(); e.returnValue = "Du hast noch nicht auf Feierabend geklickt – Büro wirklich schließen?"; return e.returnValue;
+  } catch { /* ohne API */ }
+});
 (function () {
   if (!new URLSearchParams(location.search).has("glas")) return;
   const html = document.documentElement; html.classList.add("glas");

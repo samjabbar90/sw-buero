@@ -6,6 +6,7 @@
 <meta name="color-scheme" content="light dark">
 <title>Info</title>
 <script src="https://play.workadventu.re/iframe_api.js"></script>
+<script src="glas.js?v=1792073655"></script>
 <style>
   * { box-sizing:border-box; }
   html, body { margin:0; height:100%; background:transparent; overflow:hidden; font-family:system-ui,-apple-system,"Segoe UI",sans-serif; }
@@ -104,13 +105,23 @@ $('news').addEventListener('click', async () => {
 });
 newsZaehlen(); setInterval(newsZaehlen, 60000);
 // Online seit (09.10., Sam: Layout 1): erstes Betreten heute laut SW-internem Portal + wie lange schon
-let seitMin = null;
+// 15.10.2026 (Sam): nach Arbeitstag (Server: 8 Std Lücke = neuer Tag) · im Pausenraum hält die Stoppuhr an und die Pausenzeit läuft
+let seitMin = null, online = null, imPause = false;
 async function onlineLaden() {
   try { const d = await (await fetch("https://swdigitaltest.de/buero-praesenz/online?name=" + encodeURIComponent(WA.player.name || ""), { headers: { "X-Buero-Key": NEWS_KEY } })).json();
-    if (d && d.seit) { $('seit').textContent = d.seit; seitMin = d.seitMin; $('online').style.display = ''; onlineDauer(); } } catch { /* später */ }
+    if (d && d.seit) { $('seit').textContent = d.seit; seitMin = d.seitMin; online = d.start ? { ...d, abw: Date.now() - (d.jetzt || Date.now()), pauseLokal: online && online.pauseLokal } : null; $('online').style.display = ''; onlineDauer(); } } catch { /* später */ }
 }
-function onlineDauer() { if (seitMin == null) return; const j = new Date(), m = j.getHours() * 60 + j.getMinutes() - seitMin; if (m >= 0) $('dauer').textContent = Math.floor(m / 60) + ':' + String(m % 60).padStart(2, '0') + ' h'; }
-setInterval(onlineDauer, 30000);
+const hmText = ms => { const m = Math.max(0, Math.floor(ms / 60000)); return Math.floor(m / 60) + ':' + String(m % 60).padStart(2, '0') + ' h'; };
+function onlineDauer() {
+  if (online) {
+    const jetzt = Date.now() - online.abw, pauseStart = online.pauseSeit || (imPause ? online.pauseLokal : 0), pauseJetzt = imPause && pauseStart ? jetzt - pauseStart : 0;
+    $('dauer').textContent = hmText(jetzt - online.start - online.pauseMs - pauseJetzt) + (imPause ? ' · ☕ Pause ' + hmText(pauseJetzt).replace(' h', '') : online.pauseMs > 60000 ? ' · ☕ ' + hmText(online.pauseMs).replace(' h', '') : '');
+    $('online').title = imPause ? 'Pausenraum: die Arbeitszeit steht, die Pause läuft' : 'Arbeitstag seit ' + $('seit').textContent + ' (ohne Pausen)';
+    return;
+  }
+  if (seitMin == null) return; const j = new Date(), m = j.getHours() * 60 + j.getMinutes() - seitMin; if (m >= 0) $('dauer').textContent = Math.floor(m / 60) + ':' + String(m % 60).padStart(2, '0') + ' h';
+}
+setInterval(onlineDauer, 15000);
 if (new URLSearchParams(location.search).has('kz')) { $('feierabend').style.display = '';
   $('feierabend').addEventListener('click', () => { try { WA.player.state.saveVariable('swAktion', { was: 'feierabend', t: Date.now() }, { public: false, persist: false }); } catch { /* ältere Version */ } }); }
 
@@ -135,6 +146,11 @@ WA.onInit().then(async () => {
   try { WA.players.onPlayerEnters.subscribe(zeichnen); WA.players.onPlayerLeaves.subscribe(zeichnen); } catch { /* egal */ }
   zeichnen(); setInterval(zeichnen, 20000);
   onlineLaden(); setInterval(onlineLaden, 5 * 60000);
+  // Pausenraum (15.10.2026, Sam): Stoppuhr hält an, Pausenzeit läuft
+  try {
+    WA.room.area.onEnter('Pause').subscribe(() => { imPause = true; if (online) online.pauseLokal = Date.now(); onlineDauer(); setTimeout(onlineLaden, 4000); });
+    WA.room.area.onLeave('Pause').subscribe(() => { imPause = false; setTimeout(onlineLaden, 4000); onlineDauer(); });
+  } catch { /* ältere Version */ }
 });
 </script>
 </body>

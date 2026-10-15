@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Schnellreise</title>
 <script src="https://play.workadventu.re/iframe_api.js"></script>
+<script src="glas.js?v=1792073655"></script>
 <style>
   :root { --bg: #eef2f5; --karte: rgba(255,255,255,.9); --text: #111827; --leise: #4b5563; --akzent: #0f766e; color-scheme: light; } /* 14.10.2026 (Sam): helle Optik wie Mein Profil */
   * { box-sizing: border-box; }
@@ -25,6 +26,7 @@
   details { border-top: 1px solid rgba(17,24,39,.1); } details:first-of-type { border-top: 0; }
   summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 12px; letter-spacing: .6px; text-transform: uppercase; color: var(--leise); padding: 12px 2px 8px; font-weight: 700; user-select: none; }
   summary::-webkit-details-marker { display: none; } summary .pf { transition: transform .15s; font-size: 10px; } details[open] summary .pf { transform: rotate(90deg); }
+  .stern { width: auto !important; flex: none; padding: 10px 11px !important; color: #94a3b8; font-size: 15px; } .stern.an { color: #d97706; } /* Favoriten (15.10.2026) */
   summary .anz { margin-left: auto; font-weight: 600; letter-spacing: 0; text-transform: none; font-size: 12px; opacity: .8; }
 </style>
 </head>
@@ -75,7 +77,7 @@ function vorDemRaum(r) {
 }
 // Anzeige-Namen (14.10.2026, Sam) – die Bereiche in der Karte behalten ihre Namen (Türen, Live-Anzeige, Reservierungen hängen daran)
 const PERSON = { "Zimmer 1": "Tanja R.", "Zimmer 2": "Christiane S.", "Zimmer 3": "Jana J.", "Zimmer 4": "Kubilay A.", "Zimmer 5": "Bin W.", "Zimmer 6": "Onur K.",
-  "Zimmer 7": "Dilber A.", "Zimmer 8": "Fatih K.", "Zimmer 9": "Kerstin C.", "Zimmer 10": "Angelinka T.", "Zimmer 11": "", "Zimmer 12": "", "Zimmer 13": "Ilona S.",
+  "Zimmer 7": "Dilber A.", "Zimmer 8": "Fatih K.", "Zimmer 9": "Kerstin C.", "Zimmer 10": "Angelika T.", "Zimmer 11": "", "Zimmer 12": "", "Zimmer 13": "Ilona S.",
   "Zimmer 14": "Julien M.", "Zimmer 15": "Bahjat D.", "Zimmer 16": "", "Büro Leutrim": "Leutrim S.", "Büro Katharina": "Katharina K.", "Büro Ferhat": "Ferhat F.",
   "Büro Angelina": "Angelina M.", "Büro Sam": "Sam J.", "Büro Noura": "Noura A.", "Büro Emre": "Emre A.", "Büro Kadir": "Kadir K.", "Büro Attila": "Attila K." };
 const NAME = { "Besprechung Glas": "Besprechungszimmer 1", "Besprechung 11": "Besprechungszimmer 2", "Pause": "Pausenraum", "Lernzimmer": "Schulungsraum" };
@@ -117,6 +119,9 @@ function bild(x) {
   if (a === "buero") { const p = PERSON[x.name]; if (p === "") return '<span class="gesicht leer2">–</span>'; const n = p || x.name.replace(/^Büro |^Zimmer /, ""); return gesicht(gesichtVon(n), n); }
   return '<span class="sym">' + ICON[a] + '</span>';
 }
+// Favoriten (15.10.2026, Sam): ☆ an jeder Zeile, oben eigene Gruppe „Favoriten“. Gespeichert je Person (Spieler-Variable, auf jedem Gerät gleich).
+let fav = []; try { fav = JSON.parse(localStorage.getItem("swReiseFav") || "[]"); } catch {}
+function favSpeichern() { try { localStorage.setItem("swReiseFav", JSON.stringify(fav)); } catch {} try { WA.player.state.saveVariable("swReiseFav", fav, { public: false, persist: true }); } catch {} }
 let zu = new Set(); try { zu = new Set(JSON.parse(localStorage.getItem("swReiseZu") || "[]")); } catch {}
 const raumVon = (px, py) => raeume.filter(r => px >= r.x && px < r.x + r.w && py >= r.y && py < r.y + r.h).sort((a, b) => a.w * a.h - b.w * b.h)[0];
 
@@ -124,8 +129,10 @@ function zeichnen() {
   const s = document.getElementById('suche').value.trim().toLowerCase();
   const passt = n => !s || n.toLowerCase().includes(s);
   const r = raeume.filter(x => passt(x.name) || passt(anzeige(x)));
-  const zeile = x => '<div class="zeile"><button data-raum="' + raeume.indexOf(x) + '">' + bild(x) + '<span>' + esc(anzeige(x)) + '</span></button><button class="zoom" data-zoom="' + raeume.indexOf(x) + '" title="Nur ansehen – Kamera zoomt hin">👁</button></div>';
-  document.getElementById('raeume').innerHTML = r.length ? GRUPPEN.map(([g, titel]) => {
+  const zeile = x => '<div class="zeile"><button data-raum="' + raeume.indexOf(x) + '">' + bild(x) + '<span>' + esc(anzeige(x)) + '</span></button><button class="stern' + (fav.includes(x.name) ? ' an' : '') + '" data-fav="' + esc(x.name) + '" title="' + (fav.includes(x.name) ? 'Aus den Favoriten nehmen' : 'Als Favorit merken') + '">' + (fav.includes(x.name) ? '★' : '☆') + '</button><button class="zoom" data-zoom="' + raeume.indexOf(x) + '" title="Nur ansehen – Kamera zoomt hin">👁</button></div>';
+  const favs = fav.map(n => r.find(x => x.name === n)).filter(Boolean);
+  const favHtml = favs.length ? '<details data-g="fav" open><summary><span class="pf">▶</span>⭐ Favoriten<span class="anz">' + favs.length + '</span></summary><div class="liste" style="padding-bottom:10px">' + favs.map(zeile).join('') + '</div></details>' : '';
+  document.getElementById('raeume').innerHTML = r.length ? favHtml + GRUPPEN.map(([g, titel]) => {
     const teil = r.filter(x => gruppeVon(art(x.name)) === g).sort((a, b) => anzeige(a).startsWith("Leeres") - anzeige(b).startsWith("Leeres") || anzeige(a).localeCompare(anzeige(b), 'de'));
     if (!teil.length) return '';
     return '<details data-g="' + g + '"' + (s || !zu.has(g) ? ' open' : '') + '><summary><span class="pf">▶</span>' + titel + '<span class="anz">' + teil.length + '</span></summary><div class="liste" style="padding-bottom:10px">' + teil.map(zeile).join('') + '</div></details>';
@@ -136,6 +143,7 @@ function zeichnen() {
 }
 document.addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.fav) { const n = b.dataset.fav; fav = fav.includes(n) ? fav.filter(x => x !== n) : [...fav, n]; favSpeichern(); return zeichnen(); }
   if (b.dataset.raum) { const r = raeume[+b.dataset.raum]; reisen(vorDemRaum(r)); }
   // 11.10.2026 (Sam: „direkt zoomen, wenn ich etwas sehen will, z. B. das Social-Media-Büro“): Kamera fährt auf den Raum, Figur bleibt stehen
   if (b.dataset.zoom) { const r = raeume[+b.dataset.zoom], rand = 6 * T; try { WA.camera.set(r.x + r.w / 2, r.y + r.h / 2, Math.max(r.w + rand, 14 * T), Math.max(r.h + rand, 10 * T), false, true); } catch { /* ältere Version */ } WA.ui.modal.closeModal(); }
@@ -145,6 +153,7 @@ document.getElementById('suche').addEventListener('input', zeichnen);
 
 WA.onInit().then(async () => {
   await WA.players.configureTracking({ players: true, movement: true });
+  try { const v = WA.player.state.swReiseFav; if (Array.isArray(v)) fav = v; } catch {}
   let k = await (await fetch(WA.room.mapURL)).json();
   if (!k.layers && k.mapUrl) k = await (await fetch(new URL(k.mapUrl, WA.room.mapURL).toString())).json();
   karte = k;
