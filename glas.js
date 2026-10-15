@@ -15,7 +15,9 @@
 // Büro nicht ohne Rückfrage schließen (15.10.2026, Sam: „lässt sich immer noch per X schließen“): Der Browser fragt nur, wenn der Rahmen,
 // der fragt, vorher angeklickt wurde – das Büro-Skript selbst bekommt nie Klicks. Darum fragt jedes Büro-Fenster mit.
 // Nicht nach dem Feierabend-Knopf und nicht, wenn das Büro selbst weiterleitet (Abmelden, Sperre: Variable swGehtRaus).
-window.addEventListener("beforeunload", (e) => {
+// 15.10.2026 abends (Sam: „Profil etc. lässt sich nicht mehr vergrößern“): nur in Fenstern, die nie neu geöffnet werden (Leiste unten, Joystick) –
+// beim Vergrößern schließt das Büro ein Fenster und öffnet es neu, dabei störte die Rückfrage
+if (/\/(info|blick)\.html$/.test(location.pathname)) window.addEventListener("beforeunload", (e) => {
   try {
     if (typeof WA === "undefined" || /Android|iPhone|iPod|Mobile/i.test(navigator.userAgent)) return;
     const s = WA.player.state, heute = new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Berlin" });

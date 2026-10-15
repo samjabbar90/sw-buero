@@ -113,7 +113,7 @@
   };
   var nachrichtHinweis = null;
   function nachrichtZeigen(m) {
-    if (!HANDY) {
+    if (!HANDY || grundriss) {
       mitteilung({ art: "nachricht", von: m.von, text: String(m.text || "").slice(0, 300) });
       return;
     }
@@ -1878,7 +1878,7 @@
     grundrissOeffnet = true;
     try {
       grundriss = await WA.ui.website.open({
-        url: SEITEN + "app.html?v=1",
+        url: SEITEN + "app.html?v=2",
         allowApi: true,
         visible: true,
         position: { vertical: "top", horizontal: "left" },

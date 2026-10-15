@@ -71,7 +71,7 @@
   </main>
   <nav id="nav"></nav>
 </div>
-<div id="toast"><b id="toastText"></b><button id="toastKnopf">Los</button></div>
+<div id="toast"><b id="toastText"></b><button id="toastKnopf">Los</button><button id="toastKnopf2" style="display:none;background:#3a3a3c;color:#fff"></button></div>
 <div id="blatt"><div class="kopf"><button id="blattZu">‹ Zurück</button><b id="blattTitel"></b><span style="min-width:70px"></span></div><iframe id="blattRahmen" title="Büro-Fenster"></iframe></div>
 <script src="https://play.workadventu.re/iframe_api.js"></script>
 <script>
@@ -224,9 +224,23 @@ function ichMalen() {
 
 // ---------- Hinweise vom Büro (Leertaste-Aktionen) + Toast ----------
 let toastNr = 0;
-function toast(text, knopf, nr) { $("toastText").textContent = text; $("toastKnopf").style.display = knopf ? "" : "none"; $("toastKnopf").textContent = knopf || ""; $("toast").style.display = "flex"; toastNr = nr || 0;
+function toast(text, knopf, nr) { $("toastKnopf2").style.display = "none"; toastMt = null; $("toastText").textContent = text; $("toastKnopf").style.display = knopf ? "" : "none"; $("toastKnopf").textContent = knopf || ""; $("toast").style.display = "flex"; toastNr = nr || 0;
   clearTimeout(toast.u); if (!nr) toast.u = setTimeout(() => $("toast").style.display = "none", 2600); }
-$("toastKnopf").onclick = () => { if (toastNr) aktion("hinweisTipp", { nr: toastNr }); $("toast").style.display = "none"; };
+$("toastKnopf").onclick = () => { if (toastMt) return mtKnopf(1); if (toastNr) aktion("hinweisTipp", { nr: toastNr }); $("toast").style.display = "none"; };
+$("toastKnopf2").onclick = () => mtKnopf(2);
+// Mitteilung als Hinweis oben mit zwei Knöpfen (15.10.2026, Sam: „wie besprochen – direkt Antworten / Chat“)
+let toastMt = null;
+function toastMitteilung(m) {
+  const v = vor(m.von), K = m.art === "klopfen" ? ["Reinlassen", "Komme gleich"] : m.art === "nachricht" ? ["Antworten", "Chat"] : m.art === "termin" && m.raum ? ["Hingehen", "OK"] : null;
+  toast((m.art === "klopfen" ? "✊ " + v + " klopft an" : m.art === "termin" ? "📅 " + (m.titel || "Termin") : m.art === "nachricht" ? "💬 " + v + ": " + (m.text || "") : (v ? v + " " : "") + (m.kurz || "")).slice(0, 90), K ? K[0] : "");
+  if (!K) return; toastMt = m; $("toastKnopf2").textContent = K[1]; $("toastKnopf2").style.display = ""; clearTimeout(toast.u); toast.u = setTimeout(() => { $("toast").style.display = "none"; toastMt = null; }, 15000);
+}
+function mtKnopf(n) {
+  const m = toastMt; $("toast").style.display = "none"; toastMt = null; if (!m) return;
+  if (m.art === "klopfen") return aktion(n === 1 ? "mtReinlassen" : "mtGleich", { id: m.id });
+  if (m.art === "termin") return n === 1 ? aktion("mtHin", { id: m.id }) : aktion("mtWeg", { id: m.id });
+  if (m.art === "nachricht") { if (n === 1) antwortAuf = m.id; zeigeTab("chat"); const i = $("antw"); if (i) i.focus(); }
+}
 
 WA.onInit().then(async () => {
   ICH = WA.player.name || "";
@@ -242,7 +256,7 @@ WA.onInit().then(async () => {
   if (meineTuer) { tuerLesen(); WA.state.onVariableChange(meineTuer.variable).subscribe(tuerLesen); setInterval(tuerLesen, 30000); }
   try { ich = await WA.player.getPosition(); } catch {}
   WA.player.onPlayerMove(e => { ich = { x: e.x, y: e.y }; });
-  const mtNeu = v => { const vorher = mitteilungen.length; mitteilungen = Array.isArray(v) ? v : []; if (mitteilungen.length > vorher && mitteilungen[0]) { const m = mitteilungen[0]; toast((m.art === "klopfen" ? "✊ " + vor(m.von) + " klopft an" : m.art === "termin" ? "📅 " + (m.titel || "Termin") : "💬 " + vor(m.von) + ": " + (m.text || "")).slice(0, 80)); } if (tab === "chat") { gelesen = Date.now(); chatMalen(); } navMalen(); };
+  const mtNeu = v => { const vorher = mitteilungen.length; mitteilungen = Array.isArray(v) ? v : []; if (mitteilungen.length > vorher && mitteilungen[0]) toastMitteilung(mitteilungen[0]); if (tab === "chat") { gelesen = Date.now(); chatMalen(); } navMalen(); };
   mtNeu(WA.player.state.swMitteilungen); WA.player.state.onVariableChange("swMitteilungen").subscribe(mtNeu);
   const hw = v => { if (v && v.text) toast(v.text, v.knopf ? "Los" : "", v.nr); else if (toastNr) { $("toast").style.display = "none"; toastNr = 0; } };
   WA.player.state.onVariableChange("swAppHinweis").subscribe(hw);
