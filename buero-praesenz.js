@@ -520,8 +520,12 @@
   var hm = (d) => d.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin" });
   var infoLeiste = null;
   var hinweiseOffen = 0;
-  var LEISTE_UNTEN = "0px";
+  var LEISTE_UNTEN = "3px";
   function leisteVerschieben() {
+    try {
+      if (infoLeiste) infoLeiste.visible = hinweiseOffen === 0;
+    } catch {
+    }
   }
   function hinweiseUeberwachen() {
     try {
@@ -2350,12 +2354,12 @@
       }
     } else try {
       infoLeiste = await WA.ui.website.open({
-        url: "https://samjabbar90.github.io/sw-buero/info.html?v=6&flach=1" + (kzAktiv ? "&kz=1" : ""),
+        url: "https://samjabbar90.github.io/sw-buero/info.html?v=7&flach=1" + (kzAktiv ? "&kz=1" : ""),
         allowApi: true,
         visible: true,
         // genau so groß wie die Leiste (kein weißer Rand): mit eigener Tür breiter (Tür + Fokus), sonst nur Uhrzeit + Kollegen
         position: { vertical: HANDY ? "top" : "bottom", horizontal: "middle" },
-        size: { width: HANDY ? Math.max(300, (screen.width || 390) - 16) + "px" : 400 + (meineTuer() ? 150 : 0) + (kzAktiv ? 130 : 0) + "px", height: HANDY ? "40px" : "24px" },
+        size: { width: HANDY ? Math.max(300, (screen.width || 390) - 16) + "px" : 400 + (meineTuer() ? 150 : 0) + (kzAktiv ? 130 : 0) + "px", height: HANDY ? "40px" : "18px" },
         margin: HANDY ? { top: "64px" } : { bottom: LEISTE_UNTEN }
       });
     } catch {
