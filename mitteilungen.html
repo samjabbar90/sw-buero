@@ -4,13 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Mitteilungen</title>
+<meta name="color-scheme" content="dark"><!-- 15.10.2026 spät: sonst legt Chrome einen weißen Rand um die Karten -->
 <!-- Mitteilungen oben rechts, Layout H2 (15.10.2026, Sam): alles, was mit einer anderen Person zu tun hat (Nachricht, Anklopfen, Termin,
      „komme gleich“, reingelassen), als Karte mit Knöpfen. Das Büro-Skript (main.ts › mitteilung) legt die Liste in die private
      Spieler-Variable „swMitteilungen“; Knöpfe melden über „swAktion“ zurück (mtWeg, mtReinlassen, mtGleich, mtHin, mtChat).
      Antworten auf Nachrichten geht direkt hier (Büro-Ausweis, /buero-praesenz/wer/nachricht). -->
 <style>
   * { box-sizing:border-box; }
-  html, body { margin:0; background:transparent; overflow:hidden; font-family:system-ui,-apple-system,"Segoe UI",sans-serif; color:#111827; }
+  html, body { margin:0; background:transparent !important; color-scheme:dark; overflow:hidden; font-family:system-ui,-apple-system,"Segoe UI",sans-serif; color:#111827; }
   #l { display:flex; flex-direction:column; gap:8px; padding:4px; }
   .m { background:#fff; border-radius:12px; padding:9px 11px; box-shadow:0 4px 14px rgba(0,0,0,.25); border-left:5px solid #0f766e; font-size:13.5px; height:96px; display:flex; flex-direction:column; animation:rein .25s ease-out; }
   @keyframes rein { from { transform:translateX(30px); opacity:0; } to { transform:none; opacity:1; } }
@@ -21,7 +22,7 @@
   .knoepfe { display:flex; gap:6px; margin-top:auto; }
   .knoepfe button { font:inherit; font-size:12.5px; font-weight:700; border-radius:8px; padding:5px 10px; cursor:pointer; border:1.5px solid #0f766e; background:#fff; color:#0f766e; }
   .knoepfe button.voll { background:#0f766e; color:#fff; }
-  .knoepfe input { flex:1; min-width:0; font:inherit; font-size:13px; border:1.5px solid #cbd5e1; border-radius:8px; padding:4px 8px; }
+  .knoepfe input { flex:1; min-width:0; font:inherit; font-size:13px; border:1.5px solid #cbd5e1; border-radius:8px; padding:4px 8px; background:#fff; color:#111827; color-scheme:light; }
   .zeit { font-size:11px; color:#9ca3af; font-weight:400; }
 </style>
 </head>

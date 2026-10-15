@@ -39,7 +39,8 @@
     }
     const id = Math.random().toString(36).slice(2, 9);
     mitteilungen = [{ ...m, id, t: Date.now() }, ...mitteilungen].slice(0, 5);
-    if (m.art === "klopfen" || m.art === "termin" || m.art === "nachricht") ton("klingel");
+    if (m.art === "klopfen") ton("klopfen");
+    else if (m.art === "termin" || m.art === "nachricht") ton("klingel");
     mtZeigen();
     if (autoWegMs) setTimeout(() => mtWeg(id), autoWegMs);
     return id;
@@ -69,7 +70,7 @@
     mtFenster = null;
     if (mitteilungen.length) try {
       mtFenster = await WA.ui.website.open({
-        url: SEITEN + "mitteilungen.html?v=1",
+        url: SEITEN + "mitteilungen.html?v=2",
         allowApi: true,
         visible: true,
         position: { vertical: "top", horizontal: "right" },
@@ -1795,7 +1796,7 @@
     if (t.offen ? zimmerDaten(t).s === "zu" : tuerStatus(t) === "fokus") return "fokus";
     return aktuellerBereich === t.raum || (info.belegt || []).includes(t.raum) ? "da" : "weg";
   }
-  var schildUrl = (t, n, st) => SEITEN + "schild.html?v=2&n=" + encodeURIComponent(n) + "&raum=" + encodeURIComponent(t.raum) + "&s=" + st;
+  var schildUrl = (t, n, st) => SEITEN + "schild.html?v=3&n=" + encodeURIComponent(n) + "&raum=" + encodeURIComponent(t.raum) + "&s=" + st;
   async function namensschilder() {
     if (HANDY) return;
     for (const t of tueren) {
