@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f766e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>SW-Büro</title>
+<!-- Handy-Büro ohne Karte (15.10.2026, Sam: Variante C „am Handy alle Funktionen, die Karte nur bei Bedarf“).
+     Man ist im Büro (Präsenz „📱 Handy“, sichtbar in „Wer ist da“ und im Portal), sieht wer wo ist, bekommt Nachrichten, Anklopfen
+     und Termin-Erinnerungen, öffnet alle Büro-Fenster (Kalender, Ideen, Check, Health …). Reden in der Blase: „Hingehen“ lädt die Karte
+     direkt vor der Tür (Büro-Adresse #ziel=…), „📋 Liste“ im Handy-Menü der Karte führt hierher zurück. Anmeldung: Büro-Ausweis. -->
+<style>
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { margin:0; background:#eef2f5; color:#111827; font-family:system-ui,-apple-system,"Segoe UI",sans-serif; font-size:15px; padding-bottom:env(safe-area-inset-bottom); }
+  header { position:sticky; top:0; z-index:5; background:#0f766e; color:#fff; padding:calc(10px + env(safe-area-inset-top)) 14px 10px; display:flex; align-items:center; gap:10px; }
+  header h1 { margin:0; font-size:17px; flex:1; } header .u { display:block; font-size:12px; font-weight:400; opacity:.85; }
+  header button { background:rgba(255,255,255,.18); color:#fff; border:0; border-radius:10px; padding:7px 10px; font:inherit; font-size:13px; }
+  main { padding:12px; display:flex; flex-direction:column; gap:12px; }
+  .karte { background:#fff; border-radius:14px; padding:12px; border:1px solid rgba(17,24,39,.06); }
+  h2 { font-size:13px; text-transform:uppercase; letter-spacing:.5px; color:#4b5563; margin:0 0 8px; display:flex; justify-content:space-between; }
+  .gross { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; background:#0f766e; color:#fff; border:0; border-radius:14px; padding:14px; font:inherit; font-size:16px; font-weight:700; }
+  .kacheln { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+  .kacheln button { background:#fff; border:1px solid rgba(17,24,39,.08); border-radius:14px; padding:12px 0 9px; display:flex; flex-direction:column; align-items:center; gap:5px; font:inherit; font-size:11.5px; color:#374151; }
+  .kacheln button span { font-size:22px; line-height:1; }
+  .p { display:flex; align-items:center; gap:10px; padding:8px 2px; border-top:1px solid #f1f5f9; } .p:first-of-type { border-top:0; }
+  .gesicht { width:36px; height:36px; border-radius:50%; flex:none; background:#475569 center/cover no-repeat; color:#fff; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:800; }
+  .p .n { font-weight:600; } .p .w { font-size:12.5px; color:#4b5563; }
+  .p .akt { margin-left:auto; display:flex; gap:6px; }
+  .k { border:1px solid rgba(17,24,39,.15); background:#fff; border-radius:10px; padding:7px 9px; font:inherit; font-size:13px; color:#0f766e; font-weight:600; text-decoration:none; }
+  .k.voll { background:#0f766e; color:#fff; border-color:#0f766e; }
+  .meldung { background:#ecfdf5; border:1px solid #a7f3d0; border-radius:12px; padding:10px; font-size:14px; display:flex; flex-direction:column; gap:6px; }
+  .meldung.klopfen { background:#fff7ed; border-color:#fed7aa; } .meldung.termin { background:#eff6ff; border-color:#bfdbfe; }
+  .meldung .zeile { display:flex; gap:6px; flex-wrap:wrap; }
+  .eingabe { display:flex; gap:6px; margin-top:6px; } .eingabe input { flex:1; font:inherit; padding:8px 10px; border:1px solid #cbd5e1; border-radius:10px; }
+  .leer { color:#6b7280; font-size:13.5px; padding:6px 2px; } .fehler { color:#b91c1c; font-size:13px; font-weight:600; } .ok { color:#047857; font-size:13px; font-weight:600; }
+  label { display:block; font-size:12px; font-weight:700; color:#475569; margin:8px 0 3px; } .feld { font:inherit; width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:10px; }
+  details summary { cursor:pointer; font-size:13px; color:#4b5563; padding:4px 2px; }
+  #blatt { position:fixed; inset:0; z-index:20; background:#fff; display:none; flex-direction:column; }
+  #blatt .kopf { display:flex; align-items:center; gap:8px; padding:calc(8px + env(safe-area-inset-top)) 12px 8px; background:#0f766e; color:#fff; }
+  #blatt .kopf b { flex:1; } #blatt .kopf button { background:rgba(255,255,255,.2); color:#fff; border:0; border-radius:10px; padding:7px 12px; font:inherit; font-size:15px; }
+  #blatt iframe { flex:1; border:0; width:100%; }
+</style>
+</head>
+<body>
+<header><h1>🏢 SW-Büro <span class="u" id="unter">am Handy · ohne Karte</span></h1><button id="ab" style="display:none">Abmelden</button></header>
+<main id="inhalt"><div class="leer">Lädt …</div></main>
+<div id="blatt"><div class="kopf"><b id="blattTitel"></b><button id="blattZu">✕ Schließen</button></div><iframe id="blattRahmen" title="Büro-Fenster"></iframe></div>
+<script>
+const KEY = "a21b2aa2a42fe6189b05773c07bbc9ad78e38b34ba3bb6fe", B = "https://swdigitaltest.de/buero-praesenz";
+const BUERO = "https://play.workadventu.re/@/swdigitaltax/sw-digital-tax/buero";
+const SITZUNG = Math.random().toString(36).slice(2) + Date.now().toString(36), HIER = "📱 Handy";
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const ausweis = () => { try { return localStorage.getItem("swBueroAusweis") || ""; } catch { return ""; } };
+const H = () => ({ "X-Buero-Key": KEY, "X-Buero-Ausweis": ausweis(), "Content-Type": "application/json" });
+let ICH = "", leute = [], weg = [], meldungen = [], termine = [], offen = "", seit = "", gestartet = false, takt = null;
+// Anzeige-Namen der Räume wie in der Schnellreise
+const PERSON = { "Zimmer 1": "Tanja R.", "Zimmer 2": "Christiane S.", "Zimmer 3": "Jana J.", "Zimmer 4": "Kubilay A.", "Zimmer 5": "Bin W.", "Zimmer 6": "Onur K.", "Zimmer 7": "Dilber A.", "Zimmer 8": "Fatih K.",
+  "Zimmer 9": "Kerstin C.", "Zimmer 10": "Angelika T.", "Zimmer 13": "Ilona S.", "Zimmer 14": "Julien M.", "Zimmer 15": "Bahjat D.", "Büro Leutrim": "Leutrim S.", "Büro Katharina": "Katharina K.",
+  "Büro Ferhat": "Ferhat F.", "Büro Angelina": "Angelina M.", "Büro Sam": "Sam J.", "Büro Noura": "Noura A.", "Büro Emre": "Emre A.", "Büro Kadir": "Kadir K.", "Büro Attila": "Attila K." };
+const NAME = { "Besprechung Glas": "Besprechungszimmer 1", "Besprechung 11": "Besprechungszimmer 2", "Pause": "Pausenraum", "Lernzimmer": "Schulungsraum" };
+const raumText = r => !r || r === "Flur" ? "im Flur" : r === HIER ? "📱 am Handy" : PERSON[r] ? PERSON[r] + " Büro" : NAME[r] || r;
+const hingehbar = r => r && r !== HIER && r !== "Flur";
+const initialen = n => String(n || "?").split(/\s+/).map(w => w[0] || "").join("").slice(0, 2).toUpperCase();
+
+// ---------- Präsenz: alle 30 s melden (so sehen die Kollegen „📱 am Handy“) ----------
+async function melden(event) {
+  if (!ICH) return;
+  try {
+    const r = await fetch(B + "/melden", { method: "POST", headers: { "Content-Type": "application/json", "X-Buero-Key": KEY }, keepalive: true,
+      body: JSON.stringify({ name: ICH, bereich: HIER, event, sitzung: SITZUNG, start: !gestartet && event !== "verlassen", handy: true, ruhe: 0, gespraech: [], pos: null }) });
+    gestartet = true;
+    const d = await r.json().catch(() => ({}));
+    if (d.abgeloest) { meldungen.unshift({ von: "System", text: "Du bist jetzt an einem anderen Gerät im Büro – hier ruht das Handy-Büro.", zeit: Date.now() }); clearInterval(takt); takt = null; zeichnen(); return; }
+    if (Array.isArray(d.nachrichten) && d.nachrichten.length) { meldungen = [...d.nachrichten.reverse(), ...meldungen].slice(0, 10); try { navigator.vibrate && navigator.vibrate(150); } catch {} }
+    if (Array.isArray(d.termine)) termine = d.termine;
+  } catch { /* später nochmal */ }
+}
+async function laden() {
+  try {
+    const r = await fetch(B + "/wer", { headers: H() }); const d = await r.json().catch(() => ({}));
+    if (r.status === 401) { try { localStorage.removeItem("swBueroAusweis"); } catch {} return anmelden("Bitte kurz neu anmelden."); }
+    if (!r.ok) throw new Error(d.error || "Fehler");
+    leute = (d.liste || d.da || []).filter(p => String(p.name).toLowerCase() !== ICH.toLowerCase()); weg = d.weg || [];
+  } catch (e) { /* Liste bleibt */ }
+  try { const o = await (await fetch(B + "/online?name=" + encodeURIComponent(ICH), { headers: { "X-Buero-Key": KEY } })).json(); seit = o && o.seit ? o.seit : ""; } catch {}
+  zeichnen();
+}
+
+// ---------- Anzeige ----------
+function zeichnen() {
+  if (!ICH) return;
+  $("unter").textContent = ICH.split(" ")[0] + " · am Handy" + (seit ? " · online seit " + seit : "");
+  $("ab").style.display = "";
+  const jetzt = new Date().toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
+  let h = `<button class="gross" id="karte">🗺 Ins Büro gehen (Karte)</button>`;
+  h += meldungen.map((m, i) => `<div class="meldung${m.klopfen ? " klopfen" : ""}"><div><b>${esc(String(m.von).split(" ")[0])}</b> ${esc(m.text)}</div><div class="zeile">
+    ${m.klopfen && m.raum ? `<a class="k voll" href="${BUERO}#ziel=${encodeURIComponent(m.raum)}">🚶 Hingehen</a>` : ""}${m.von !== "System" ? `<button class="k" data-antw="${i}">💬 Antworten</button>` : ""}<button class="k" data-weg="${i}">OK</button></div>
+    ${offen === "a" + i ? `<div class="eingabe"><input id="txt" placeholder="Antwort an ${esc(String(m.von).split(" ")[0])} …" maxlength="300"><button class="k voll" data-senden="${esc(m.von)}">Senden</button></div>` : ""}</div>`).join("");
+  h += termine.map(t => `<div class="meldung termin"><div>📅 <b>${esc(t.von)}${t.ende ? "–" + esc(t.ende) : ""}</b> ${esc(t.titel)}${t.ort ? " · " + esc(t.ort) : ""}${t.von <= jetzt ? " · <b>läuft</b>" : ""}</div>
+    ${t.ort ? `<div class="zeile"><a class="k voll" href="${BUERO}#ziel=${encodeURIComponent(t.ort)}">🚶 Hingehen</a></div>` : ""}</div>`).join("");
+  h += `<div class="kacheln">${KACHELN.map((k, i) => `<button data-k="${i}"><span>${k[0]}</span>${k[1]}</button>`).join("")}</div>`;
+  h += `<div class="karte"><h2>Im Büro <span>${leute.length}</span></h2>${leute.length ? leute.map((p, i) => {
+    const f = p.foto ? `<span class="gesicht" style="background-image:url(&quot;${esc(p.foto)}&quot;)"></span>` : `<span class="gesicht">${esc(initialen(p.name))}</span>`;
+    return `<div class="p" data-p="${i}">${f}<div><div class="n">${esc(p.name)}</div><div class="w">${esc(raumText(p.bereich))}${p.telefoniert ? " · 📞 telefoniert" : ""}</div></div>
+      <div class="akt"><button class="k" data-nachricht="${i}" aria-label="Nachricht">💬</button>${hingehbar(p.bereich) ? `<a class="k voll" href="${BUERO}#ziel=${encodeURIComponent(p.bereich)}">🚶 Hin</a>` : ""}</div></div>
+      ${offen === "n" + i ? `<div class="eingabe"><input id="txt" placeholder="Nachricht an ${esc(String(p.name).split(" ")[0])} …" maxlength="300"><button class="k voll" data-senden="${esc(p.name)}">Senden</button></div>` : ""}`; }).join("") : '<div class="leer">Gerade ist niemand außer dir im Büro.</div>'}
+    <div id="fe"></div></div>`;
+  if (weg.length) h += `<div class="karte"><details><summary>Nicht im Büro (${weg.length})</summary>${weg.map(p => `<div class="p"><span class="gesicht" style="background:#cbd5e1">${esc(initialen(p.name))}</span><div><div class="n">${esc(p.name)}</div><div class="w">${p.zuletzt ? "zuletzt " + new Date(p.zuletzt).toLocaleString("de-DE", { weekday: "short", hour: "2-digit", minute: "2-digit" }) : "–"}</div></div>${p.durchwahl ? `<div class="akt"><a class="k" href="tel:${esc(p.durchwahl)}">📞</a></div>` : ""}</div>`).join("")}</details></div>`;
+  $("inhalt").innerHTML = h;
+  $("karte").onclick = () => { melden("verlassen"); location.href = BUERO; };
+  document.querySelectorAll("[data-k]").forEach(b => b.onclick = () => blatt(KACHELN[+b.dataset.k]));
+  document.querySelectorAll("[data-weg]").forEach(b => b.onclick = () => { meldungen.splice(+b.dataset.weg, 1); offen = ""; zeichnen(); });
+  document.querySelectorAll("[data-antw]").forEach(b => b.onclick = () => { offen = offen === "a" + b.dataset.antw ? "" : "a" + b.dataset.antw; zeichnen(); $("txt") && $("txt").focus(); });
+  document.querySelectorAll("[data-nachricht]").forEach(b => b.onclick = () => { offen = offen === "n" + b.dataset.nachricht ? "" : "n" + b.dataset.nachricht; zeichnen(); $("txt") && $("txt").focus(); });
+  document.querySelectorAll("[data-senden]").forEach(b => b.onclick = () => senden(b.dataset.senden));
+}
+async function senden(an) {
+  const t = ($("txt") || {}).value || ""; if (!t.trim()) return;
+  try { const r = await fetch(B + "/wer/nachricht", { method: "POST", headers: H(), body: JSON.stringify({ an, text: t }) }); const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || "Fehler");
+    offen = ""; zeichnen(); $("fe").innerHTML = '<div class="ok">✓ Nachricht an ' + esc(an.split(" ")[0]) + " geschickt</div>"; }
+  catch (e) { $("fe").innerHTML = '<div class="fehler">' + esc(e.message) + "</div>"; }
+}
+// Büro-Fenster als Blatt (dieselben Seiten wie im Büro, mit dem Büro-Ausweis)
+const KACHELN = [["📅", "Kalender", "kalender.html"], ["💡", "Ideen", "ideen.html"], ["✅", "Tages-Check", "tagescheck.html"], ["⏰", "Arbeitszeit", "kernzeit.html"],
+  ["❤️", "Health", "health.html"], ["👥", "Team", "wer.html?sheet=1"], ["👤", "Profil", "profil.html?ich=1"], ["💛", "Danke", "danke.html"],
+  ["📰", "News", "news.html"], ["🎓", "Schulung", "lernen.html"], ["🗓", "Donna", "ute.html"], ["🚪", "Feierabend", "kernzeit.html?feierabend=1"]];
+function blatt(k) { $("blattTitel").textContent = k[0] + " " + k[1]; $("blattRahmen").src = k[2] + (k[2].includes("?") ? "&" : "?") + "name=" + encodeURIComponent(ICH) + "&t=" + Date.now(); $("blatt").style.display = "flex"; }
+$("blattZu").onclick = () => { $("blatt").style.display = "none"; $("blattRahmen").src = "about:blank"; laden(); };
+$("ab").onclick = async () => { if (!confirm("Aus dem Büro abmelden?")) return; await melden("verlassen"); clearInterval(takt); takt = null; ICH = ""; $("inhalt").innerHTML = '<div class="karte"><b>Abgemeldet.</b><div class="leer">Bis später! 👋</div><button class="gross" onclick="location.reload()">Wieder ins Büro</button></div>'; $("ab").style.display = "none"; };
+
+// ---------- Anmelden (Büro-Passwort/PIN oder Code per E-Mail → Büro-Ausweis) ----------
+function anmelden(text) {
+  let ben = ""; try { ben = localStorage.getItem("swSchlossBenutzer") || localStorage.getItem("swSchlossMail") || ""; } catch {}
+  $("inhalt").innerHTML = `<div class="karte"><b>Ins Büro anmelden</b><div class="leer">Wie am Laptop: Büro-Passwort oder Code per E-Mail.</div>
+    <label>Benutzername oder E-Mail</label><input class="feld" id="aBen" value="${esc(ben)}" autocomplete="username" autocapitalize="none">
+    <label>Büro-Passwort, PIN oder Code aus der E-Mail</label><input class="feld" id="aPin" type="password" autocomplete="current-password">
+    <div id="aFe" class="fehler" style="margin-top:6px">${esc(text || "")}</div>
+    <div style="display:flex;gap:6px;margin-top:10px"><button class="gross" id="aLos" style="flex:1">Weiter</button><button class="k" id="aMail">✉️ Code</button></div></div>`;
+  $("aMail").onclick = async () => { const m = $("aBen").value.trim(); if (!/@/.test(m)) return $("aFe").textContent = "Für den Code bitte oben deine dienstliche E-Mail eintragen.";
+    try { const r = await fetch(B + "/ausweis/mailcode", { method: "POST", headers: { "X-Buero-Key": KEY, "Content-Type": "application/json" }, body: JSON.stringify({ benutzer: m }) }); const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || "Fehler");
+      $("aFe").className = "ok"; $("aFe").textContent = "Code an " + m + " geschickt – unten eintragen."; } catch (e) { $("aFe").className = "fehler"; $("aFe").textContent = e.message; } };
+  $("aLos").onclick = async () => { $("aLos").disabled = true;
+    try { const r = await fetch(B + "/ausweis", { method: "POST", headers: { "X-Buero-Key": KEY, "Content-Type": "application/json" }, body: JSON.stringify({ benutzer: $("aBen").value.trim(), pin: $("aPin").value, pause: true }) });
+      const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || (r.status === 429 ? "Zu viele Versuche – bitte 15 Minuten warten." : "Fehler"));
+      try { localStorage.setItem("swBueroAusweis", d.token); localStorage.setItem("swSchlossBenutzer", $("aBen").value.trim()); } catch {} start(); }
+    catch (e) { $("aFe").className = "fehler"; $("aFe").textContent = e.message; $("aLos").disabled = false; } };
+}
+async function start() {
+  if (!ausweis()) return anmelden();
+  try { const r = await fetch(B + "/ausweis/pruefen", { method: "POST", headers: H(), body: "{}" }); const d = await r.json().catch(() => ({}));
+    if (!r.ok || !d.name) { try { localStorage.removeItem("swBueroAusweis"); } catch {} return anmelden(r.status === 401 ? "Bitte kurz neu anmelden." : ""); }
+    ICH = d.name; } catch { $("inhalt").innerHTML = '<div class="leer">Keine Verbindung – bitte gleich nochmal versuchen.</div>'; return; }
+  gestartet = false; await melden("betreten"); await laden();
+  clearInterval(takt); takt = setInterval(() => { melden("heartbeat").then(zeichnen); }, 30000);
+  setInterval(laden, 60000);
+}
+// App im Hintergrund und wieder vorne: gleich melden (iOS hält die Seite im Hintergrund an)
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && ICH && takt) { melden("heartbeat").then(laden); } });
+start();
+</script>
+</body>
+</html>

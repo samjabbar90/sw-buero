@@ -574,7 +574,9 @@
     } catch {
     }
   }
+  var SPAR_EBENE = /^fx-(regen|schnee|trueb|blitz|pfuetzen|abend|nacht|lichter|dunkel|feierabend)/;
   function fx(name, an) {
+    if (HANDY && SPAR_EBENE.test(name)) an = false;
     if (fxStand[name] === an) return;
     fxStand[name] = an;
     try {
@@ -955,7 +957,7 @@
     }
   }
   function ranglistenTafel() {
-    try {
+    if (!HANDY) try {
       WA.room.website.create({ name: "rangliste", url: SEITEN + "rangliste-bildschirm.html", visible: true, allowApi: false, origin: "map", scale: 1, position: { x: 2284, y: 128 + DY * 32, width: 184, height: 54 } });
     } catch {
     }
@@ -1593,6 +1595,7 @@
     }
   }
   function konfettiHeute() {
+    if (HANDY) return;
     const kinder = info.geburtstage || [];
     if (!kinder.length) return;
     const heute = (/* @__PURE__ */ new Date()).toLocaleDateString("sv-SE", { timeZone: "Europe/Berlin" });
@@ -1921,17 +1924,6 @@
   }
   var AMPEL_START = Date.now();
   var AMPEL_KREUZUNGEN = [{ x: 115, y: 67 + DY, sv: 4, sh: 6 }, { x: 115, y: 84 + DY, sv: 4, sh: 4 }];
-  function ampelText() {
-    const ZYK = 128 * 120, t = (Date.now() - AMPEL_START) % ZYK, f = Math.floor(t / 120);
-    const status = (von, bis) => {
-      const drin = f >= von && f < bis, ziel = drin ? bis : von, rest = Math.ceil(((ziel * 120 - t) % ZYK + ZYK) % ZYK / 1e3);
-      return drin ? `\u{1F7E2} gehen (noch ${rest} s)` : `\u{1F534} warten (${rest} s)`;
-    };
-    return `\u{1F6A6} \xDCber die Hauptstra\xDFe: ${status(64, 128)} \xB7 \xDCber die Querstra\xDFe: ${status(0, 72)}`;
-  }
-  function fussgaengerAmpel() {
-    AMPEL_KREUZUNGEN.forEach((k, i) => [[k.x - 1, k.y - 1], [k.x + k.sv, k.y - 1], [k.x - 1, k.y + k.sh], [k.x + k.sv, k.y + k.sh]].forEach(([x, y], j) => leertasteBereich(`ampel-${i + 1}-${j + 1}`, { x, y, w: 3, h: 3 }, "\u{1F6A6} Fu\xDFg\xE4nger-Ampel \xB7 Leertaste", () => kurzMeldung(ampelText(), 6e3))));
-  }
   async function infoLaden() {
     try {
       info = await (await fetch(INFO, { headers: { "X-Buero-Key": BUERO_KEY } })).json();
@@ -2168,6 +2160,17 @@
     }
     await tuerenStarten();
     namensschilder();
+    try {
+      const z = WA.room.hashParameters && WA.room.hashParameters.ziel;
+      if (z) {
+        const t = tueren.find((x) => x.raum === z);
+        if (t && t.draussen) {
+          WA.player.teleport(t.draussen[0] * 32 + 16, t.draussen[1] * 32 + 16);
+          kurzMeldung("\u{1F6AA} Du stehst vor " + z + " \u2013 Leertaste = anklopfen, sonst einfach reingehen", 7e3);
+        } else zuRaum(String(z));
+      }
+    } catch {
+    }
     let kzAktiv = false, tcAktiv = false;
     try {
       const r = await fetch(ENDPOINT.replace(/melden$/, "kernzeit/hinweis"), { method: "POST", headers: { "Content-Type": "application/json", "X-Buero-Key": BUERO_KEY }, body: JSON.stringify({ name: WA.player.name }) });
@@ -2184,7 +2187,7 @@
     }
     effekte();
     setInterval(effekte, 6e4);
-    wetterTakt();
+    if (!HANDY) wetterTakt();
     infoLaden();
     setInterval(infoLaden, 15e3);
     if (HANDY) {
@@ -2224,7 +2227,7 @@
     }
     glasBeobachten();
     ideen();
-    posterAufhaengen();
+    if (!HANDY) posterAufhaengen();
     helpcenterRoboter();
     lernzimmer();
     fitnessEmpfang();
@@ -2242,9 +2245,8 @@
     jaPlatz();
     itPlatz();
     ronPlatz();
-    fussgaengerAmpel();
     klingel();
-    hundStarten();
+    if (!HANDY) hundStarten();
     profilKarten();
     wandGespraeche();
     kernzeitStarten();
@@ -2437,6 +2439,10 @@
             rausZu(SEITEN + "weg.html?grund=feierabend");
           });
         }
+        if (v.was === "handyListe") return melden("verlassen").then(() => {
+          beendet = true;
+          rausZu(SEITEN + "handy.html?von=karte");
+        });
         if (v.was === "abmelden") {
           return melden("verlassen").then(() => {
             beendet = true;
