@@ -297,7 +297,7 @@ const zahl = n => String(Math.round(n * 10) / 10).replace(".", ",");
 function antrZeile(a) {
   const art = a.art === "standort" ? (a.typ === "standort" ? "📍 " + (a.standortName || "Standort") : ARTEN.homeoffice) : (ARTEN[a.typ] || (a.typ === "minusstunden" ? "⏱️ Minusstunden" : a.typ));
   const zeit = dDE(a.von) + (a.bis && a.bis !== a.von ? " – " + dDE(a.bis) : "");
-  const umfang = a.stunden ? zahl(a.stunden) + " Std" : a.halb ? "½ Tag" : "";
+  const umfang = a.stunden ? zahl(a.stunden) + " Std" + (a.tage > 1 ? " (" + a.tage + " Tage à " + zahl(a.stundenProTag) + ")" : "") : a.halb ? "½ Tag" : "";
   const st = a.status === "genehmigt" ? (a.typ === "krankmeldung" ? "zur Kenntnis" : "genehmigt") : a.status === "abgelehnt" ? "abgelehnt" : "offen";
   return `<div class="antr"><div><b>${esc(art)}</b> · ${esc(zeit)}${umfang ? " · " + esc(umfang) : ""}${a.datei ? " · 📎" : ""}
     ${a.notiz || a.kommentar ? `<div class="leer" style="padding:2px 0 0">${esc(a.notiz || a.kommentar)}</div>` : ""}${a.entscheidKommentar ? `<div class="leer" style="padding:2px 0 0">💬 ${esc(a.entscheidKommentar)}</div>` : ""}</div>
@@ -306,12 +306,12 @@ function antrZeile(a) {
 function antrFormHtml() {
   const f = A.form, h = heuteIso();
   let x = `<div class="box"><b>Neuer Antrag</b><div class="arten" style="margin-top:8px">${Object.entries(ARTEN).map(([k, v]) => `<button data-art="${k}" class="${f.art === k ? "an" : ""}">${v}</button>`).join("")}</div>`;
-  const einTag = f.art === "ueberstunden" || f.umfang === "stunden";
+  const einTag = f.umfang === "stunden" && f.art !== "ueberstunden"; // 15.10.2026: Überstundenabbau über einen Zeitraum
   x += `<div class="reihe"><div><label>${einTag ? "Tag" : "von"}</label><input id="aVon" type="date" value="${esc(f.von || h)}" style="width:100%"></div>${einTag ? "<div></div>" : `<div><label>bis</label><input id="aBis" type="date" value="${esc(f.bis || f.von || h)}" style="width:100%"></div>`}</div>`;
   if (f.art === "urlaub") x += `<label>Umfang</label><select id="aUmfang" style="width:100%"><option value="ganz">ganze Tage</option><option value="halb" ${f.umfang === "halb" ? "selected" : ""}>½ Tag</option><option value="stunden" ${f.umfang === "stunden" ? "selected" : ""}>stundenweise (ein Tag)</option></select>`;
   if (f.art === "krankmeldung") x += `<label style="display:flex;gap:6px;align-items:center"><input id="aHalb" type="checkbox" ${f.umfang === "halb" ? "checked" : ""}> nur ½ Tag</label><label>Nachweis (optional, Bild oder PDF, max. 5 MB)</label><input id="aDatei" type="file" accept="image/*,application/pdf" style="width:100%">`;
-  if (f.art === "ueberstunden" || f.umfang === "stunden") x += `<label>Stunden</label><input id="aStd" type="number" min="0.5" max="${f.art === "ueberstunden" ? 8 : 7.5}" step="0.5" value="${esc(f.stunden || "")}" style="width:100%" placeholder="z. B. 2,5">
-    ${f.art === "ueberstunden" ? '<div class="leer">Überstunden abfeiern – geht nur mit Guthaben aus der Zeiterfassung, max. 8 Std pro Tag.</div>' : ""}`;
+  if (f.art === "ueberstunden" || f.umfang === "stunden") x += `<label>${f.art === "ueberstunden" ? "Stunden pro Arbeitstag" : "Stunden"}</label><input id="aStd" type="number" min="0.5" max="${f.art === "ueberstunden" ? 8 : 7.5}" step="0.5" value="${esc(f.stunden || "")}" style="width:100%" placeholder="z. B. 2,5">
+    ${f.art === "ueberstunden" ? '<div class="leer">Überstunden abfeiern: Zeitraum wählen, die Stunden gelten für jeden Arbeitstag darin (Mo–Fr, ohne Feiertage), max. 8 Std pro Tag. Geht nur mit Guthaben aus der Zeiterfassung.</div>' : ""}`;
   x += `<label>Notiz (optional)</label><input id="aNotiz" maxlength="500" style="width:100%" value="${esc(f.notiz || "")}">
     <div class="fehler" id="aFe"></div><div style="display:flex;gap:6px;margin-top:8px"><button id="aOk">Beantragen</button><button class="leicht" id="aAbbr">Abbrechen</button></div></div>`;
   return x;
@@ -332,7 +332,7 @@ function antrZeichnen() {
   $("aAbbr").onclick = () => { A.form = null; antrZeichnen(); };
   $("aOk").onclick = async () => {
     merken(); const f = A.form, k = $("aOk"); $("aFe").textContent = "";
-    const von = f.von, bis = (f.art === "ueberstunden" || f.umfang === "stunden") ? f.von : (f.bis || f.von);
+    const von = f.von, bis = (f.umfang === "stunden" && f.art !== "ueberstunden") ? f.von : (f.bis || f.von);
     if (!von) return $("aFe").textContent = "Bitte ein Datum wählen.";
     if (bis < von) return $("aFe").textContent = "„bis“ liegt vor „von“.";
     if ((f.art === "ueberstunden" || f.umfang === "stunden") && !(parseFloat(String(f.stunden).replace(",", ".")) > 0)) return $("aFe").textContent = "Bitte die Stunden eintragen.";
