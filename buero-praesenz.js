@@ -2416,7 +2416,7 @@
       const c = WA.controls;
       c.disableInviteButton?.();
       c.disableInviteUserButton?.();
-      if (!/^sam\b/i.test(String(WA.player.name || ""))) c.disableMapEditor?.();
+      if (!/^(sam|angelina)\b/i.test(String(WA.player.name || ""))) c.disableMapEditor?.();
     } catch {
     }
     if (HANDY) try {
