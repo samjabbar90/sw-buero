@@ -67,11 +67,18 @@
     mtFenster = null;
     if (mitteilungen.length) try {
       mtFenster = await WA.ui.website.open({
-        url: SEITEN + "mitteilungen.html?v=3",
+        url: SEITEN + "mitteilungen.html?v=4",
         allowApi: true,
         visible: true,
         position: { vertical: "top", horizontal: HANDY ? "middle" : "right" },
-        size: { width: HANDY ? Math.min(360, Math.round((screen.width || 390) - 16)) + "px" : "330px", height: mitteilungen.length * 104 + 8 + "px" },
+        size: {
+          width: HANDY ? Math.min(360, Math.round((screen.width || 390) - 16)) + "px" : "330px",
+          height: mitteilungen.reduce((s, x) => {
+            const t = String((x.art === "info" ? x.kurz : x.text) || ""), z = Math.ceil(t.length / (HANDY ? 36 : 40));
+            return s + 104 + Math.max(0, Math.min(x.art === "info" || x.art === "push" ? 10 : x.art === "nachricht" ? 3 : 1, z) - 1) * 18;
+          }, 0) + 8 + "px"
+          /* 16.10.2026: Höhe nach Textlänge */
+        },
         margin: HANDY ? { top: "110px" } : { top: "64px", right: rechts + "px" }
       });
     } catch {
