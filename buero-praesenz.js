@@ -253,6 +253,11 @@
     const v = String(WA.state[t.variable] || "");
     return v.startsWith("fokus:") ? Number(v.slice(6)) || 0 : 0;
   };
+  var offenBis = (t) => {
+    const v = String(WA.state[t.variable] || "");
+    return v.startsWith("offen:") ? Number(v.slice(6)) || 0 : 0;
+  };
+  var immerZu = (t) => !t.offen && (info.immerZu || []).includes(vorname(t.besitzer));
   var besitzerDa = (t) => !Array.isArray(info.da) || info.da.includes(vorname(t.besitzer));
   var telefoniertGerade = (n) => (info.telefoniert || []).some((x) => vorname(x) === vorname(n));
   function autoZu(t) {
@@ -268,6 +273,7 @@
       const d = zimmerDaten(t);
       return d.s !== "frei" && telefoniertGerade(d.wer) ? "zu" : d.s;
     }
+    if (immerZu(t) && !(offenBis(t) > Date.now())) return "zu";
     if (!besitzerDa(t)) return "frei";
     if (autoZu(t)) return "zu";
     return fokusBis(t) > Date.now() ? "fokus" : "frei";
@@ -297,7 +303,19 @@
     kurzMeldung("\u{1F512} Fokus: dein Zimmer ist " + FOKUS_MIN + " Min abgeschlossen \xB7 heute noch " + (FOKUS_MAX - n - 1) + "\xD7", 6e3);
     return true;
   }
+  function offenUmschalten(t) {
+    if (offenBis(t) > Date.now()) {
+      WA.state.saveVariable(t.variable, "frei");
+      kurzMeldung("\u{1F512} Deine T\xFCr ist wieder zu", 4e3);
+      return;
+    }
+    const ende = /* @__PURE__ */ new Date();
+    ende.setHours(23, 59, 0, 0);
+    WA.state.saveVariable(t.variable, "offen:" + ende.getTime());
+    kurzMeldung("\u{1F7E2} Deine T\xFCr bleibt heute offen \u2013 nochmal tippen = wieder zu", 5e3);
+  }
   function fokusUmschalten(t) {
+    if (immerZu(t)) return offenUmschalten(t);
     if (fokusBis(t) > Date.now()) return fokusSetzen(t, 0);
     if (fokusErlaubt()) fokusSetzen(t, FOKUS_MIN);
   }
@@ -350,7 +368,7 @@
     hinweisTuer = t ? t.variable : null;
     if (!t) return;
     const st = tuerStatus(t), wer = String(werVon(t)).split(/\s+/)[0];
-    const grund = t.offen ? st === "zu" ? "nicht zu st\xF6ren \u2013 Zimmer abgeschlossen" : "besch\xE4ftigt" : st === "fokus" ? "im Fokus bis " + bisText(fokusBis(t)) : st === "zu" ? autoZu(t) || "besch\xE4ftigt" : "besch\xE4ftigt";
+    const grund = t.offen ? st === "zu" ? "nicht zu st\xF6ren \u2013 Zimmer abgeschlossen" : "besch\xE4ftigt" : st === "fokus" ? "im Fokus bis " + bisText(fokusBis(t)) : st === "zu" ? autoZu(t) || (immerZu(t) ? "hat die T\xFCr zu" : "besch\xE4ftigt") : "besch\xE4ftigt";
     hinweis = WA.ui.displayActionMessage({
       message: `${t.raum}: ${wer} ${t.offen || st !== "zu" ? "ist " : ""}${grund}. Leertaste = anklopfen`,
       callback: () => anklopfen(t)
@@ -2277,6 +2295,12 @@
     } catch {
       return;
     }
+    try {
+      const mt = tueren.find((x) => !x.offen && x.besitzer.toLowerCase() === vorname(WA.player.name));
+      const iz = !!(mt && immerZu(mt));
+      if (WA.player.state.swTuerImmerZu !== iz) WA.player.state.saveVariable("swTuerImmerZu", iz, { public: false, persist: false });
+    } catch {
+    }
     editorPruefen();
     try {
       const d = info.durchsage;
@@ -2546,7 +2570,7 @@
       klassikOeffnen = async () => {
         try {
           klassik.push(await WA.ui.website.open({
-            url: SEITEN + "info.html?v=6&teil=status" + (kzAktiv ? "&kz=1" : ""),
+            url: SEITEN + "info.html?v=7&teil=status" + (kzAktiv ? "&kz=1" : ""),
             allowApi: true,
             visible: true,
             position: { vertical: "top", horizontal: "left" },
@@ -2557,7 +2581,7 @@
         }
         if (meineTuer()) try {
           klassik.push(await WA.ui.website.open({
-            url: SEITEN + "info.html?v=6&teil=tuer",
+            url: SEITEN + "info.html?v=7&teil=tuer",
             allowApi: true,
             visible: true,
             position: { vertical: "top", horizontal: "right" },

@@ -63,6 +63,9 @@ function zeichnen() {
   if (!meineVar) return;
   // 14.10.2026 (Sam): nur noch frei | Fokus (selbst gewählt, mit Ende) – „zu“ setzt das Büro automatisch (2+ Leute, Telefonat, Termin)
   const v = String(WA.state[meineVar] || ''), bis = v.startsWith('fokus:') ? Number(v.slice(6)) || 0 : 0;
+  // 16.10.2026 (Sam): „Tür immer zu“ – zu, außer extra offen gelassen (Klick schaltet um, offen gilt bis zum Abend)
+  let iz = false; try { iz = !!WA.player.state.swTuerImmerZu; } catch (e) { /* ältere Version */ }
+  if (iz) { const ob = v.startsWith('offen:') ? Number(v.slice(6)) || 0 : 0; if (ob > Date.now()) { $('tuer').innerHTML = 'Tür 🟢 offen'; $('tuer').title = 'Tür bleibt heute offen · tippen: wieder abschließen'; } else { $('tuer').innerHTML = 'Tür 🔒 zu'; $('tuer').title = 'Tür ist automatisch zu · tippen: heute offen lassen'; } return; }
   if (bis > Date.now()) { $('tuer').innerHTML = '🎯 Fokus bis ' + new Date(bis).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) + ' ✕'; $('tuer').title = 'Tippen: Fokus beenden'; }
   else { $('tuer').innerHTML = 'Tür 🟢'; $('tuer').title = 'Tür frei · tippen: 🎯 Fokus – Büro 25 Min abschließen (max. 3× am Tag)'; }
 
@@ -146,7 +149,7 @@ WA.onInit().then(async () => {
     }); });
     lauf(k.layers || []);
   } catch { /* ohne Tür */ }
-  if (meineVar) { $('tuer').style.display = ''; WA.state.onVariableChange(meineVar).subscribe(zeichnen); }
+  if (meineVar) { $('tuer').style.display = ''; WA.state.onVariableChange(meineVar).subscribe(zeichnen); try { WA.player.state.onVariableChange('swTuerImmerZu').subscribe(zeichnen); } catch (e) { /* ältere Version */ } }
   try { WA.players.onPlayerEnters.subscribe(zeichnen); WA.players.onPlayerLeaves.subscribe(zeichnen); } catch { /* egal */ }
   zeichnen(); setInterval(zeichnen, 20000);
   onlineLaden(); setInterval(onlineLaden, 5 * 60000);
