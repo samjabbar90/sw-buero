@@ -1162,7 +1162,7 @@
   var POSTER = [
     { name: "poster-zimmer4", bild: "kubilay.jpg", x: 31 + DX, y: 18.15 + DY, w: 2.5, h: 1.4, zimmerX: 29 + DX, zimmerY: 17 + DY, unsichtbar: true },
     // 16.10.2026 (Sam): Büro Ferhat – Bild statt Whiteboard (Whiteboard = Ebene fx-ideen x 4–8 / y 49–50); Bild liegt auf dem Server (wa-bilder)
-    { name: "poster-ferhat", srv: "ferhat-poster.webp", x: 4.55 + DX, y: 49.05, w: 3.9, h: 1.8, unsichtbar: true }
+    { name: "poster-ferhat", srv: "ferhat-poster.webp", x: 1.95 + DX, y: 48.75, w: 2.6, h: 1, unsichtbar: true }
   ];
   function posterAufhaengen() {
     for (const p of POSTER) {
