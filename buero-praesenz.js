@@ -796,7 +796,7 @@
     } catch {
       return;
     }
-    const KORB = { x: 400 + DX * 32, y: -16 + DY * 32 }, ECKE = { x: 80, y: -16 + DY * 32 }, UNTEN = { x: 80, y: 272 + DY * 32 }, TEMPO = 32;
+    const KORB = { x: 400 + DX * 32, y: -144 + DY * 32 }, ECKE = { x: 48, y: -144 + DY * 32 }, UNTEN = { x: 48, y: 272 + DY * 32 }, TEMPO = 32;
     const d1 = (KORB.x - ECKE.x) / TEMPO, d2 = (UNTEN.y - ECKE.y) / TEMPO;
     const PHASEN = [["lieg", 40], ["wedelK", 4], ["links", d1], ["runter", d2], ["sitz", 12], ["hoch", d2], ["rechts", d1], ["sitzK", 6]];
     const ZYKLUS = PHASEN.reduce((s, p) => s + p[1], 0);
