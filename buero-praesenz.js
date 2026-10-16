@@ -251,12 +251,16 @@
   function autoZu(t) {
     const wer = vorname(t.besitzer), gleich = (n) => String(n).toLowerCase() === wer;
     if (!besitzerDa(t)) return "";
+    if ((info.telefoniert || []).some(gleich)) return "telefoniert";
     if ((info.imTermin || []).some(gleich) && (!info.imTerminRaum || info.imTerminRaum[wer] === t.raum)) return "hat einen Termin";
     if ((info.zuRaeume || []).includes(t.raum)) return "hat Besuch";
     return "";
   }
   var tuerStatus = (t) => {
-    if (t.offen) return zimmerDaten(t).s;
+    if (t.offen) {
+      const d = zimmerDaten(t);
+      return d.s !== "frei" && telefoniertGerade(d.wer) ? "zu" : d.s;
+    }
     if (!besitzerDa(t)) return "frei";
     if (autoZu(t)) return "zu";
     return fokusBis(t) > Date.now() ? "fokus" : "frei";
@@ -670,13 +674,11 @@
       kurzMeldung("\u2615 Fokuszeit vorbei \u2013 deine T\xFCr ist wieder frei", 8e3);
     }
     const grund = autoZu(t), tel = telefoniertGerade(WA.player.name);
-    if (tel && !telefonGemeldet) {
-      telefonGemeldet = true;
-      kurzMeldung("\u{1F4DE} Du telefonierst \u2013 an deinem B\xFCro h\xE4ngt jetzt ein Telefon-Zeichen", 5e3);
-    } else if (!tel) telefonGemeldet = false;
+    void tel;
+    void telefonGemeldet;
     if (grund && tuerVorTelefon === null) {
       tuerVorTelefon = "x";
-      kurzMeldung(`\u{1F534} Deine T\xFCr ist zu \u2013 du ${grund === "hat Besuch" ? "hast Besuch" : "hast einen Termin"}`, 5e3);
+      kurzMeldung(`\u{1F534} Deine T\xFCr ist zu \u2013 du ${grund === "hat Besuch" ? "hast Besuch" : grund === "hat einen Termin" ? "hast einen Termin" : "telefonierst (\u{1F4DE} am Schild)"}`, 5e3);
     } else if (!grund && tuerVorTelefon !== null) tuerVorTelefon = null;
     return;
     const ich = vorname(WA.player.name), gleich = (n) => String(n).toLowerCase() === ich;

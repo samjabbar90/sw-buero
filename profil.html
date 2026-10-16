@@ -151,9 +151,11 @@ const minSeit = ms => { const m = Math.max(0, Math.round((Date.now() - ms) / 600
 async function liveLaden() {
   const box = $("liveBox"); if (!box) return;
   let d; try { d = await api("/live?" + (P && P.ich ? "ich=1" : "name=" + encodeURIComponent(NAME))); } catch { return; }
-  if (!d || !d.pfad) { box.innerHTML = ""; return; }
   const zeit = t => new Date(t).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
-  box.innerHTML = `<div class="zh-live" style="margin:12px 14px 0;border-radius:10px;padding:10px 12px">
+  // 16.10.2026: laufendes Telefonat (NFON) – auch wenn gerade nicht im Portal
+  const tf = d && d.telefon, telHtml = tf ? `<div style="margin:12px 14px 0;border-radius:10px;padding:10px 12px;background:#ffedd5;color:#7c2d12"><div style="font-size:11.5px;font-weight:700">📞 Telefoniert gerade · seit ${minSeit(tf.seit)}</div>${tf.mit ? `<div style="font-size:14px;font-weight:700;margin-top:3px">${tf.richtung === "ausgehend" ? "ruft an: " : "Anruf von "}${esc(tf.mit)}</div>` : ""}${tf.nummer ? `<div style="font-size:12.5px">${esc(tf.nummer)}</div>` : ""}</div>` : "";
+  if (!d || !d.pfad) { box.innerHTML = telHtml; if (tf) { clearTimeout(liveLaden.t); liveLaden.t = setTimeout(liveLaden, 30000); } return; }
+  box.innerHTML = telHtml + `<div class="zh-live" style="margin:12px 14px 0;border-radius:10px;padding:10px 12px">
     <div style="display:flex;justify-content:space-between;font-size:11.5px">${d.live ? '<span style="color:#b91c1c;font-weight:700">● Live im SW-internen Portal</span><span style="opacity:.8">seit ' + minSeit(d.seit) + "</span>"
       : '<span style="opacity:.75">zuletzt im SW-internen Portal vor ' + minSeit(d.zuletzt) + "</span><span></span>"}</div>
     <div style="font-size:14px;font-weight:700;margin:4px 0 2px">${esc(d.pfad)}</div>${d.mandant ? `<div style="font-size:13px;font-weight:600;color:#374151">👔 ${esc(d.mandant)}</div>` : ""}${d.detail ? `<div style="font-size:12.5px;color:#0f766e">${esc(d.detail)}</div>` : ""}
