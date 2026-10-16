@@ -44,6 +44,16 @@
   .leer { color:var(--leise); text-align:center; padding:28px 10px; }
   .schalter { display:flex; background:#e4e4ea; border-radius:10px; padding:2px; } .schalter button { flex:1; border:0; background:none; font:inherit; font-size:14px; padding:8px 4px; border-radius:8px; color:#374151; }
   .schalter button.an { background:#fff; font-weight:600; box-shadow:0 1px 3px rgba(0,0,0,.12); }
+  /* Heute (16.10.2026, Sam: Layout A) */
+  .hgruss { font-size:26px; font-weight:800; margin:2px 2px 12px; }
+  .hk { background:#fff; border-radius:16px; padding:12px 14px; margin-bottom:10px; }
+  .hk .kt { font-size:12px; font-weight:700; color:var(--leise); text-transform:uppercase; letter-spacing:.4px; margin-bottom:4px; }
+  .hk .gr { font-size:24px; font-weight:800; } .hk .kl { font-size:13px; color:var(--leise); }
+  .hzwei { display:grid; grid-template-columns:1fr 1fr; gap:10px; } .hzwei .hk { margin-bottom:0; }
+  .hleute { display:flex; align-items:center; } .hleute .gesicht { width:36px; height:36px; margin-left:-8px; border:2px solid #fff; font-size:12px; } .hleute .gesicht:first-child { margin-left:0; }
+  .hbalken { height:6px; background:#eef0f3; border-radius:3px; margin-top:8px; overflow:hidden; } .hbalken i { display:block; height:100%; background:var(--gruen); border-radius:3px; }
+  .hk.rot { border-left:5px solid #ff3b30; } .hk.blau { border-left:5px solid #0a84ff; }
+  .hschnell { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:14px; } .hschnell button { border:0; background:#fff; border-radius:14px; padding:10px 2px 8px; font:inherit; font-size:12px; color:var(--text); display:flex; flex-direction:column; align-items:center; gap:4px; } .hschnell span { font-size:22px; }
   /* Grundriss */
   #plan-rahmen { position:absolute; inset:0; overflow:auto; background:#d6f2d6; -webkit-overflow-scrolling:touch; }
   .planknoepfe { position:absolute; right:12px; bottom:12px; display:flex; flex-direction:column; gap:8px; z-index:3; }
@@ -64,6 +74,7 @@
     <section class="seite" id="s-buero"><div id="plan-rahmen"><svg id="plan" xmlns="http://www.w3.org/2000/svg"></svg></div>
       <div class="planoben"><button id="zuMir">📍 Ich</button></div>
       <div class="planknoepfe"><button id="plus" aria-label="Größer">＋</button><button id="minus" aria-label="Kleiner">－</button></div></section>
+    <section class="seite" id="s-heute"></section>
     <section class="seite" id="s-team"></section>
     <section class="seite" id="s-arbeiten"></section>
     <section class="seite" id="s-chat"></section>
@@ -90,16 +101,16 @@ const PERSON = { "Zimmer 1": "Tanja R.", "Zimmer 2": "Christiane S.", "Zimmer 3"
 const NAME = { "Besprechung Glas": "Besprechung 1", "Besprechung 11": "Besprechung 2", "Pause": "Pausenraum", "Lernzimmer": "Schulung", "Termine mit Donna": "Empfang · Donna", "Mandanten-Flur": "" };
 const raumText = r => !r || r === "Flur" ? "im Flur" : r === "📱 Handy" ? "📱 am Handy" : PERSON[r] ? PERSON[r] + " Büro" : /^Zimmer \d+$/.test(r) ? "freies Zimmer" : (NAME[r] != null && NAME[r] !== "" ? NAME[r] : r);
 
-let ICH = "", tab = "buero", start = "buero", GES = [], da = [], weg = [], mitteilungen = [], gelesen = 0, online = null, meineTuer = null;
+let ICH = "", tab = "heute", start = "heute", GES = [], da = [], weg = [], mitteilungen = [], gelesen = 0, online = null, meineTuer = null;
 function gesichtVon(name) { const n = String(name || "").toLowerCase().trim(); if (!n) return null;
   const g = GES.find(x => String(x.kurz || "").toLowerCase() === n || String(x.name || "").toLowerCase() === n); if (g) return g.foto;
   const t = GES.filter(x => String(x.name || "").toLowerCase().split(/\s+/)[0] === n.split(/\s+/)[0]); return t.length === 1 ? t[0].foto : null; }
 const gesicht = (name, punkt) => { const f = gesichtVon(name); return f ? `<span class="gesicht" style="background-image:url(&quot;${esc(f)}&quot;)">${punkt ? '<i class="p"></i>' : ""}</span>` : `<span class="gesicht">${esc(kurz(name))}${punkt ? '<i class="p"></i>' : ""}</span>`; };
 
 // ---------- Tabs ----------
-const TABS = { buero: ["🗺️", "Büro"], team: ["👥", "Team"], arbeiten: ["💼", "Arbeiten"], chat: ["💬", "Chat"], ich: ["👤", "Ich"] };
+const TABS = { heute: ["🏠", "Heute"], team: ["👥", "Team"], buero: ["🗺️", "Büro"], chat: ["💬", "Chat"], ich: ["☰", "Mehr"] };
 function navMalen() {
-  const reihe = start === "team" ? ["team", "buero", "arbeiten", "chat", "ich"] : ["buero", "team", "arbeiten", "chat", "ich"];
+  const reihe = ["heute", "team", "buero", "chat", "ich"];
   const neu = mitteilungen.filter(m => m.t > gelesen).length;
   $("nav").innerHTML = reihe.map(k => `<button data-tab="${k}" class="${k === tab ? "an" : ""}"><span>${TABS[k][0]}</span>${TABS[k][1]}${k === "chat" && neu ? `<i class="zahl">${neu}</i>` : ""}</button>`).join("");
   document.querySelectorAll("[data-tab]").forEach(b => b.onclick = () => zeigeTab(b.dataset.tab));
@@ -108,7 +119,7 @@ function zeigeTab(k) {
   tab = k; document.querySelectorAll(".seite").forEach(s => s.classList.toggle("an", s.id === "s-" + k));
   $("titel").textContent = TABS[k][1] === "Büro" ? "Büro" : TABS[k][1];
   if (k === "chat") { gelesen = Date.now(); }
-  if (k === "team") teamMalen(); if (k === "arbeiten") arbeitenMalen(); if (k === "chat") chatMalen(); if (k === "ich") ichMalen();
+  if (k === "heute") heuteLaden(); if (k === "team") teamMalen(); if (k === "chat") chatMalen(); if (k === "ich") ichMalen();
   if (k === "buero") planZeichnen();
   navMalen();
 }
@@ -159,8 +170,58 @@ $("plan").addEventListener("click", ev => { const g = ev.target.closest("[data-p
   if (g.dataset.person) { toast("🚶 Zu " + vor(g.dataset.person) + " …"); return aktion("grundrissPerson", { name: g.dataset.person }); }
   toast("🚶 " + raumText(g.dataset.raum) + " …"); aktion("grundrissRaum", { name: g.dataset.raum }); });
 
+// ---------- Heute (16.10.2026, Sam: Layout A – beim Öffnen sofort das Wichtigste) ----------
+let HEUTE = null, heuteZeit = 0;
+const stdT = x => { if (x == null || isNaN(x)) return "–"; const m = Math.round(Math.abs(x) * 60); return (x < 0 ? "−" : "") + Math.floor(m / 60) + ":" + String(m % 60).padStart(2, "0"); };
+async function heuteLaden(zwingend) {
+  heuteMalen();
+  if (!zwingend && Date.now() - heuteZeit < 45000) return;
+  try { const r = await fetch(B + "/heute", { headers: H() }); if (r.ok) { HEUTE = await r.json(); heuteZeit = Date.now(); } } catch {}
+  heuteMalen();
+}
+function heuteMalen() {
+  const el = $("s-heute"); if (!el) return;
+  const h0 = new Date().getHours(), gruss = h0 < 11 ? "Guten Morgen" : h0 < 18 ? "Hallo" : "Guten Abend", d = HEUTE || {};
+  const nun = new Date().toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
+  let h = `<div class="hgruss">${gruss}, ${esc(vor(ICH))}</div>`;
+  // Status + Tür
+  h += `<div class="hk" style="display:flex;align-items:center;gap:12px">${gesicht(ICH, true)}<div style="flex:1;min-width:0"><b>Du bist im Büro</b><div class="kl">${esc(($("status").textContent || "").replace(/(🟢|🎯).*/, "").trim() || "online")}</div></div>${meineTuer ? `<button class="k ${meineTuer.fokus ? "voll" : "grau"}" id="hTuer">${meineTuer.fokus ? "🎯 Fokus" : "🟢 Tür frei"}</button>` : ""}</div>`;
+  // offene Kernzeit-Frage
+  if (d.zeit && d.zeit.offen) h += `<div class="hk rot" id="hFrage" style="cursor:pointer"><b>⏰ Arbeitszeit: Frage offen</b><div class="kl">Bitte kurz beantworten – tippen</div></div>`;
+  // nächster Termin
+  const T = (d.termine || []), naechst = T.find(t => !t.ganztag && (t.ende || "23:59") > nun) || T.find(t => t.ganztag);
+  if (naechst) {
+    const laeuft = naechst.von && naechst.von <= nun, inMin = naechst.von && !laeuft ? Math.round((new Date().setHours(+naechst.von.slice(0, 2), +naechst.von.slice(3, 5), 0, 0) - Date.now()) / 60000) : 0;
+    h += `<div class="hk blau"><div class="kt">${laeuft ? "Läuft gerade" : inMin > 0 && inMin <= 60 ? "Gleich · in " + inMin + " Min" : "Heute"}</div><b style="font-size:16px">${esc(naechst.ganztag ? "ganztägig" : naechst.von)} ${esc(naechst.titel)}</b>${naechst.ort ? `<div class="kl">${esc(raumText(naechst.ort))}</div>` : ""}
+      <div style="display:flex;gap:8px;margin-top:8px">${naechst.ort && naechst.raum ? `<button class="k voll" id="hHin">🚶 Hingehen</button>` : ""}<button class="k grau" id="hKal">Kalender${T.length > 1 ? " · " + T.length + " heute" : ""}</button></div></div>`;
+  } else h += `<div class="hk"><div class="kt">Termine</div><div class="kl">Heute keine Termine mehr.</div><div style="margin-top:8px"><button class="k grau" id="hKal">Kalender</button></div></div>`;
+  // Zeit + Tages-Check
+  const z = d.zeit, c = d.check;
+  h += `<div class="hzwei" style="margin-bottom:10px">`
+    + `<div class="hk" id="hZeit" style="cursor:pointer"><div class="kt">${z && z.art === "woche" ? "Diese Woche" : "Zeit heute"}</div><div class="gr">${z ? stdT(z.ist) : "–"}</div><div class="kl">${z ? "von " + stdT(z.soll) : "keine Vorgabe"}</div>${z && z.soll ? `<div class="hbalken"><i style="width:${Math.min(100, Math.round(z.ist / z.soll * 100))}%"></i></div>` : ""}</div>`
+    + `<div class="hk" id="hCheck" style="cursor:pointer"><div class="kt">Tages-Check</div><div class="gr">${c ? c.erledigt + "/" + c.gesamt : "–"}</div><div class="kl" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c ? (c.naechster ? "▶ " + esc(c.naechster) + (c.bis ? " · bis " + esc(c.bis) : "") : "✓ alles erledigt") : "keiner eingerichtet"}</div></div></div>`;
+  // Im Büro
+  h += `<div class="hk" id="hTeam" style="cursor:pointer"><div class="kt">Im Büro · ${da.length}</div>${da.length ? `<div class="hleute">${da.slice(0, 7).map(p => gesicht(p.name)).join("")}${da.length > 7 ? `<span class="gesicht" style="background:#555">+${da.length - 7}</span>` : ""}</div><div class="kl" style="margin-top:6px">${esc(da.slice(0, 3).map(p => vor(p.name) + " · " + raumText(p.bereich)).join("  ·  "))}</div>` : '<div class="kl">Gerade niemand sonst da.</div>'}</div>`;
+  // Neu
+  const neu = mitteilungen.filter(m => m.t > gelesen).slice(0, 3);
+  if (neu.length) h += `<div class="hk" id="hNeu" style="cursor:pointer"><div class="kt">Neu · ${mitteilungen.filter(m => m.t > gelesen).length}</div>${neu.map(m => `<div class="kl" style="padding:2px 0;color:#374151">${m.art === "klopfen" ? "✊ " + esc(vor(m.von)) + " klopft an" : m.art === "nachricht" ? "💬 " + esc(vor(m.von)) + ": „" + esc(String(m.text || "").slice(0, 60)) + "“" : esc((m.von ? vor(m.von) + " " : "") + (m.kurz || m.titel || ""))}</div>`).join("")}</div>`;
+  // Schnellzugriff
+  h += `<div class="hschnell"><button data-hs="Kalender"><span>📅</span>Kalender</button><button data-hs="@reise"><span>🚀</span>Reisen</button><button data-hs="Health"><span>❤️</span>Health</button><button data-hs="@feierabend"><span>🚪</span>Feierabend</button></div>`;
+  el.innerHTML = h;
+  const kachel = n => KACHELN.find(k => k[1] === n);
+  if ($("hTuer")) $("hTuer").onclick = () => aktion("tuer");
+  if ($("hFrage")) $("hFrage").onclick = () => aktion("arbeitszeit");
+  if ($("hHin")) $("hHin").onclick = () => { toast("🚶 " + raumText(naechst.ort) + " …"); aktion("grundrissRaum", { name: naechst.ort }); };
+  if ($("hKal")) $("hKal").onclick = () => blatt(kachel("Kalender"));
+  $("hZeit").onclick = () => aktion("arbeitszeit");
+  $("hCheck").onclick = () => blatt(kachel("Tages-Check"));
+  $("hTeam").onclick = () => zeigeTab("team");
+  if ($("hNeu")) $("hNeu").onclick = () => zeigeTab("chat");
+  document.querySelectorAll("[data-hs]").forEach(b => b.onclick = () => { const v = b.dataset.hs; if (v[0] === "@") return aktion(v.slice(1)); blatt(kachel(v)); });
+}
+setInterval(() => { if (tab === "heute") heuteLaden(); }, 60000);
 // ---------- Team ----------
-async function wer() { try { const r = await fetch(B + "/wer", { headers: H() }); if (!r.ok) return; const d = await r.json(); da = (d.da || []).filter(p => p.name !== ICH); weg = d.weg || []; if (tab === "team") teamMalen(); } catch {} }
+async function wer() { try { const r = await fetch(B + "/wer", { headers: H() }); if (!r.ok) return; const d = await r.json(); da = (d.da || []).filter(p => p.name !== ICH); weg = d.weg || []; if (tab === "heute") heuteMalen(); if (tab === "team") teamMalen(); } catch {} }
 function teamMalen() {
   let h = `<div class="gtitel">Im Büro · ${da.length}</div><div class="gruppe">` + (da.length ? da.map((p, i) => `<div class="zeile">${gesicht(p.name, true)}<div style="min-width:0"><div class="n">${esc(p.name)}</div><div class="w">${esc(raumText(p.bereich))}${p.telefoniert ? " · 📞" : ""}</div></div>
     <div class="r"><button class="k grau" data-schreib="${i}" aria-label="Nachricht">💬</button>${p.bereich && p.bereich !== "📱 Handy" && p.bereich !== "Flur" ? `<button class="k voll" data-hin="${i}">Hin</button>` : ""}</div></div>`).join("") : '<div class="leer">Gerade ist niemand außer dir da.</div>') + "</div>";
@@ -210,12 +271,13 @@ async function senden(an, text) {
 // ---------- Ich ----------
 function ichMalen() {
   const t = meineTuer;
-  $("s-ich").innerHTML = `<div class="gruppe"><div class="zeile">${gesicht(ICH, true)}<div><div class="n">${esc(ICH)}</div><div class="w">${esc($("status").textContent || "im Büro")}</div></div></div></div>
+  $("s-ich").innerHTML = `<div class="kacheln" style="margin-bottom:18px">${KACHELN.map((k, i) => `<button data-k="${i}"><span>${k[0]}</span>${k[1]}</button>`).join("")}</div><div class="gruppe"><div class="zeile">${gesicht(ICH, true)}<div><div class="n">${esc(ICH)}</div><div class="w">${esc($("status").textContent || "im Büro")}</div></div></div></div>
     ${t ? `<div class="gtitel">Meine Tür</div><div class="gruppe"><div class="zeile"><div><div class="n">${t.fokus ? "🎯 Fokus bis " + esc(t.bis) : "🟢 frei"}</div><div class="w">Fokus = 25 Min abgeschlossen, max. 3× am Tag</div></div><div class="r"><button class="k ${t.fokus ? "grau" : "voll"}" id="tuer">${t.fokus ? "Beenden" : "Fokus"}</button></div></div></div>` : ""}
-    <div class="gtitel">Startansicht der App</div><div class="gruppe" style="padding:10px"><div class="schalter"><button data-start="buero" class="${start === "buero" ? "an" : ""}">🗺️ Grundriss</button><button data-start="team" class="${start === "team" ? "an" : ""}">👥 Team-Liste</button></div></div>
+    <div class="gtitel">Startansicht der App</div><div class="gruppe" style="padding:10px"><div class="schalter"><button data-start="heute" class="${start === "heute" ? "an" : ""}">🏠 Heute</button><button data-start="buero" class="${start === "buero" ? "an" : ""}">🗺️ Grundriss</button><button data-start="team" class="${start === "team" ? "an" : ""}">👥 Team-Liste</button></div></div>
     <div class="gruppe"><div class="zeile" id="karte" style="cursor:pointer"><span style="font-size:22px">🎮</span><div><div class="n">Echte Büro-Karte anzeigen</div><div class="w">Mit Figur und Joystick wie am Laptop</div></div></div>
       <div class="zeile" id="feier" style="cursor:pointer"><span style="font-size:22px">🚪</span><div class="n">Feierabend</div></div>
       <div class="zeile" id="ab" style="cursor:pointer"><span style="font-size:22px">⏏️</span><div class="n" style="color:#ff3b30">Aus dem Büro abmelden</div></div></div>`;
+  document.querySelectorAll("#s-ich [data-k]").forEach(b => b.onclick = () => { const k = KACHELN[+b.dataset.k]; if (k[2][0] === "@") return aktion(k[2].slice(1)); blatt(k); });
   if ($("tuer")) $("tuer").onclick = () => aktion("tuer");
   document.querySelectorAll("[data-start]").forEach(b => b.onclick = () => { start = b.dataset.start; try { WA.player.state.saveVariable("swAppStart", start, { public: false, persist: true }); } catch {} ichMalen(); navMalen(); toast(start === "team" ? "App startet jetzt mit der Team-Liste" : "App startet jetzt mit dem Grundriss"); });
   $("karte").onclick = () => aktion("appAus"); $("feier").onclick = () => aktion("feierabend");
@@ -244,7 +306,7 @@ function mtKnopf(n) {
 
 WA.onInit().then(async () => {
   ICH = WA.player.name || "";
-  try { const s = WA.player.state.swAppStart; if (s === "team") { start = "team"; tab = "team"; } } catch {}
+  try { const s = WA.player.state.swAppStart; if (s === "team" || s === "buero") { start = s; tab = s; } } catch {}
   try { await WA.players.configureTracking({ players: true, movement: true }); } catch {}
   try { let k = await (await fetch(WA.room.mapURL)).json(); if (!k.layers && k.mapUrl) k = await (await fetch(new URL(k.mapUrl, WA.room.mapURL).toString())).json();
     const fl = (k.layers || []).find(l => l.name === "floorLayer"); const alle = (fl ? fl.objects : []).filter(o => o.name && o.width && o.name !== "start" && !o.name.startsWith("zu-")).map(o => ({ name: o.name, x: o.x / 32, y: o.y / 32, w: o.width / 32, h: o.height / 32 }));
