@@ -737,6 +737,28 @@
     } catch {
     }
   }
+  async function aussenweltAus() {
+    try {
+      const k = await ladeKarte();
+      const geh = (ls, pfad) => {
+        for (const l of ls || []) {
+          if (l.type === "group") geh(l.layers, pfad + l.name + "/");
+          else if (/-aussen$/.test(l.name)) {
+            try {
+              WA.room.hideLayer(pfad + l.name);
+            } catch {
+            }
+            if (pfad) try {
+              WA.room.hideLayer(l.name);
+            } catch {
+            }
+          }
+        }
+      };
+      geh(k.layers, "");
+    } catch {
+    }
+  }
   function effekte() {
     schilderAktualisieren();
     for (const o of ((karte && karte.layers || []).find((l) => l.name === "floorLayer") || { objects: [] }).objects) {
@@ -2564,6 +2586,7 @@
     effekte();
     setInterval(effekte, 6e4);
     if (!HANDY) wetterTakt();
+    if (HANDY) aussenweltAus();
     infoLaden();
     setInterval(infoLaden, 15e3);
     let klassikLeiste = null;
