@@ -69,7 +69,7 @@
 </head>
 <body>
 <div id="app">
-  <header><h1 id="titel">Büro</h1><div class="status" id="status"></div></header>
+  <header><h1 id="titel">Büro</h1><div class="status" id="status"></div><button id="zurKarte" style="margin-left:auto;border:0;border-radius:999px;background:#0f766e;color:#fff;font:inherit;font-weight:700;font-size:14px;padding:8px 14px;align-self:center">🗺️ Karte</button></header>
   <main>
     <section class="seite" id="s-buero"><div id="plan-rahmen"><svg id="plan" xmlns="http://www.w3.org/2000/svg"></svg></div>
       <div class="planoben"><button id="zuMir">📍 Ich</button></div>
@@ -165,6 +165,7 @@ function leuteMalen() {
 }
 function zuMir() { if (!ich) return; const r = $("plan-rahmen"); r.scrollLeft = (ich.x / 32 - X0) * skala - r.clientWidth / 2; r.scrollTop = (ich.y / 32 - Y0) * skala - r.clientHeight / 2; }
 function zoom(d) { const r = $("plan-rahmen"), mx = r.scrollLeft + r.clientWidth / 2, my = r.scrollTop + r.clientHeight / 2, alt = skala; skala = Math.max(4, Math.min(18, skala + d)); planZeichnen(); r.scrollLeft = mx * skala / alt - r.clientWidth / 2; r.scrollTop = my * skala / alt - r.clientHeight / 2; }
+$("zurKarte").onclick = () => aktion("appAus"); // 16.10.2026: zurück auf die echte Karte (man bleibt online)
 $("plus").onclick = () => zoom(2); $("minus").onclick = () => zoom(-2); $("zuMir").onclick = zuMir;
 $("plan").addEventListener("click", ev => { const g = ev.target.closest("[data-person],[data-raum]"); if (!g) return;
   if (g.dataset.person) { toast("🚶 Zu " + vor(g.dataset.person) + " …"); return aktion("grundrissPerson", { name: g.dataset.person }); }

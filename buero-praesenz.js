@@ -33,10 +33,6 @@
   var mtAnzahl = -1;
   var mtLage = "";
   function mitteilung(m, autoWegMs = 0) {
-    if (HANDY && !grundrissAn) {
-      kurzMeldung((m.art === "klopfen" ? "\u270A " : m.art === "termin" ? "\u{1F4C5} " : "\u{1F4AC} ") + (m.von ? String(m.von).split(/\s+/)[0] + ": " : "") + (m.titel || m.kurz || m.text || ""), 12e3);
-      return "";
-    }
     const id = Math.random().toString(36).slice(2, 9);
     mitteilungen = [{ ...m, id, t: Date.now() }, ...mitteilungen].slice(0, 5);
     if (m.art === "klopfen") ton("klopfen");
@@ -55,7 +51,7 @@
       await WA.player.state.saveVariable("swMitteilungen", mitteilungen, { public: false, persist: false });
     } catch {
     }
-    if (HANDY) return;
+    if (HANDY && grundriss) return;
     let rechts = 12;
     if (glasOffen) {
       try {
@@ -74,9 +70,9 @@
         url: SEITEN + "mitteilungen.html?v=2",
         allowApi: true,
         visible: true,
-        position: { vertical: "top", horizontal: "right" },
-        size: { width: "330px", height: mitteilungen.length * 104 + 8 + "px" },
-        margin: { top: "64px", right: rechts + "px" }
+        position: { vertical: "top", horizontal: HANDY ? "middle" : "right" },
+        size: { width: HANDY ? Math.min(360, Math.round((screen.width || 390) - 16)) + "px" : "330px", height: mitteilungen.length * 104 + 8 + "px" },
+        margin: HANDY ? { top: "110px" } : { top: "64px", right: rechts + "px" }
       });
     } catch {
     }
@@ -113,7 +109,7 @@
   };
   var nachrichtHinweis = null;
   function nachrichtZeigen(m) {
-    if (!HANDY || grundriss) {
+    {
       mitteilung({ art: "nachricht", von: m.von, text: String(m.text || "").slice(0, 300) });
       return;
     }
@@ -1878,7 +1874,7 @@
     grundrissOeffnet = true;
     try {
       grundriss = await WA.ui.website.open({
-        url: SEITEN + "app.html?v=3",
+        url: SEITEN + "app.html?v=4",
         allowApi: true,
         visible: true,
         position: { vertical: "top", horizontal: "left" },
@@ -1899,6 +1895,14 @@
   }
   function grundrissUmschalten(an) {
     grundrissAn = an === void 0 ? !grundrissAn : an;
+    mtLage = "";
+    if (grundrissAn) {
+      try {
+        mtFenster && mtFenster.close();
+      } catch {
+      }
+      mtFenster = null;
+    } else setTimeout(() => mtZeigen(), 600);
     try {
       WA.player.state.saveVariable("swGrundriss", grundrissAn, { public: false, persist: true });
     } catch {
@@ -1919,7 +1923,7 @@
       } catch {
       }
       try {
-        klassik.push(await WA.ui.website.open({ url: SEITEN + "handy-menue.html?v=3&appknopf=1", allowApi: true, visible: true, position: { vertical: "top", horizontal: "middle" }, size: { width: "120px", height: "40px" }, margin: { top: "64px" } }));
+        klassik.push(await WA.ui.website.open({ url: SEITEN + "handy-menue.html?v=4&appknopf=1", allowApi: true, visible: true, position: { vertical: "top", horizontal: "middle" }, size: { width: "120px", height: "40px" }, margin: { top: "64px" } }));
       } catch {
       }
     }
@@ -2571,11 +2575,7 @@
     profilKarten();
     wandGespraeche();
     if (HANDY) {
-      try {
-        const v = WA.player.state.swGrundriss;
-        if (v === false) grundrissAn = false;
-      } catch {
-      }
+      grundrissAn = false;
       grundrissZeigen();
     }
     kernzeitStarten();
