@@ -1141,9 +1141,9 @@
     }
   }
   var POSTER = [
-    { name: "poster-zimmer4", bild: "kubilay.jpg", x: 31, y: 18.15 + DY, w: 2.5, h: 1.4, zimmerX: 29, zimmerY: 17 + DY },
+    { name: "poster-zimmer4", bild: "kubilay.jpg", x: 31, y: 18.15 + DY, w: 2.5, h: 1.4, zimmerX: 29, zimmerY: 17 + DY, unsichtbar: true },
     // 16.10.2026 (Sam): Büro Ferhat – Bild statt Whiteboard (Whiteboard = Ebene fx-ideen x 4–8 / y 49–50); Bild liegt auf dem Server (wa-bilder)
-    { name: "poster-ferhat", srv: "ferhat-poster.webp", pos: "72% 22%", x: 4.55, y: 49.05, w: 3.9, h: 1.8, ohneWhiteboard: { x: 4, y: 49, w: 5, h: 2 } }
+    { name: "poster-ferhat", srv: "ferhat-poster.webp", x: 4.55, y: 49.05, w: 3.9, h: 1.8, unsichtbar: true }
   ];
   function posterAufhaengen() {
     for (const p of POSTER) {
@@ -1158,7 +1158,7 @@
       try {
         WA.room.website.create({
           name: p.name,
-          url: SEITEN + "poster.html?" + (p.srv ? "srv=" + encodeURIComponent(p.srv) + (p.pos ? "&pos=" + encodeURIComponent(p.pos) : "") : "bild=" + encodeURIComponent(p.bild)),
+          url: SEITEN + "poster.html?" + (p.srv ? "srv=" + encodeURIComponent(p.srv) + (p.pos ? "&pos=" + encodeURIComponent(p.pos) : "") : "bild=" + encodeURIComponent(p.bild)) + (p.unsichtbar ? "&klick=1" : ""),
           visible: true,
           allowApi: true,
           origin: "map",

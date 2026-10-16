@@ -12,6 +12,7 @@
   .wand { position: absolute; inset: 0; box-sizing: border-box; border: 2px solid #1f2937; background: #000 center/cover no-repeat; cursor: zoom-in;
     box-shadow: 2px 3px 0 rgba(0, 0, 0, .25); }
   .wand:hover { outline: 2px solid #fbbf24; }
+  .wand.klick { border: 0; background: transparent !important; box-shadow: none; } .wand.klick:hover { outline: 0; } /* 16.10.2026: Bild liegt in der Karte, hier nur Klickfläche */
   body.gross { background: #111; display: flex; align-items: center; justify-content: center; }
   body.gross img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
   .zu { position: fixed; top: 10px; right: 10px; width: 40px; height: 40px; border-radius: 10px; border: 0; background: #3f4651; color: #fff; font-size: 20px; cursor: pointer; }
@@ -32,7 +33,7 @@ if (q.has("gross")) {
   document.addEventListener("keydown", e => { if (e.key === "Escape") zu(); });
   document.body.addEventListener("click", e => { if (e.target === document.body) zu(); });
 } else {
-  const d = document.createElement("div"); d.className = "wand"; d.title = "Klicken: Poster groß ansehen"; d.style.backgroundImage = "url('" + BILD + "')"; if (q.get("pos")) d.style.backgroundPosition = q.get("pos").replace(/[^0-9% ]/g, ""); document.body.appendChild(d);
+  const d = document.createElement("div"); d.className = "wand" + (q.has("klick") ? " klick" : ""); d.title = "Klicken: Poster groß ansehen"; d.style.backgroundImage = "url('" + BILD + "')"; if (q.get("pos")) d.style.backgroundPosition = q.get("pos").replace(/[^0-9% ]/g, ""); document.body.appendChild(d);
   d.onclick = async () => { try { await WA.onInit(); WA.ui.modal.openModal({ title: "Poster", src: location.href.split("?")[0] + "?gross=1&" + (SRV ? "srv=" + encodeURIComponent(SRV) : "bild=" + encodeURIComponent(q.get("bild") || "")), allowApi: true, position: "center", allow: "fullscreen" }); } catch (e) { window.open(BILD, "_blank"); } };
 }
 </script>
