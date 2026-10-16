@@ -235,7 +235,7 @@ function teamMalen() {
 // ---------- Arbeiten ----------
 const KACHELN = [["📅", "Kalender", "kalender.html"], ["💡", "Ideen", "ideen.html"], ["✅", "Tages-Check", "tagescheck.html"], ["⏰", "Arbeitszeit", "@arbeitszeit"],
   ["❤️", "Health", "health.html"], ["👤", "Profil", "profil.html?ich=1"], ["💛", "Danke", "danke.html"], ["📰", "News", "news.html"],
-  ["🎓", "Schulung", "lernen.html"], ["🗓", "Donna", "ute.html"], ["🚀", "Schnellreise", "@reise"], ["🚪", "Feierabend", "@feierabend"]];
+  ["🎓", "Schulung", "lernen.html"], ["🗓", "Donna", "ute.html"], ["🚀", "Schnellreise", "@reise"], ["🔔", "Push", "push-start.html"], ["🚪", "Feierabend", "@feierabend"]];
 function arbeitenMalen() { $("s-arbeiten").innerHTML = `<div class="kacheln">${KACHELN.map((k, i) => `<button data-k="${i}"><span>${k[0]}</span>${k[1]}</button>`).join("")}</div>`;
   document.querySelectorAll("[data-k]").forEach(b => b.onclick = () => { const k = KACHELN[+b.dataset.k]; if (k[2][0] === "@") return aktion(k[2].slice(1)); blatt(k); }); }
 function blatt(k) { $("blattTitel").textContent = k[1]; $("blattRahmen").src = k[2] + (k[2].includes("?") ? "&" : "?") + "name=" + encodeURIComponent(ICH) + "&t=" + Date.now(); $("blatt").style.display = "flex"; }
@@ -294,7 +294,7 @@ $("toastKnopf2").onclick = () => mtKnopf(2);
 // Mitteilung als Hinweis oben mit zwei Knöpfen (15.10.2026, Sam: „wie besprochen – direkt Antworten / Chat“)
 let toastMt = null;
 function toastMitteilung(m) {
-  const v = vor(m.von), K = m.art === "klopfen" ? ["Reinlassen", "Komme gleich"] : m.art === "nachricht" ? ["Antworten", "Chat"] : m.art === "termin" && m.raum ? ["Hingehen", "OK"] : null;
+  const v = vor(m.von), K = m.art === "klopfen" ? ["Reinlassen", "Komme gleich"] : m.art === "nachricht" ? ["Antworten", "Chat"] : m.art === "termin" && m.raum ? ["Hingehen", "OK"] : m.art === "push" ? ["Aktivieren", "Später"] : null;
   toast((m.art === "klopfen" ? "✊ " + v + " klopft an" : m.art === "termin" ? "📅 " + (m.titel || "Termin") : m.art === "nachricht" ? "💬 " + v + ": " + (m.text || "") : (v ? v + " " : "") + (m.kurz || "")).slice(0, 90), K ? K[0] : "");
   if (!K) return; toastMt = m; $("toastKnopf2").textContent = K[1]; $("toastKnopf2").style.display = ""; clearTimeout(toast.u); toast.u = setTimeout(() => { $("toast").style.display = "none"; toastMt = null; }, 15000);
 }
@@ -302,6 +302,7 @@ function mtKnopf(n) {
   const m = toastMt; $("toast").style.display = "none"; toastMt = null; if (!m) return;
   if (m.art === "klopfen") return aktion(n === 1 ? "mtReinlassen" : "mtGleich", { id: m.id });
   if (m.art === "termin") return n === 1 ? aktion("mtHin", { id: m.id }) : aktion("mtWeg", { id: m.id });
+  if (m.art === "push") return n === 1 ? blatt(["🔔", "Benachrichtigungen", "push-start.html"]) : aktion("mtWeg", { id: m.id });
   if (m.art === "nachricht") { if (n === 1) antwortAuf = m.id; zeigeTab("chat"); const i = $("antw"); if (i) i.focus(); }
 }
 

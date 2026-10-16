@@ -15,6 +15,7 @@
   .da span { background:#dcfce7; color:#166534; border-color:#86efac; }
   .weg span { background:#f1f5f9; color:#475569; border-color:#cbd5e1; }
   .fokus span { background:#ede9fe; color:#5b21b6; border-color:#c4b5fd; }
+  .tel span { background:#ffedd5; color:#9a3412; border-color:#fdba74; } /* 16.10.2026: telefoniert */
   .leer span { background:rgba(255,255,255,.7); color:#9ca3af; border-color:#e5e7eb; font-weight:600; }
 </style>
 </head>
@@ -23,10 +24,10 @@
 <script>
 const q = new URLSearchParams(location.search), n = q.get("n") || "", raum = q.get("raum") || "", st = q.get("s") || "weg";
 const kuerzel = n ? n.replace(/\./g, "").split(/\s+/).map(w => w[0] || "").join("").slice(0, 2).toUpperCase() : "";
-const TEXT = { da: "im Büro", weg: "nicht da", fokus: "Fokus – bitte anklopfen" };
+const TEXT = { da: "im Büro", weg: "nicht da", fokus: "Fokus – bitte anklopfen", tel: "telefoniert gerade" };
 const s = document.getElementById("s"), t = document.getElementById("t");
 s.className = "s " + (n ? st : "leer");
-const klein = () => { t.textContent = n ? "● " + kuerzel : "frei"; };
+const klein = () => { t.textContent = n ? (st === "tel" ? "📞 " : "● ") + kuerzel : "frei"; };
 klein();
 let uhr = null;
 // Schild ist nur so breit wie das Kürzel: ganzer Name beim Drüberfahren (Tooltip)

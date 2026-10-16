@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Benachrichtigungen</title>
+<link rel="stylesheet" href="glas.css">
+<link rel="stylesheet" href="hell.css">
+<!-- 16.10.2026 (Sam: „Nachrichten auch sehen, wenn das Büro im Hintergrund ist / wenn man abgemeldet wurde“): holt mit dem Büro-Ausweis
+     einen Einmal-Link und öffnet swdigitaltest.de/push.html in einem eigenen Tab – dort meldet sich das Gerät für Push an. -->
+<style>
+  body { font-family:system-ui,-apple-system,"Segoe UI",sans-serif; margin:0; padding:18px; color-scheme:light; }
+  h2 { margin:0 0 8px; font-size:19px; } p { line-height:1.5; margin:0 0 14px; font-size:14.5px; color:#475569; }
+  ul { margin:0 0 16px; padding-left:20px; font-size:14px; line-height:1.6; color:#334155; }
+  button { border:0; border-radius:10px; background:#0f766e; color:#fff; font:inherit; font-weight:700; font-size:15px; padding:12px 18px; cursor:pointer; }
+  a.link { display:inline-block; margin-top:10px; font-weight:700; color:#0f766e; } .m { margin-top:12px; font-size:14px; } .fe { color:#b91c1c; }
+</style></head><body>
+<h2>🔔 Benachrichtigungen auf diesem Gerät</h2>
+<p>Dann bekommst du eine Meldung vom Computer bzw. Handy, auch wenn das Büro gerade nicht vorne ist:</p>
+<ul><li>💬 Nachrichten von Kollegen</li><li>✊ Anklopfen an deiner Tür</li><li>✅ Tages-Check: Frist beginnt / läuft ab</li><li>🚪 wenn du aus dem Büro abgemeldet wurdest</li></ul>
+<button id="los">Jetzt aktivieren</button>
+<div class="m" id="m"></div>
+<script src="https://play.workadventu.re/iframe_api.js"></script>
+<script>
+const KEY = "a21b2aa2a42fe6189b05773c07bbc9ad78e38b34ba3bb6fe", B = "https://swdigitaltest.de/buero-praesenz";
+const $ = id => document.getElementById(id), aw = () => { try { return localStorage.getItem("swBueroAusweis") || ""; } catch { return ""; } };
+$("los").onclick = async () => {
+  $("los").disabled = true; $("m").textContent = "Einen Moment …"; $("m").className = "m";
+  try {
+    const r = await fetch(B + "/push-code", { method: "POST", headers: { "X-Buero-Key": KEY, "X-Buero-Ausweis": aw(), "X-Buero-Name": encodeURIComponent((window.WA && WA.player && WA.player.name) || "") } });
+    const d = await r.json().catch(() => ({})); if (!r.ok || !d.url) throw new Error(d.error === "ausweis-ungueltig" ? "Bitte kurz neu im Büro anmelden und dann noch einmal tippen." : (d.error || "Fehler"));
+    let auf = false; try { if (window.WA && WA.nav && WA.nav.openTab) { WA.nav.openTab(d.url); auf = true; } } catch {}
+    if (!auf) { try { auf = !!window.open(d.url, "_blank"); } catch {} }
+    $("m").innerHTML = (auf ? "Ein neuer Tab ist aufgegangen – dort „Auf diesem Gerät aktivieren“ tippen und erlauben." : "Bitte diesen Link öffnen:") + `<br><a class="link" href="${d.url}" target="_blank" rel="noopener">➜ Benachrichtigungen aktivieren</a>`
+      + (d.geraete ? `<div style="margin-top:8px;color:#64748b">Schon aktiv auf ${d.geraete} Gerät${d.geraete === 1 ? "" : "en"}.</div>` : "");
+  } catch (e) { $("m").textContent = e.message; $("m").className = "m fe"; }
+  $("los").disabled = false;
+};
+</script>
+</body></html>

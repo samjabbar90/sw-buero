@@ -67,7 +67,7 @@
     mtFenster = null;
     if (mitteilungen.length) try {
       mtFenster = await WA.ui.website.open({
-        url: SEITEN + "mitteilungen.html?v=2",
+        url: SEITEN + "mitteilungen.html?v=3",
         allowApi: true,
         visible: true,
         position: { vertical: "top", horizontal: HANDY ? "middle" : "right" },
@@ -105,9 +105,15 @@
     mtChat: (m) => {
       glasFenster(SEITEN + "wer.html?an=" + encodeURIComponent(m.von || "") + "&t=" + Date.now());
       mtWeg(m.id);
+    },
+    mtPush: (m) => {
+      glasFenster(SEITEN + "push-start.html?t=" + Date.now());
+      mtWeg(m.id);
     }
+    // 16.10.2026: Benachrichtigungen auf diesem Gerät
   };
   var nachrichtHinweis = null;
+  var pushHinweisGezeigt = false;
   function nachrichtZeigen(m) {
     {
       mitteilung({ art: "nachricht", von: m.von, text: String(m.text || "").slice(0, 300) });
@@ -165,6 +171,11 @@
       if (d && typeof d.system === "boolean") mitSystemZeit = d.system;
       if (d && Array.isArray(d.nachrichten)) for (const m of d.nachrichten) nachrichtZeigen(m);
       if (d && Array.isArray(d.termine)) termineErinnern(d.termine);
+      if (d && Array.isArray(d.glocke)) for (const g of d.glocke) mitteilung({ art: "info", kurz: String(g.text || "").slice(0, 200) }, 6e4);
+      if (d && d.pushAktiv === false && !pushHinweisGezeigt) {
+        pushHinweisGezeigt = true;
+        setTimeout(() => mitteilung({ art: "push", kurz: "Benachrichtigungen aktivieren", text: "Damit du Nachrichten und Anklopfen auch siehst, wenn das B\xFCro im Hintergrund ist." }), 15e3);
+      }
       if (d && d.inaktiv) return wegVomRechner();
       if (d && d.abgeloest) beenden();
     }).catch(() => {
@@ -235,18 +246,18 @@
     const v = String(WA.state[t.variable] || "");
     return v.startsWith("fokus:") ? Number(v.slice(6)) || 0 : 0;
   };
+  var besitzerDa = (t) => !Array.isArray(info.da) || info.da.includes(vorname(t.besitzer));
+  var telefoniertGerade = (n) => (info.telefoniert || []).some((x) => vorname(x) === vorname(n));
   function autoZu(t) {
     const wer = vorname(t.besitzer), gleich = (n) => String(n).toLowerCase() === wer;
-    if ((info.telefoniert || []).some(gleich)) return "telefoniert";
+    if (!besitzerDa(t)) return "";
     if ((info.imTermin || []).some(gleich) && (!info.imTerminRaum || info.imTerminRaum[wer] === t.raum)) return "hat einen Termin";
     if ((info.zuRaeume || []).includes(t.raum)) return "hat Besuch";
     return "";
   }
   var tuerStatus = (t) => {
-    if (t.offen) {
-      const d = zimmerDaten(t);
-      return d.s !== "frei" && (info.telefoniert || []).some((n) => vorname(n) === vorname(d.wer)) ? "zu" : d.s;
-    }
+    if (t.offen) return zimmerDaten(t).s;
+    if (!besitzerDa(t)) return "frei";
     if (autoZu(t)) return "zu";
     return fokusBis(t) > Date.now() ? "fokus" : "frei";
   };
@@ -648,6 +659,7 @@
     }
   }
   var tuerVorTelefon = null;
+  var telefonGemeldet = false;
   function telefonTuer() {
     for (const x of tueren) if (!x.offen) tuerAnwenden(x);
     const t = meineTuer();
@@ -657,10 +669,14 @@
       fokusSetzen(t, 0);
       kurzMeldung("\u2615 Fokuszeit vorbei \u2013 deine T\xFCr ist wieder frei", 8e3);
     }
-    const grund = autoZu(t);
+    const grund = autoZu(t), tel = telefoniertGerade(WA.player.name);
+    if (tel && !telefonGemeldet) {
+      telefonGemeldet = true;
+      kurzMeldung("\u{1F4DE} Du telefonierst \u2013 an deinem B\xFCro h\xE4ngt jetzt ein Telefon-Zeichen", 5e3);
+    } else if (!tel) telefonGemeldet = false;
     if (grund && tuerVorTelefon === null) {
       tuerVorTelefon = "x";
-      kurzMeldung(`\u{1F534} Deine T\xFCr ist zu \u2013 du ${grund === "hat Besuch" ? "hast Besuch" : grund === "hat einen Termin" ? "hast einen Termin" : "telefonierst"}`, 5e3);
+      kurzMeldung(`\u{1F534} Deine T\xFCr ist zu \u2013 du ${grund === "hat Besuch" ? "hast Besuch" : "hast einen Termin"}`, 5e3);
     } else if (!grund && tuerVorTelefon !== null) tuerVorTelefon = null;
     return;
     const ich = vorname(WA.player.name), gleich = (n) => String(n).toLowerCase() === ich;
@@ -1814,10 +1830,14 @@
   };
   var schilder = /* @__PURE__ */ new Map();
   function schildStatus(t) {
+    {
+      const wer = t.offen ? zimmerDaten(t).wer : t.besitzer;
+      if (wer && telefoniertGerade(wer)) return "tel";
+    }
     if (t.offen ? zimmerDaten(t).s === "zu" : tuerStatus(t) === "fokus") return "fokus";
     return aktuellerBereich === t.raum || (info.belegt || []).includes(t.raum) ? "da" : "weg";
   }
-  var schildUrl = (t, n, st) => SEITEN + "schild.html?v=3&n=" + encodeURIComponent(n) + "&raum=" + encodeURIComponent(t.raum) + "&s=" + st;
+  var schildUrl = (t, n, st) => SEITEN + "schild.html?v=4&n=" + encodeURIComponent(n) + "&raum=" + encodeURIComponent(t.raum) + "&s=" + st;
   async function namensschilder() {
     if (HANDY) return;
     for (const t of tueren) {
@@ -1874,7 +1894,7 @@
     grundrissOeffnet = true;
     try {
       grundriss = await WA.ui.website.open({
-        url: SEITEN + "app.html?v=4",
+        url: SEITEN + "app.html?v=5",
         allowApi: true,
         visible: true,
         position: { vertical: "top", horizontal: "left" },
@@ -2750,6 +2770,15 @@
       WA.player.state.onVariableChange("swAktiv").subscribe(() => {
         letzteAktivitaet = Date.now();
       });
+    } catch {
+    }
+    try {
+      WA.chat.onChatMessage((text, ev) => {
+        const von = ev && ev.author && ev.author.name;
+        if (!von || von === WA.player.name || !document.hidden) return;
+        fetch(ENDPOINT.replace(/melden$/, "chat-eingang"), { method: "POST", headers: { "Content-Type": "application/json", "X-Buero-Key": BUERO_KEY }, body: JSON.stringify({ name: WA.player.name, von, text: String(text || "").slice(0, 300) }) }).catch(() => {
+        });
+      }, { scope: "bubble" });
     } catch {
     }
     try {
