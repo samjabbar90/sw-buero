@@ -1158,7 +1158,7 @@
       try {
         WA.room.website.create({
           name: p.name,
-          url: SEITEN + "poster.html?" + (p.srv ? "srv=" + encodeURIComponent(p.srv) + (p.pos ? "&pos=" + encodeURIComponent(p.pos) : "") : "bild=" + encodeURIComponent(p.bild)) + (p.unsichtbar ? "&klick=1" : ""),
+          url: SEITEN + "poster.html?v=2&" + (p.srv ? "srv=" + encodeURIComponent(p.srv) + (p.pos ? "&pos=" + encodeURIComponent(p.pos) : "") : "bild=" + encodeURIComponent(p.bild)) + (p.unsichtbar ? "&klick=1" : ""),
           visible: true,
           allowApi: true,
           origin: "map",

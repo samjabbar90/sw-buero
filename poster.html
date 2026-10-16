@@ -3,12 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark"><!-- 16.10.2026: sonst legt Chrome einen weißen Kasten hinter die (durchsichtige) Klickfläche -->
 <title>Poster</title>
 <!-- Eigene Poster im Büro (14.10.2026, Sam: „kleiner, Whiteboard weg, wenn man drauf klickt sieht man das Bild groß“).
      ?bild=<datei in poster/> → kleines Wandbild (als Webseite in die Karte gesetzt, main.ts POSTER); Klick öffnet es groß.
      ?gross=1&bild=… → große Ansicht im Fenster. -->
 <style>
-  html, body { margin: 0; height: 100%; background: transparent; overflow: hidden; }
+  html, body { margin: 0; height: 100%; background: transparent !important; color-scheme: dark; overflow: hidden; }
   .wand { position: absolute; inset: 0; box-sizing: border-box; border: 2px solid #1f2937; background: #000 center/cover no-repeat; cursor: zoom-in;
     box-shadow: 2px 3px 0 rgba(0, 0, 0, .25); }
   .wand:hover { outline: 2px solid #fbbf24; }
