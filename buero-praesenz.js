@@ -5,6 +5,8 @@
   var DASHBOARD = "https://swdigitaltest.de";
   var SITZUNG = Math.random().toString(36).slice(2) + Date.now().toString(36);
   var DY = 26;
+  var MI = (x) => x >= 48 ? x + 8 : x;
+  var MI32 = (px) => px >= 48 * 32 ? px + 256 : px;
   var DX = 2;
   var HANDY = (screen.width || 1200) < 768 || /Android|iPhone|iPod|Mobile/i.test(navigator.userAgent);
   var aktuellerBereich = null;
@@ -818,7 +820,7 @@
     } catch {
       return;
     }
-    const KORB = { x: 400 + DX * 32, y: -144 + DY * 32 }, ECKE = { x: 48, y: -144 + DY * 32 }, UNTEN = { x: 48, y: 272 + DY * 32 }, TEMPO = 32;
+    const KORB = { x: MI32(400 + DX * 32), y: -144 + DY * 32 }, ECKE = { x: 48, y: -144 + DY * 32 }, UNTEN = { x: 48, y: 272 + DY * 32 }, TEMPO = 32;
     const d1 = (KORB.x - ECKE.x) / TEMPO, d2 = (UNTEN.y - ECKE.y) / TEMPO;
     const PHASEN = [["lieg", 40], ["wedelK", 4], ["links", d1], ["runter", d2], ["sitz", 12], ["hoch", d2], ["rechts", d1], ["sitzK", 6]];
     const ZYKLUS = PHASEN.reduce((s, p) => s + p[1], 0);
@@ -985,7 +987,7 @@
     } catch {
     }
   }
-  var NEWS_SCHIRM = { x: 1325 + DX * 32, y: 962 + DY * 32, w: 214, h: 70 };
+  var NEWS_SCHIRM = { x: MI32(1325 + DX * 32), y: 962 + DY * 32, w: 214, h: 70 };
   var NEWS_BEREICH = { x: (41 + DX) * 32, y: (33 + DY) * 32, w: 8 * 32, h: 3 * 32 };
   var newsFenster = null;
   var newsHinweis = null;
@@ -999,7 +1001,7 @@
     } catch {
     }
   }
-  var HELPCENTER = [{ x: 40 + DX, y: 22 + DY }];
+  var HELPCENTER = true ? [{ x: 63, y: 70 }] : [{ x: MI(40 + DX), y: 22 + DY }];
   var hcFenster = null;
   var hcHinweis = null;
   function helpcenterRoboter() {
@@ -1084,110 +1086,15 @@
     } catch {
     }
   }
-  var FITNESS = { x: 78 + DX, y: 6 + DY };
-  function fitnessEmpfang() {
-    const b = { x: (FITNESS.x - 1) * 32, y: (FITNESS.y + 3) * 32, w: 8 * 32, h: 3 * 32 };
-    let fenster = null, hinweis2 = null;
-    const rein = () => {
-      fx("fx-fit-aktiv", true);
-      fx("fx-fit-ruhe", false);
-      try {
-        hinweis2 = WA.ui.displayActionMessage({ message: "\u2764\uFE0F Health & Wellbeing \xB7 Leertaste", callback: async () => {
-          try {
-            hinweis2 && hinweis2.remove();
-          } catch {
-          }
-          try {
-            fenster = await glasFenster(SEITEN + "health.html?name=" + encodeURIComponent(WA.player.name || "") + "&t=" + Date.now());
-          } catch {
-          }
-        } });
-      } catch {
-      }
-    };
-    const raus = () => {
-      fx("fx-fit-aktiv", false);
-      fx("fx-fit-ruhe", true);
-      try {
-        hinweis2 && hinweis2.remove();
-      } catch {
-      }
-      hinweis2 = null;
-      try {
-        fenster && fenster.close();
-      } catch {
-      }
-      fenster = null;
-    };
-    try {
-      WA.room.area.create({ name: "fitness-empfang", x: b.x, y: b.y, width: b.w, height: b.h });
-      WA.room.area.onEnter("fitness-empfang").subscribe(rein);
-      WA.room.area.onLeave("fitness-empfang").subscribe(raus);
-    } catch {
-      let drin = false;
-      WA.player.onPlayerMove((e) => {
-        const j = e.x >= b.x && e.x < b.x + b.w && e.y >= b.y && e.y < b.y + b.h;
-        if (j && !drin) rein();
-        if (!j && drin) raus();
-        drin = j;
-      });
-    }
-  }
-  function ranglistenTafel() {
-    if (!HANDY) try {
-      WA.room.website.create({ name: "rangliste", url: SEITEN + "rangliste-bildschirm.html", visible: true, allowApi: false, origin: "map", scale: 1, position: { x: 2284 + DX * 32, y: 128 + DY * 32, width: 184, height: 54 } });
-    } catch {
-    }
-    const b = { x: (71 + DX) * 32, y: (6 + DY) * 32, w: 7 * 32, h: 2 * 32 };
-    let fenster = null, hinweis2 = null;
-    const rein = () => {
-      try {
-        hinweis2 = WA.ui.displayActionMessage({ message: "\u{1F3C6} Rangliste \xB7 Leertaste", callback: async () => {
-          try {
-            hinweis2 && hinweis2.remove();
-          } catch {
-          }
-          try {
-            fenster = await glasFenster(SEITEN + "rangliste.html?name=" + encodeURIComponent(WA.player.name || "") + "&t=" + Date.now());
-          } catch {
-          }
-        } });
-      } catch {
-      }
-    };
-    const raus = () => {
-      try {
-        hinweis2 && hinweis2.remove();
-      } catch {
-      }
-      hinweis2 = null;
-      try {
-        fenster && fenster.close();
-      } catch {
-      }
-      fenster = null;
-    };
-    try {
-      WA.room.area.create({ name: "rangliste-tafel", x: b.x, y: b.y, width: b.w, height: b.h });
-      WA.room.area.onEnter("rangliste-tafel").subscribe(rein);
-      WA.room.area.onLeave("rangliste-tafel").subscribe(raus);
-    } catch {
-      let drin = false;
-      WA.player.onPlayerMove((e) => {
-        const j = e.x >= b.x && e.x < b.x + b.w && e.y >= b.y && e.y < b.y + b.h;
-        if (j && !drin) rein();
-        if (!j && drin) raus();
-        drin = j;
-      });
-    }
-  }
+  var FITNESS = { x: MI(78 + DX), y: 6 + DY };
   var POSTER = [
-    { name: "poster-zimmer4", bild: "kubilay.jpg", x: 31 + DX, y: 18.15 + DY, w: 2.5, h: 1.4, zimmerX: 29 + DX, zimmerY: 17 + DY, unsichtbar: true },
+    { name: "poster-zimmer4", bild: "kubilay.jpg", x: MI(31 + DX), y: 18.15 + DY, w: 2.5, h: 1.4, zimmerX: MI(29 + DX), zimmerY: 17 + DY, unsichtbar: true },
     // 16.10.2026 (Sam): Büro Ferhat – Bild statt Whiteboard (Whiteboard = Ebene fx-ideen x 4–8 / y 49–50); Bild liegt auf dem Server (wa-bilder)
-    { name: "poster-ferhat", srv: "ferhat-poster.webp", x: 1.95 + DX, y: 48.75, w: 2.2, h: 1, unsichtbar: true }
+    { name: "poster-ferhat", srv: "ferhat-poster.webp", x: MI(1.95 + DX), y: 48.75, w: 2.2, h: 1, unsichtbar: true }
   ];
   function posterAufhaengen() {
-    for (const p of POSTER) {
+    const POSTER_AKTIV = true ? [] : POSTER;
+    for (const p of POSTER_AKTIV) {
       if (p.ohneWhiteboard) {
         const t = [];
         for (let x = p.ohneWhiteboard.x; x < p.ohneWhiteboard.x + p.ohneWhiteboard.w; x++) for (let y = p.ohneWhiteboard.y; y < p.ohneWhiteboard.y + p.ohneWhiteboard.h; y++) t.push({ x, y, tile: null, layer: "fx-ideen" });
@@ -1402,7 +1309,7 @@
   }
   function zitatTafel() {
     let fenster = null;
-    leertasteBereich("zitat-tafel", { x: 45 + DX, y: 50 + DY, w: 4, h: 4 }, "\u{1F4DC} Leertaste: Zitat des Tages sehen", async () => {
+    leertasteBereich("zitat-tafel", { x: MI(45 + DX), y: 50 + DY, w: 4, h: 4 }, "\u{1F4DC} Leertaste: Zitat des Tages sehen", async () => {
       try {
         fenster = await glasFenster(SEITEN + "zitat.html?t=" + Date.now());
       } catch {
@@ -1417,7 +1324,7 @@
   }
   function dankeWand() {
     let fenster = null;
-    leertasteBereich("danke-wand", { x: 64 + DX, y: 38 + DY, w: 2, h: 1 }, "\u{1F49B} Leertaste: Danke-Wand", async () => {
+    leertasteBereich("danke-wand", { x: MI(64 + DX), y: 38 + DY, w: 2, h: 1 }, "\u{1F49B} Leertaste: Danke-Wand", async () => {
       try {
         fenster = await glasFenster(SEITEN + "danke.html?t=" + Date.now());
       } catch {
@@ -1432,7 +1339,7 @@
   }
   function schaufenster() {
     let fenster = null;
-    leertasteBereich("schaufenster", { x: 66 + DX, y: 37 + DY, w: 2, h: 1 }, "\u{1F6CD}\uFE0F Leertaste: Mitarbeiter-Rabatte", async () => {
+    leertasteBereich("schaufenster", { x: MI(66 + DX), y: 37 + DY, w: 2, h: 1 }, "\u{1F6CD}\uFE0F Leertaste: Mitarbeiter-Rabatte", async () => {
       try {
         fenster = await glasFenster(SEITEN + "rabatte.html?t=" + Date.now());
       } catch {
@@ -1447,8 +1354,8 @@
   }
   var GESPRAECHS_RAEUME = [
     // 14.10.2026: Besprechung 10 ist jetzt das Lernzimmer
-    { raum: "Besprechung 11", x: 25 + DX, y: 39 + DY, w: 7, h: 5 },
-    { raum: "Besprechung Glas", x: 45 + DX, y: 6 + DY, w: 8, h: 8 }
+    { raum: "Besprechung 11", x: MI(25 + DX), y: 39 + DY, w: 7, h: 5 },
+    true ? { raum: "Besprechung Glas", x: 45, y: 34, w: 12, h: 16 } : { raum: "Besprechung Glas", x: MI(45 + DX), y: 6 + DY, w: 8, h: 8 }
   ];
   function gespraechsRaeume() {
     for (const r of GESPRAECHS_RAEUME) {
@@ -1649,14 +1556,14 @@
     } catch {
     }
   }
-  var GLASTUER = [[88 + DX, 29 + DY], [88 + DX, 30 + DY]];
+  var GLASTUER = [[MI(88 + DX), 29 + DY], [MI(88 + DX), 30 + DY]];
   var anbauFrei = false;
   var glastuerZu = null;
   var anbauZiel = null;
   var anbauPinZuletzt = 0;
   var imAnbau = (px, py) => {
     const x = Math.floor(px / 32), y = Math.floor(py / 32);
-    return x >= 89 + DX && x <= 113 + DX && y >= 3 + DY && y <= 33 + DY;
+    return x >= MI(89 + DX) && x <= MI(113 + DX) && y >= 3 + DY && y <= 33 + DY;
   };
   function glastuer(offen) {
     try {
@@ -1670,7 +1577,7 @@
     const zu = async () => {
       try {
         const p = await WA.player.getPosition(), fx2 = Math.floor(p.x / 32), fy = Math.floor(p.y / 32);
-        if (fx2 >= 87 + DX && fx2 <= 89 + DX && fy >= 28 + DY && fy <= 31 + DY) {
+        if (fx2 >= MI(87 + DX) && fx2 <= MI(89 + DX) && fy >= 28 + DY && fy <= 31 + DY) {
           glastuerZu = setTimeout(zu, 3e3);
           return;
         }
@@ -1683,14 +1590,14 @@
   function glaswandAgenten() {
     leertasteBereich(
       "glastuer-aussen",
-      { x: 85 + DX, y: 28 + DY, w: 3, h: 4 },
+      { x: MI(85 + DX), y: 28 + DY, w: 3, h: 4 },
       () => anbauFrei ? "\u{1F6AA} Leertaste: Glast\xFCr \xF6ffnen" : "\u{1F512} Bereich der KI-Agenten \xB7 Leertaste: PIN eingeben",
       () => {
         if (anbauFrei) glastuerOeffnen();
         else glasFenster(SEITEN + "glastuer.html?t=" + Date.now());
       }
     );
-    leertasteBereich("glastuer-innen", { x: 89 + DX, y: 28 + DY, w: 3, h: 4 }, "\u{1F6AA} Leertaste: Glast\xFCr \xF6ffnen", () => glastuerOeffnen());
+    leertasteBereich("glastuer-innen", { x: MI(89 + DX), y: 28 + DY, w: 3, h: 4 }, "\u{1F6AA} Leertaste: Glast\xFCr \xF6ffnen", () => glastuerOeffnen());
     WA.player.onPlayerMove((e) => {
       if (anbauFrei || !imAnbau(e.x, e.y)) return;
       anbauZiel = { x: e.x, y: e.y };
@@ -1738,9 +1645,9 @@
       } catch {
       }
     };
-    leertasteBereich("kueche-kuehlschrank", { x: 67 + DX, y: 37 + DY, w: 4, h: 1 }, "\u{1F9CA} K\xFChlschrank \xF6ffnen \xB7 Leertaste", () => los("kuehlschrank"));
-    leertasteBereich("kueche-herd", { x: 75 + DX, y: 37 + DY, w: 3, h: 1 }, "\u{1F373} Spiegelei braten \xB7 Leertaste", () => los("herd"));
-    leertasteBereich("kueche-kaffee", { x: 81 + DX, y: 36 + DY, w: 2, h: 4 }, "\u2615 Kaffee holen \xB7 Leertaste", () => {
+    leertasteBereich("kueche-kuehlschrank", { x: MI(67 + DX), y: 37 + DY, w: 4, h: 1 }, "\u{1F9CA} K\xFChlschrank \xF6ffnen \xB7 Leertaste", () => los("kuehlschrank"));
+    leertasteBereich("kueche-herd", { x: MI(75 + DX), y: 37 + DY, w: 3, h: 1 }, "\u{1F373} Spiegelei braten \xB7 Leertaste", () => los("herd"));
+    leertasteBereich("kueche-kaffee", { x: MI(81 + DX), y: 36 + DY, w: 2, h: 4 }, "\u2615 Kaffee holen \xB7 Leertaste", () => {
       los("kaffee");
       kurzMeldung("\u2615 Kaffee l\xE4uft durch \u2026", 3800);
       setTimeout(() => {
@@ -1890,6 +1797,7 @@
     "B\xFCro Kadir": "Kadir K.",
     "B\xFCro Attila": "Attila K."
   };
+  if (true) Object.assign(SCHILD_PERSON, { "Zimmer 1": "", "Zimmer 2": "", "B\xFCro Tanja": "Tanja R.", "B\xFCro Jana": "Jana J.", "B\xFCro Kubilay": "Kubilay A.", "B\xFCro Kerstin": "Kerstin C.", "B\xFCro Angelika": "Angelika T.", "B\xFCro Onur": "Onur K.", "B\xFCro Bin": "Bin W.", "B\xFCro Fatih": "Fatih K.", "B\xFCro Dilber": "Dilber A.", "B\xFCro Ilona": "Ilona S.", "B\xFCro Julien": "Julien M.", "B\xFCro Dalo": "Dalo" });
   var schilder = /* @__PURE__ */ new Map();
   function schildStatus(t) {
     {
@@ -2162,12 +2070,12 @@
   }
   var FUSSBALL = {
     tore: [
-      { name: "platz-tor-oben", x: 172 + DX, y: 5 + DY, w: 13, h: 6 },
-      { name: "platz-tor-unten", x: 172 + DX, y: 34 + DY, w: 13, h: 6 },
-      { name: "bolzplatz-tor-oben", x: 198 + DX, y: 5 + DY, w: 7, h: 4 },
-      { name: "bolzplatz-tor-unten", x: 198 + DX, y: 23 + DY, w: 7, h: 4 }
+      { name: "platz-tor-oben", x: MI(172 + DX), y: 5 + DY, w: 13, h: 6 },
+      { name: "platz-tor-unten", x: MI(172 + DX), y: 34 + DY, w: 13, h: 6 },
+      { name: "bolzplatz-tor-oben", x: MI(198 + DX), y: 5 + DY, w: 7, h: 4 },
+      { name: "bolzplatz-tor-unten", x: MI(198 + DX), y: 23 + DY, w: 7, h: 4 }
     ],
-    vereinsheim: { x: 194 + DX, y: 38 + DY, w: 14, h: 2 }
+    vereinsheim: { x: MI(194 + DX), y: 38 + DY, w: 14, h: 2 }
   };
   function torGeschossen(wer, wo) {
     try {
@@ -2221,7 +2129,7 @@
   }
   function ronPlatz() {
     let fenster = null;
-    leertasteBereich("ron-platz", { x: 106 + DX, y: 31 + 14, w: 2, h: 2 }, "\u{1F4AC} Ron \xB7 Onboarding \u2013 Leertaste", async () => {
+    leertasteBereich("ron-platz", { x: MI(106 + DX), y: 31 + 14, w: 2, h: 2 }, "\u{1F4AC} Ron \xB7 Onboarding \u2013 Leertaste", async () => {
       try {
         fenster = await glasFenster(SEITEN + "ron.html?t=" + Date.now());
       } catch {
@@ -2253,7 +2161,7 @@
   }
   function jaPlatz() {
     let fenster = null;
-    leertasteBereich("ja-abschluss-platz", { x: 92 + DX, y: 8 + DY, w: 2, h: 2 }, "\u{1F4AC} Harvey \xB7 Abschluss-Agent \u2013 Leertaste", async () => {
+    leertasteBereich("ja-abschluss-platz", { x: MI(92 + DX), y: 8 + DY, w: 2, h: 2 }, "\u{1F4AC} Harvey \xB7 Abschluss-Agent \u2013 Leertaste", async () => {
       try {
         fenster = await glasFenster(SEITEN + "ja-team.html?t=" + Date.now());
       } catch {
@@ -2268,7 +2176,7 @@
   }
   function utePlatz() {
     let fenster = null;
-    leertasteBereich("ute-platz", { x: 51 + DX, y: 6 + 14, w: 6, h: 2 }, "\u{1F5D3} Termine mit Donna \u2013 Leertaste: freie Zeiten finden und buchen", async () => {
+    leertasteBereich("ute-platz", { x: MI(51 + DX) - (true ? 4 : 0), y: 6 + 14, w: 6, h: 2 }, "\u{1F5D3} Termine mit Donna \u2013 Leertaste: freie Zeiten finden und buchen", async () => {
       try {
         fenster = await glasFenster(SEITEN + "ute.html?t=" + Date.now());
       } catch {
@@ -2299,7 +2207,7 @@
     });
   }
   var AMPEL_START = Date.now();
-  var AMPEL_KREUZUNGEN = [{ x: 115 + DX, y: 67 + DY, sv: 4, sh: 6 }, { x: 115 + DX, y: 84 + DY, sv: 4, sh: 4 }];
+  var AMPEL_KREUZUNGEN = [{ x: MI(115 + DX), y: 67 + DY, sv: 4, sh: 6 }, { x: MI(115 + DX), y: 84 + DY, sv: 4, sh: 4 }];
   var editorAn = null;
   function editorPruefen() {
     if (!Array.isArray(info.editoren)) return;
@@ -2616,7 +2524,7 @@
         }
         try {
           klassik.push(await WA.ui.website.open({
-            url: SEITEN + "blick.html?teil=karte&v=4",
+            url: SEITEN + "blick.html?teil=karte&v=5",
             allowApi: true,
             visible: true,
             position: { vertical: "bottom", horizontal: "right" },
@@ -2644,8 +2552,8 @@
     if (!HANDY) posterAufhaengen();
     helpcenterRoboter();
     lernzimmer();
-    fitnessEmpfang();
-    ranglistenTafel();
+    if (false) fitnessEmpfang();
+    if (false) ranglistenTafel();
     kueche();
     zitatTafel();
     schaufenster();
@@ -2668,7 +2576,7 @@
       grundrissZeigen();
     }
     kernzeitStarten();
-    const breite = (116 + DX) * 32, hoehe = (62 + DY) * 32;
+    const breite = (116 + DX + (true ? 8 : 0)) * 32, hoehe = (62 + DY) * 32;
     void karte;
     let blick = 0, uebersichtAn = false;
     const uebersicht = () => {
@@ -2701,7 +2609,7 @@
     try {
       const w = WA.ui.website;
       if (!HANDY) await w.open({
-        url: SEITEN + "blick.html?teil=stick&v=4",
+        url: SEITEN + "blick.html?teil=stick&v=5",
         allowApi: true,
         visible: true,
         position: { vertical: "bottom", horizontal: "left" },
@@ -2709,7 +2617,7 @@
         margin: { bottom: HANDY ? "96px" : "20px", left: HANDY ? "8px" : "20px" }
       });
       if (!HANDY) await w.open({
-        url: SEITEN + "blick.html?teil=karte&v=4",
+        url: SEITEN + "blick.html?teil=karte&v=5",
         allowApi: true,
         visible: true,
         position: { vertical: "bottom", horizontal: "right" },

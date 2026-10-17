@@ -31,7 +31,7 @@
 <script src="glas.js?v=1792088168"></script>
 <script>
 const teil = new URLSearchParams(location.search).get("teil") === "karte" ? "karte" : "stick";
-const BREITE = 118 * 32, HOEHE = 88 * 32, // 16.10.2026: Karte links 2 Felder breiter // 14.10.: +14 Felder Außenanlage oben
+const BREITE = 126 * 32, HOEHE = 88 * 32, // 18.10.2026 Teams-Umbau: +8 in der Mitte // // 16.10.2026: Karte links 2 Felder breiter // 14.10.: +14 Felder Außenanlage oben
       // 13.10.: +12 Felder (Mandanten-Stockwerk)
   $ = id => document.getElementById(id);
 let blick = null; // aktuelle Mitte des Blicks in Pixeln der Karte

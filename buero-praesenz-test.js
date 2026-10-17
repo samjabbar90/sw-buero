@@ -1797,6 +1797,7 @@
     "B\xFCro Kadir": "Kadir K.",
     "B\xFCro Attila": "Attila K."
   };
+  if (true) Object.assign(SCHILD_PERSON, { "Zimmer 1": "", "Zimmer 2": "", "B\xFCro Tanja": "Tanja R.", "B\xFCro Jana": "Jana J.", "B\xFCro Kubilay": "Kubilay A.", "B\xFCro Kerstin": "Kerstin C.", "B\xFCro Angelika": "Angelika T.", "B\xFCro Onur": "Onur K.", "B\xFCro Bin": "Bin W.", "B\xFCro Fatih": "Fatih K.", "B\xFCro Dilber": "Dilber A.", "B\xFCro Ilona": "Ilona S.", "B\xFCro Julien": "Julien M.", "B\xFCro Dalo": "Dalo" });
   var schilder = /* @__PURE__ */ new Map();
   function schildStatus(t) {
     {
@@ -2523,7 +2524,7 @@
         }
         try {
           klassik.push(await WA.ui.website.open({
-            url: SEITEN + "blick.html?teil=karte&v=4",
+            url: SEITEN + "blick.html?teil=karte&v=5",
             allowApi: true,
             visible: true,
             position: { vertical: "bottom", horizontal: "right" },
@@ -2575,7 +2576,7 @@
       grundrissZeigen();
     }
     kernzeitStarten();
-    const breite = (116 + DX) * 32, hoehe = (62 + DY) * 32;
+    const breite = (116 + DX + (true ? 8 : 0)) * 32, hoehe = (62 + DY) * 32;
     void karte;
     let blick = 0, uebersichtAn = false;
     const uebersicht = () => {
@@ -2608,7 +2609,7 @@
     try {
       const w = WA.ui.website;
       if (!HANDY) await w.open({
-        url: SEITEN + "blick.html?teil=stick&v=4",
+        url: SEITEN + "blick.html?teil=stick&v=5",
         allowApi: true,
         visible: true,
         position: { vertical: "bottom", horizontal: "left" },
@@ -2616,7 +2617,7 @@
         margin: { bottom: HANDY ? "96px" : "20px", left: HANDY ? "8px" : "20px" }
       });
       if (!HANDY) await w.open({
-        url: SEITEN + "blick.html?teil=karte&v=4",
+        url: SEITEN + "blick.html?teil=karte&v=5",
         allowApi: true,
         visible: true,
         position: { vertical: "bottom", horizontal: "right" },
