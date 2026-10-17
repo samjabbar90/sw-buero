@@ -1083,6 +1083,53 @@
       }
     }
   }
+  var AUTOS = ["lambo", "r8", "rsq8", "amggt", "porsche911", "delorean", "kitt", "batmobil", "herbie", "ecto1", "bumblebee"];
+  var autoFaehrt = false;
+  function autosStarten() {
+    setInterval(autosPruefen, 4e3);
+    autosPruefen();
+  }
+  async function autosPruefen() {
+    if (autoFaehrt || HANDY) return;
+    const jetzt = Date.now(), b = new Date(jetzt).toLocaleString("sv-SE", { timeZone: "Europe/Berlin" });
+    const tagNr = Math.floor(Date.parse(b.slice(0, 10) + "T12:00:00Z") / 864e5), std = Number(b.slice(11, 13)), mi = Number(b.slice(14, 16));
+    if (std < 8 || std >= 20) return;
+    for (let k = 0; k < 2; k++) {
+      const seed = tagNr * 48 + std * 2 + k + 2e3, abMin = k * 30 + 10 + paradeHash(seed + 23) % 18;
+      if (mi !== abMin) continue;
+      const start = Math.floor(jetzt / 6e4) * 6e4, dauer = 25e3;
+      if (jetzt - start > dauer - 2e3) continue;
+      autoFaehrt = true;
+      const wer = AUTOS[paradeHash(seed + 7) % AUTOS.length], rechts = (std + k) % 2 === 1, W = 160, H = 80;
+      const y = Math.round((rechts ? 98.7 : 96.3) * 32) - H, B = 236 * 32 + W;
+      let h = null;
+      try {
+        h = await WA.room.website.create({ name: "auto", url: SEITEN + "auto.html?v=1&a=" + wer + (rechts ? "" : "&l=1"), visible: true, allowApi: false, origin: "map", scale: 1, position: { x: rechts ? -W : B, y, width: W, height: H } });
+      } catch {
+        autoFaehrt = false;
+        return;
+      }
+      const tick = setInterval(() => {
+        const t = (Date.now() - start) / dauer;
+        if (t >= 1) {
+          clearInterval(tick);
+          try {
+            WA.room.website.delete("auto");
+          } catch {
+          }
+          setTimeout(() => {
+            autoFaehrt = false;
+          }, 6e4);
+          return;
+        }
+        try {
+          h.x = Math.round(rechts ? -W + t * B : B - t * (B + W));
+        } catch {
+        }
+      }, 60);
+      return;
+    }
+  }
   function kurzMeldung(text, ms = 7e3) {
     try {
       const m = WA.ui.displayActionMessage({ message: text, callback: () => {
@@ -3004,6 +3051,7 @@
     if (!HANDY) hundStarten();
     pokemonStarten();
     paradeStarten();
+    autosStarten();
     dekoStarten();
     gongStarten();
     fliegerStarten();

@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Auto</title>
+<style>
+  /* Autos auf der Straße unten (17.10.2026, Sam): Bilder aus Canva, ausgeschnitten; ?a=name, &l=1 = nach links (gespiegelt) */
+  html, body { margin:0; height:100%; background:transparent; overflow:hidden; color-scheme:dark; }
+  img { position:absolute; left:0; bottom:0; width:100%; height:100%; object-fit:contain; object-position:bottom; animation:federn .35s ease-in-out infinite; filter:drop-shadow(0 4px 2px rgba(0,0,0,.35)); }
+  @keyframes federn { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-1.5%); } }
+  body.l img { transform:scaleX(-1); animation:federnL .35s ease-in-out infinite; }
+  @keyframes federnL { 0%,100% { transform:scaleX(-1) translateY(0); } 50% { transform:scaleX(-1) translateY(-1.5%); } }
+</style>
+</head>
+<body>
+<img id="a" alt="">
+<script>
+const q = new URLSearchParams(location.search);
+document.getElementById("a").src = "auto-" + (q.get("a") || "lambo").replace(/[^a-z0-9]/g, "") + ".png?v=1";
+if (q.get("l") === "1") document.body.className = "l";
+</script>
+</body>
+</html>
