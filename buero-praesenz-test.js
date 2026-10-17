@@ -652,6 +652,77 @@
     return { remove: () => {
     } };
   }
+  var pokeListe = [];
+  var pokeOrte = [];
+  var pokeZaehler = 0;
+  var pokeAktiv = /* @__PURE__ */ new Map();
+  async function pokemonStarten() {
+    try {
+      pokeListe = (await (await fetch(SEITEN + "pokemon/pokemon.json?t=" + Date.now())).json()).filter((p) => p.bild);
+      pokeOrte = await (await fetch(SEITEN + "pokemon/orte.json?v=1")).json();
+    } catch {
+      return;
+    }
+    if (HANDY) pokeOrte = pokeOrte.filter((p) => p[1] < 88);
+    if (!pokeListe.length || !pokeOrte.length) return;
+    for (let k = 0; k < (HANDY ? 6 : 15); k++) pokeSetzen();
+    setInterval(() => {
+      const n = [...pokeAktiv.keys()];
+      if (!n.length) return;
+      pokeWeg(n[Math.floor(Math.random() * n.length)]);
+      pokeSetzen();
+    }, 24e4);
+  }
+  function pokeZiehen() {
+    const gew = pokeListe.map((p) => 1 / Math.pow(p.selten || 1, 2.2));
+    let r = Math.random() * gew.reduce((a, b) => a + b, 0);
+    for (let i = 0; i < gew.length; i++) {
+      r -= gew[i];
+      if (r <= 0) return pokeListe[i];
+    }
+    return pokeListe[0];
+  }
+  async function pokeSetzen() {
+    const p = pokeZiehen(), [x, y] = pokeOrte[Math.floor(Math.random() * pokeOrte.length)], name = "poke-" + ++pokeZaehler;
+    try {
+      const h = await WA.room.website.create({
+        name,
+        url: SEITEN + "poke.html?nr=" + p.nr + "&i=" + name,
+        visible: true,
+        allowApi: true,
+        origin: "map",
+        scale: 1,
+        position: { x: x * 32 - 8, y: y * 32 - 16, width: 48, height: 48 }
+      });
+      pokeAktiv.set(name, h);
+    } catch {
+    }
+  }
+  function pokeWeg(name) {
+    const h = pokeAktiv.get(name);
+    pokeAktiv.delete(name);
+    try {
+      WA.room.website.delete(name);
+    } catch {
+      try {
+        h && h.remove && h.remove();
+      } catch {
+      }
+    }
+  }
+  async function pokeGefangen(v) {
+    const name = String(v.i || ""), nr = Number(v.nr);
+    if (!pokeAktiv.has(name)) return;
+    setTimeout(() => pokeWeg(name), 450);
+    const p = pokeListe.find((x) => x.nr === nr);
+    let r = {};
+    try {
+      r = await (await fetch("https://swdigitaltest.de/buero-praesenz/pokemon/fang", { method: "POST", headers: { "X-Buero-Key": BUERO_KEY, "Content-Type": "application/json" }, body: JSON.stringify({ name: WA.player.name, nr }) })).json();
+    } catch {
+    }
+    kurzMeldung((r.neu ? "\u2728 Neu im Sammelbuch: " : "\u{1F389} Gefangen: ") + (p ? p.name : "Pok\xE9mon") + (r.arten ? " \xB7 " + r.arten + " / 151" : ""), 6e3);
+    setTimeout(() => pokeSetzen(), 6e4 + Math.random() * 12e4);
+  }
   function kurzMeldung(text, ms = 7e3) {
     try {
       const m = WA.ui.displayActionMessage({ message: text, callback: () => {
@@ -2571,6 +2642,7 @@
     ronPlatz();
     klingel();
     if (!HANDY) hundStarten();
+    pokemonStarten();
     profilKarten();
     wandGespraeche();
     if (HANDY) {
@@ -2644,6 +2716,8 @@
           ["sw-kalender", "Kalender", "kalender", () => glasFenster(SEITEN + "kalender.html?t=" + Date.now())],
           ["sw-wer", "Wer ist da", "wer", () => glasFenster(SEITEN + "wer.html?t=" + Date.now())],
           // 11.10.: Liste mit Live-Anzeige (Recht „live“)
+          ["sw-pokedex", "Pok\xE9mon", "pokedex", () => glasFenster(SEITEN + "pokedex.html?name=" + encodeURIComponent(WA.player.name || "") + "&t=" + Date.now())],
+          // 18.10.2026 Sammelbuch
           ["sw-mein-profil", "Profil", "profil", () => glasFenster(SEITEN + "profil.html?ich=1&tore=" + toreVon(WA.player.name || "") + "&t=" + Date.now())],
           ...tcAktiv ? [["sw-tagescheck", "Tages-Check", "tagescheck", () => glasFenster(SEITEN + "tagescheck.html?t=" + Date.now())]] : [],
           ...kzAktiv ? [["sw-arbeitszeit", "Arbeitszeit", "arbeitszeit", () => glasFenster(SEITEN + "kernzeit.html?t=" + Date.now())], ["sw-feierabend", "Feierabend", "feierabend", feierabendOeffnen]] : []
@@ -2773,6 +2847,7 @@
         if (v.was === "hinweisTipp") return hinweisGetippt(Number(v.nr) || 0);
         if (v.was === "team") return HANDY ? handyBlattUmschalten("team", SEITEN + "wer.html?sheet=1&t=" + Date.now(), "78vh") : glasFenster(SEITEN + "wer.html?t=" + Date.now());
         if (ZIMMER_AKTIONEN[v.was]) return ZIMMER_AKTIONEN[v.was](v);
+        if (v.was === "pokeFang") return pokeGefangen(v);
         if (v.was === "grundrissRaum") return grundrissRaum(String(v.name || ""));
         if (v.was === "grundrissPerson") return grundrissPerson(String(v.name || ""));
         if (v.was === "grundrissAus" || v.was === "appAus") return grundrissUmschalten(false);
