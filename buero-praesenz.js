@@ -803,8 +803,18 @@
     // Going Merry (One Piece)
     { name: "pearl", seite: "schiff.html?v=1&b=pearl", w: 160, h: 300, bahn: "fluss", dauer: 18e4 },
     // Black Pearl (Fluch der Karibik)
-    { name: "hollaender", seite: "schiff.html?v=1&b=hollaender", w: 160, h: 300, bahn: "fluss", dauer: 18e4 }
+    { name: "hollaender", seite: "schiff.html?v=1&b=hollaender", w: 160, h: 300, bahn: "fluss", dauer: 18e4 },
     // Fliegender Holländer (Geisterschiff)
+    { name: "bigmom", seite: "schiff.html?v=1&b=bigmom", w: 160, h: 300, bahn: "fluss", dauer: 18e4 },
+    // Queen Mama Chanter (Big Mom)
+    { name: "redforce", seite: "schiff.html?v=1&b=redforce", w: 160, h: 300, bahn: "fluss", dauer: 18e4 },
+    // Red Force (Shanks)
+    { name: "mobydick", seite: "schiff.html?v=1&b=mobydick", w: 160, h: 300, bahn: "fluss", dauer: 18e4 },
+    // Moby Dick (Whitebeard)
+    { name: "orojackson", seite: "schiff.html?v=1&b=orojackson", w: 160, h: 300, bahn: "fluss", dauer: 18e4 },
+    // Oro Jackson (Gol D. Roger)
+    { name: "polartang", seite: "schiff.html?v=1&b=polartang", w: 160, h: 300, bahn: "fluss", dauer: 18e4 }
+    // Polar Tang (Law)
   ];
   var paradeLaeuft = false;
   function paradeStarten() {
