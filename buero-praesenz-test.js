@@ -851,7 +851,7 @@
   function effekte() {
     schilderAktualisieren();
     for (const o of ((karte && karte.layers || []).find((l) => l.name === "floorLayer") || { objects: [] }).objects) {
-      if (!/^(Büro |Google Meet |Zoom |Teams )|^(Paris|Berlin|Lissabon|New York|Amsterdam|Moskau)$/.test(o.name)) continue;
+      if (!/^(Büro |Google Meet |Zoom |Teams |Zimmer \d)|^(Paris|Berlin|Lissabon|New York|Amsterdam|Moskau)$/.test(o.name)) continue;
       const an = aktuellerBereich === o.name || (info.belegt || []).includes(o.name);
       fx("fx-dunkel-" + o.name.normalize("NFD").replace(/[^A-Za-z0-9]/g, ""), !an);
     }
