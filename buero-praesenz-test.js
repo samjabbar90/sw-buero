@@ -720,7 +720,23 @@
       r = await (await fetch("https://swdigitaltest.de/buero-praesenz/pokemon/fang", { method: "POST", headers: { "X-Buero-Key": BUERO_KEY, "Content-Type": "application/json" }, body: JSON.stringify({ name: WA.player.name, nr }) })).json();
     } catch {
     }
-    kurzMeldung((r.neu ? "\u2728 Neu im Sammelbuch: " : "\u{1F389} Gefangen: ") + (p ? p.name : "Pok\xE9mon") + (r.arten ? " \xB7 " + r.arten + " / 151" : ""), 6e3);
+    try {
+      const w = await WA.ui.website.open({
+        url: SEITEN + "fang.html?nr=" + nr + "&name=" + encodeURIComponent(p ? p.name : "Pok\xE9mon") + "&neu=" + (r.neu ? 1 : 0) + "&anzahl=" + (r.anzahl || 1) + "&arten=" + (r.arten || 0) + "&t=" + Date.now(),
+        allowApi: false,
+        visible: true,
+        position: { vertical: "middle", horizontal: "middle" },
+        size: { width: HANDY ? "300px" : "380px", height: HANDY ? "330px" : "360px" }
+      });
+      setTimeout(() => {
+        try {
+          w.close();
+        } catch {
+        }
+      }, 4800);
+    } catch {
+      kurzMeldung((r.neu ? "\u2728 Neu! Du hast " : "Du hast ") + (p ? p.name : "Pok\xE9mon") + (r.neu ? " gefangen" : " erneut gefangen (" + (r.anzahl || 1) + "\xD7)") + (r.arten ? " \xB7 " + r.arten + " / 151" : ""), 6e3);
+    }
     setTimeout(() => pokeSetzen(), 36e5 + Math.random() * 18e5);
   }
   function kurzMeldung(text, ms = 7e3) {
