@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Shenlong</title>
+<style>
+  /* 17.10.2026 (Sam): alle 7 Dragon Balls gefunden – Kugeln kreisen, Himmel wird dunkel, Shenlong erscheint */
+  html, body { margin:0; height:100%; overflow:hidden; color-scheme:dark; font-family:system-ui, sans-serif; }
+  body { background:radial-gradient(circle at 50% 45%, #1e3a2a 0%, #0b1410 70%); color:#fff; display:flex; align-items:center; justify-content:center; }
+  .kreis { position:absolute; left:50%; top:44%; width:0; height:0; animation:drehen 6s linear infinite; }
+  .kreis img { position:absolute; width:42px; height:42px; margin:-21px; filter:drop-shadow(0 0 10px #fbbf24); }
+  .licht { position:absolute; left:50%; top:44%; width:10px; height:10px; margin:-5px; border-radius:50%; background:#fef3c7; box-shadow:0 0 60px 40px rgba(251,191,36,.55); animation:licht 2.4s ease-in-out infinite; }
+  .drache { position:absolute; left:50%; top:44%; transform:translate(-50%, -50%); width:300px; max-width:80vw; opacity:0; animation:da 1.6s ease-out 1.2s forwards; filter:drop-shadow(0 0 18px #4ade80); }
+  .text { position:absolute; bottom:22px; left:0; right:0; text-align:center; }
+  .text b { display:block; font-size:21px; color:#fde68a; text-shadow:0 2px 6px #000; }
+  .text span { font-size:14px; opacity:.9; }
+  @keyframes drehen { to { transform:rotate(360deg); } }
+  @keyframes licht { 0%,100% { transform:scale(1); } 50% { transform:scale(1.5); } }
+  @keyframes da { from { opacity:0; transform:translate(-50%, -40%) scale(.6); } to { opacity:1; transform:translate(-50%, -50%) scale(1); } }
+</style>
+</head>
+<body>
+<div class="licht"></div>
+<div class="kreis" id="k"></div>
+<img class="drache" id="d" alt="" onerror="this.remove()">
+<div class="text"><b>🐉 Shenlong erscheint!</b><span id="t">Du hast alle 7 Dragon Balls gefunden – du stehst jetzt in der Ruhmeshalle.</span></div>
+<script>
+// Die 7 Kugeln als kleine Bilder aus db.html-Zeichnung (Canvas → Bild), im Kreis um das Licht
+const k = document.getElementById("k");
+for (let s = 1; s <= 7; s++) { const c = document.createElement("canvas"); c.width = c.height = 64; const g = c.getContext("2d");
+  const gr = g.createRadialGradient(24, 22, 3, 32, 32, 28); gr.addColorStop(0, "#fff7d6"); gr.addColorStop(.3, "#fdba3b"); gr.addColorStop(1, "#c2620a"); g.fillStyle = gr; g.beginPath(); g.arc(32, 32, 28, 0, 7); g.fill();
+  g.fillStyle = "#dc2626"; g.font = "bold 20px sans-serif"; g.textAlign = "center"; g.fillText("★".repeat(Math.min(s, 3)), 32, 30); if (s > 3) g.fillText("★".repeat(s - 3), 32, 48);
+  const i = document.createElement("img"), a = (s - 1) / 7 * Math.PI * 2; i.src = c.toDataURL(); i.style.left = Math.cos(a) * 110 + "px"; i.style.top = Math.sin(a) * 110 + "px"; k.appendChild(i); }
+// Shenlong-Bild, sobald Sam eins schickt (shenlong.png); fehlt es, bleibt nur das Licht
+document.getElementById("d").src = "shenlong.png?v=1";
+</script>
+</body>
+</html>

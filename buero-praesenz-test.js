@@ -702,6 +702,86 @@
       }
     }
     for (const id of [...pokeAktiv.keys()]) if (!da.has(id)) pokeWeg(id);
+    for (const t of d.tauschEin || []) if (!pokeGesehen.has("t" + t.id)) {
+      pokeGesehen.add("t" + t.id);
+      kurzMeldung("\u{1F504} " + t.von + " m\xF6chte mit dir Pok\xE9mon tauschen \u2013 \u{1F4D5} Sammelbuch \u203A Tausch", 9e3);
+    }
+    for (const x of d.ruhmNeu || []) if (!pokeGesehen.has("r" + x.id)) {
+      pokeGesehen.add("r" + x.id);
+      if (ruhmGeladen) kurzMeldung("\u{1F409} " + x.name + " hat alle 7 Dragon Balls gefunden und Shenlong gerufen!", 9e3);
+    }
+    ruhmGeladen = true;
+    dbAbgleich();
+  }
+  var ruhmGeladen = false;
+  var dbAktiv = /* @__PURE__ */ new Map();
+  async function dbAbgleich() {
+    let d;
+    try {
+      d = await (await fetch(POKE_API + "/db?name=" + encodeURIComponent(WA.player.name || ""), { headers: { "X-Buero-Key": BUERO_KEY } })).json();
+    } catch {
+      return;
+    }
+    const offen = /* @__PURE__ */ new Set();
+    for (const k of d.kugeln || []) {
+      if (k.gefunden) continue;
+      offen.add(k.s);
+      if (dbAktiv.has(k.s)) continue;
+      try {
+        const h = await WA.room.website.create({
+          name: "db-" + k.s,
+          url: SEITEN + "db.html?v=1&s=" + k.s,
+          visible: true,
+          allowApi: true,
+          origin: "map",
+          scale: 1,
+          position: { x: k.x * 32 + 4, y: k.y * 32 + 2, width: 26, height: 26 }
+        });
+        dbAktiv.set(k.s, h);
+      } catch {
+      }
+    }
+    for (const s of [...dbAktiv.keys()]) if (!offen.has(s)) dbWeg(s);
+  }
+  function dbWeg(s) {
+    dbAktiv.delete(s);
+    try {
+      WA.room.website.delete("db-" + s);
+    } catch {
+    }
+  }
+  async function dbGefunden(v) {
+    const s = Number(v.s) || 0;
+    if (!s) return;
+    setTimeout(() => dbWeg(s), 500);
+    let r = {};
+    try {
+      const a = await fetch(POKE_API + "/db/fund", { method: "POST", headers: { "X-Buero-Key": BUERO_KEY, "Content-Type": "application/json" }, body: JSON.stringify({ name: WA.player.name, s }) });
+      r = await a.json();
+      if (!a.ok) {
+        kurzMeldung("\u{1F4A8} " + (r.error || "Weg!"), 5e3);
+        return;
+      }
+    } catch {
+      return;
+    }
+    if (r.alle) {
+      try {
+        const w = await WA.ui.website.open({ url: SEITEN + "shenlong.html?t=" + Date.now(), allowApi: false, visible: true, position: { vertical: "middle", horizontal: "middle" }, size: { width: HANDY ? "320px" : "520px", height: HANDY ? "420px" : "460px" } });
+        setTimeout(() => {
+          try {
+            w.close();
+          } catch {
+          }
+        }, 9e3);
+      } catch {
+        kurzMeldung("\u{1F409} Alle 7 Dragon Balls! Shenlong erscheint \u2013 du stehst in der Ruhmeshalle.", 9e3);
+      }
+    } else kurzMeldung("\u{1F409} Dragon Ball " + "\u2605".repeat(s) + " gefunden \u2013 " + r.anzahl + " / 7 diese Woche", 6e3);
+    erfolgeZeigen(r.neueErfolge);
+  }
+  function erfolgeZeigen(liste) {
+    (liste || []).forEach((e, i) => setTimeout(() => kurzMeldung("\u{1F3C5} Neuer Erfolg: " + e.icon + " " + e.name + " \u2013 " + e.text, 8e3), 6500 * (i + 1)));
   }
   function pokeWeg(id) {
     const e = pokeAktiv.get(id);
@@ -732,6 +812,7 @@
       return;
     }
     setTimeout(pokeAbgleich, 1200);
+    erfolgeZeigen(r.neueErfolge);
     if (r.raid && !r.geschafft) {
       kurzMeldung("\u2694\uFE0F Raid: " + r.treffer + " von " + r.noetig + " dabei \u2013 holt Verst\xE4rkung, dann bekommt ihr " + (p ? p.name : "es") + " alle!", 9e3);
       return;
@@ -3077,6 +3158,7 @@
         if (v.was === "hinweisTipp") return hinweisGetippt(Number(v.nr) || 0);
         if (v.was === "team") return HANDY ? handyBlattUmschalten("team", SEITEN + "wer.html?sheet=1&t=" + Date.now(), "78vh") : glasFenster(SEITEN + "wer.html?t=" + Date.now());
         if (ZIMMER_AKTIONEN[v.was]) return ZIMMER_AKTIONEN[v.was](v);
+        if (v.was === "dbFund") return dbGefunden(v);
         if (v.was === "pokeFang") return pokeGefangen(v);
         if (v.was === "grundrissRaum") return grundrissRaum(String(v.name || ""));
         if (v.was === "grundrissPerson") return grundrissPerson(String(v.name || ""));

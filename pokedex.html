@@ -30,6 +30,24 @@
   html.glas .k.leer, html.glas .k .fragez { color:rgba(255,255,255,.5) !important; }
   html.glas .z { background:rgba(10,11,14,.68) !important; } html.glas .z .na { color:#fff; } html.glas .z .w { color:#fca5a5; }
   html.glas .z.ich { background:rgba(220,38,38,.3) !important; border-color:#fca5a5 !important; } html.glas .leer2 { color:rgba(255,255,255,.75); }
+  /* 17.10.2026: Dragon Balls, Erfolge, Tausch */
+  .reiter { flex-wrap:wrap; justify-content:flex-end; }
+  .kugeln { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin:6px 0 16px; } .kugel { width:56px; text-align:center; font-size:12px; font-weight:700; }
+  .kugel .o { width:48px; height:48px; border-radius:50%; margin:0 auto 4px; background:radial-gradient(circle at 35% 30%, #fff7d6, #fdba3b 30%, #c2620a); color:#dc2626; display:flex; align-items:center; justify-content:center; font-size:11px; line-height:1; flex-wrap:wrap; padding:6px; }
+  .kugel.nein .o { filter:grayscale(1) opacity(.3); }
+  h3 { margin:14px 0 8px; font-size:15px; } .hin { font-size:13px; color:#64748b; margin:0 0 10px; }
+  .e { display:flex; align-items:center; gap:12px; background:#fff; border:1.5px solid #e2e8f0; border-radius:10px; padding:9px 12px; margin-bottom:8px; }
+  .e .i { font-size:26px; width:34px; text-align:center; } .e.nein { opacity:.45; } .e .t1 { font-weight:800; } .e .t2 { font-size:12.5px; color:#64748b; }
+  .tz { display:flex; align-items:center; gap:8px; background:#fff; border:1.5px solid #e2e8f0; border-radius:10px; padding:8px 10px; margin-bottom:8px; flex-wrap:wrap; }
+  .tz img { width:40px; height:40px; object-fit:contain; } .tz .f { flex:1; min-width:140px; font-size:13.5px; }
+  .kn { border:0; border-radius:8px; padding:6px 10px; font-weight:700; cursor:pointer; background:#dc2626; color:#fff; } .kn.grau { background:#e2e8f0; color:#0f172a; } .kn:disabled { opacity:.4; cursor:default; }
+  select { padding:6px; border-radius:8px; border:1.5px solid #cbd5e1; font:inherit; max-width:100%; }
+  .wahl { display:grid; grid-template-columns:repeat(auto-fill, minmax(72px, 1fr)); gap:6px; margin:6px 0 10px; }
+  .wahl div { border:2px solid #e2e8f0; border-radius:8px; text-align:center; font-size:11px; cursor:pointer; padding:3px; background:#fff; } .wahl div.an { border-color:#dc2626; background:#fef2f2; }
+  .wahl img { width:44px; height:44px; object-fit:contain; }
+  html.glas .e, html.glas .tz, html.glas .wahl div { background:rgba(10,11,14,.68) !important; color:#fff; border-color:rgba(255,255,255,.22) !important; }
+  html.glas .e .t2, html.glas .hin { color:rgba(255,255,255,.75); } html.glas .wahl div.an { border-color:#fca5a5 !important; background:rgba(220,38,38,.3) !important; }
+  html.glas h3, html.glas .kugel { color:#fff; }
   html.glas header { background:rgba(127,29,29,.75) !important; padding-right:190px !important; }
 </style>
 <script src="glas.js?v=1792088168"></script>
@@ -37,7 +55,7 @@
 </head>
 <body>
 <header><div><h1>📕 Sammelbuch</h1><div class="u" id="u">Lade …</div></div>
-  <div class="reiter"><button id="r1" class="an">Meine</button><button id="r2">Rangliste</button></div></header>
+  <div class="reiter"><button id="r1" class="an">Meine</button><button id="r2">Rangliste</button><button id="r3">🐉 Dragon Balls</button><button id="r4">🏅 Erfolge</button><button id="r5">🔄 Tausch</button></div></header>
 <main id="m"><div class="leer2">Lade …</div></main>
 <script>
 // Pokémon-Sammelbuch (18.10.2026, Sam): alle 151, gefangene farbig, fehlende als Schatten; Rangliste im Team
@@ -47,7 +65,8 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;",
 function zeigen() {
   const m = document.getElementById("m"), hab = new Map(daten.meine.map(x => [x.nr, x.anzahl]));
   document.getElementById("u").textContent = hab.size + " von 151 gefunden · " + [...hab.values()].reduce((s, x) => s + x, 0) + " gefangen";
-  document.getElementById("r1").className = reiter === 1 ? "an" : ""; document.getElementById("r2").className = reiter === 2 ? "an" : "";
+  for (let i = 1; i <= 5; i++) document.getElementById("r" + i).className = reiter === i ? "an" : "";
+  if (reiter === 3) return dbZeigen(m); if (reiter === 4) return erfolgeZeigen(m); if (reiter === 5) return tauschZeigen(m);
   if (reiter === 2) { m.innerHTML = daten.rang.length ? daten.rang.map(r => `<div class="z${r.ich ? " ich" : ""}"><div class="pl">${r.platz <= 3 ? ["🥇", "🥈", "🥉"][r.platz - 1] : r.platz + "."}</div><div class="na">${esc(r.name)}</div><div class="w">${r.arten} / 151</div></div>`).join("") : '<div class="leer2">Noch hat niemand etwas gefangen.</div>'; return; }
   m.innerHTML = '<div class="gitter">' + liste.map(p => { const n = hab.get(p.nr), num = "#" + String(p.nr).padStart(3, "0");
     if (!p.bild) return `<div class="k leer"><div class="fragez">?</div><div class="nr">${num}</div><div class="n">kommt bald</div></div>`;
@@ -58,7 +77,54 @@ async function laden() {
   try { daten = await (await fetch(API + "?name=" + encodeURIComponent(NAME), { headers: { "X-Buero-Key": KEY } })).json(); } catch { }
   zeigen();
 }
-document.getElementById("r1").onclick = () => { reiter = 1; zeigen(); }; document.getElementById("r2").onclick = () => { reiter = 2; zeigen(); };
+for (let i = 1; i <= 5; i++) document.getElementById("r" + i).onclick = async () => { reiter = i; if (i >= 3) await extraLaden(); zeigen(); };
+// ===== 17.10.2026 (Sam): Dragon Balls, Erfolge, Pokémon-Tausch
+const H = { "X-Buero-Key": KEY }, nameVon = nr => (liste.find(p => p.nr === nr) || {}).name || "#" + nr, bildVon = nr => "pokemon/" + String(nr).padStart(3, "0") + ".png?v=2";
+let ex = { db: null, erfolge: null, tausch: null }, tw = { an: "", will: 0, gib: 0 }, meldung = "";
+async function extraLaden() {
+  const n = encodeURIComponent(NAME);
+  try { if (reiter === 3) ex.db = await (await fetch(API + "/db?name=" + n, { headers: H })).json();
+    if (reiter === 4) ex.erfolge = await (await fetch(API + "/erfolge?name=" + n, { headers: H })).json();
+    if (reiter === 5) ex.tausch = await (await fetch(API + "/tausch?name=" + n, { headers: H })).json(); } catch { }
+}
+function dbZeigen(m) {
+  const d = ex.db || { kugeln: [], ruhm: [] }, gef = (d.kugeln || []).filter(k => k.gefunden).length;
+  m.innerHTML = '<h3>Deine Dragon Balls diese Woche: ' + gef + ' / 7</h3><p class="hin">Jede Woche liegen für jeden 7 eigene Kugeln draußen versteckt – halb im Gras. Alle 7 gefunden: Shenlong erscheint und du kommst in die Ruhmeshalle.</p><div class="kugeln">'
+    + (d.kugeln || []).map(k => '<div class="kugel' + (k.gefunden ? "" : " nein") + '"><div class="o">' + "★".repeat(k.s) + '</div>' + k.s + ' ★</div>').join("") + '</div>'
+    + '<h3>🏆 Ruhmeshalle</h3>' + ((d.ruhm || []).length ? d.ruhm.map(x => '<div class="z"><div class="pl">🐉</div><div class="na">' + esc(x.name) + '</div><div class="w">' + esc(x.woche.replace("-W", " · KW ")) + '</div></div>').join("") : '<div class="leer2">Noch hat niemand Shenlong gerufen.</div>');
+}
+function erfolgeZeigen(m) {
+  const l = (ex.erfolge || {}).liste || [], n = l.filter(e => e.erreicht).length;
+  m.innerHTML = '<h3>' + n + ' von ' + l.length + ' Erfolgen</h3>' + l.map(e => '<div class="e' + (e.erreicht ? "" : " nein") + '"><div class="i">' + e.icon + '</div><div><div class="t1">' + esc(e.name) + '</div><div class="t2">' + esc(e.text) + (e.erreicht ? " · seit " + new Date(e.erreicht).toLocaleDateString("de-DE") : "") + '</div></div></div>').join("");
+}
+function tauschZeigen(m) {
+  const t = ex.tausch || { liste: [], leute: [], meineDoppelt: [] }, ST = { offen: "offen", angenommen: "✅ getauscht", abgelehnt: "❌ abgelehnt", zurueck: "zurückgezogen", ungueltig: "nicht mehr möglich" };
+  let h = meldung ? '<p class="hin"><b>' + esc(meldung) + '</b></p>' : "";
+  const offenEin = (t.liste || []).filter(x => x.ein && x.status === "offen");
+  if (offenEin.length) h += '<h3>Angebote an dich</h3>' + offenEin.map(x => '<div class="tz"><img src="' + bildVon(x.gib) + '"><div class="f"><b>' + esc(x.mit) + '</b> gibt dir <b>' + esc(nameVon(x.gib)) + '</b> und möchte dein <b>' + esc(nameVon(x.will)) + '</b></div><img src="' + bildVon(x.will) + '"><button class="kn" data-a="' + x.id + '" data-ja="1">Annehmen</button><button class="kn grau" data-a="' + x.id + '" data-ja="0">Ablehnen</button></div>').join("");
+  h += '<h3>Neues Angebot</h3>';
+  if (!(t.meineDoppelt || []).length) h += '<p class="hin">Du hast noch keine doppelten Pokémon. Getauscht werden nur Doppelte – so verliert niemand eine Art.</p>';
+  else if (!(t.leute || []).length) h += '<p class="hin">Gerade hat kein Kollege doppelte Pokémon.</p>';
+  else {
+    h += '<p class="hin">Du gibst ein Doppeltes und bekommst eins von deinem Kollegen. Er muss annehmen.</p><select id="an"><option value="">Kollegen wählen …</option>' + t.leute.map(p => '<option value="' + p.id + '"' + (tw.an === p.id ? " selected" : "") + '>' + esc(p.name) + ' (' + p.doppelt.length + ' doppelt)</option>').join("") + '</select>';
+    const k = t.leute.find(p => p.id === tw.an);
+    if (k) h += '<h3>Das möchtest du von ' + esc(k.name) + '</h3><div class="wahl">' + k.doppelt.map(nr => '<div data-will="' + nr + '" class="' + (tw.will === nr ? "an" : "") + '"><img src="' + bildVon(nr) + '"><br>' + esc(nameVon(nr)) + '</div>').join("") + '</div>'
+      + '<h3>Das gibst du</h3><div class="wahl">' + t.meineDoppelt.map(nr => '<div data-gib="' + nr + '" class="' + (tw.gib === nr ? "an" : "") + '"><img src="' + bildVon(nr) + '"><br>' + esc(nameVon(nr)) + '</div>').join("") + '</div>'
+      + '<button class="kn" id="senden"' + (tw.will && tw.gib ? "" : " disabled") + '>Tausch anbieten</button>';
+  }
+  const rest = (t.liste || []).filter(x => !(x.ein && x.status === "offen"));
+  if (rest.length) h += '<h3>Deine Tauschgeschäfte</h3>' + rest.map(x => '<div class="tz"><div class="f">' + (x.ein ? esc(x.mit) + " → dir" : "Du → " + esc(x.mit)) + ': ' + esc(nameVon(x.gib)) + ' ⇄ ' + esc(nameVon(x.will)) + ' · ' + ST[x.status] + '</div>' + (!x.ein && x.status === "offen" ? '<button class="kn grau" data-a="' + x.id + '" data-ja="0">Zurückziehen</button>' : "") + '</div>').join("");
+  m.innerHTML = h;
+  const an = document.getElementById("an"); if (an) an.onchange = () => { tw = { an: an.value, will: 0, gib: 0 }; meldung = ""; zeigen(); };
+  m.querySelectorAll("[data-will]").forEach(e => e.onclick = () => { tw.will = Number(e.dataset.will); zeigen(); });
+  m.querySelectorAll("[data-gib]").forEach(e => e.onclick = () => { tw.gib = Number(e.dataset.gib); zeigen(); });
+  const sd = document.getElementById("senden"); if (sd) sd.onclick = () => senden({ name: NAME, an: tw.an, gib: tw.gib, will: tw.will }, "Angebot geschickt – dein Kollege bekommt einen Hinweis im Büro.");
+  m.querySelectorAll("[data-a]").forEach(e => e.onclick = () => senden({ name: NAME, id: e.dataset.a, ja: e.dataset.ja === "1" }, e.dataset.ja === "1" ? "Getauscht! 🎉" : "Erledigt."));
+}
+async function senden(body, ok) {
+  try { const r = await fetch(API + "/tausch", { method: "POST", headers: { ...H, "Content-Type": "application/json" }, body: JSON.stringify(body) }), d = await r.json(); meldung = r.ok ? ok : (d.error || "Hat nicht geklappt."); } catch { meldung = "Keine Verbindung."; }
+  tw = { an: "", will: 0, gib: 0 }; await extraLaden(); try { daten = await (await fetch(API + "?name=" + encodeURIComponent(NAME), { headers: H })).json(); } catch { } zeigen();
+}
 let geladen = false; const los = () => { if (!geladen) { geladen = true; laden(); } };
 if (NAME) los(); else if (window.WA) { WA.onInit().then(() => { NAME = WA.player.name || ""; los(); }).catch(los); setTimeout(los, 2500); } else los();
 </script>
