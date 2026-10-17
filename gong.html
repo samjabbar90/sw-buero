@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Feierabend-Gong</title>
+<style>
+  /* 17.10.2026 (Sam): um 16 Uhr fliegt Goku (SSJ3) vorbei und sagt, dass die Kernarbeitszeit vorbei ist */
+  html, body { margin:0; height:100%; background:transparent; overflow:hidden; color-scheme:dark; font-family:system-ui, sans-serif; }
+  .blase { position:absolute; right:8px; top:0; background:#fff; color:#111827; font-weight:800; font-size:17px; line-height:1.25; padding:8px 12px; border-radius:14px;
+    border:3px solid #111827; box-shadow:0 3px 0 rgba(0,0,0,.25); text-align:center; white-space:nowrap; animation:wippen 1s ease-in-out infinite; }
+  .blase:after { content:""; position:absolute; right:46px; bottom:-14px; border:8px solid transparent; border-top:10px solid #111827; }
+  img { position:absolute; left:0; bottom:0; width:288px; height:144px; animation:schweben .8s ease-in-out infinite; }
+  @keyframes schweben { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-5%); } }
+  @keyframes wippen { 0%,100% { transform:rotate(-2deg); } 50% { transform:rotate(2deg); } }
+  body.links img { transform:scaleX(-1); animation:none; }
+</style>
+</head>
+<body>
+<div class="blase">Kernarbeitszeit ist vorbei! 🎉<br><span style="font-weight:600;font-size:13px">Schönen Feierabend – wer mag 😄</span></div>
+<img src="flieger-goku.png?v=2" alt="">
+</body>
+</html>

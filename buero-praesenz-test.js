@@ -912,6 +912,43 @@
       return;
     }
   }
+  var gongGezeigt = "";
+  function gongStarten() {
+    setInterval(gongPruefen, 3e3);
+    gongPruefen();
+  }
+  async function gongPruefen() {
+    const jetzt = Date.now(), b = new Date(jetzt).toLocaleString("sv-SE", { timeZone: "Europe/Berlin" }), tag = b.slice(0, 10);
+    const wt = (/* @__PURE__ */ new Date(tag + "T12:00:00Z")).getUTCDay();
+    if (wt === 0 || wt === 6 || b.slice(11, 16) !== "16:00" || gongGezeigt === tag) return;
+    gongGezeigt = tag;
+    const start = Math.floor(jetzt / 6e4) * 6e4, dauer = 45e3;
+    kurzMeldung("\u{1F409} Goku: Die Kernarbeitszeit ist vorbei! Sch\xF6nen Feierabend \u2013 wer mag \u{1F604}", 12e3);
+    if (HANDY || jetzt - start > dauer - 3e3) return;
+    const y = 9 * 32, B = 236 * 32 + 320;
+    let h = null;
+    try {
+      h = await WA.room.website.create({ name: "gong", url: SEITEN + "gong.html?v=1", visible: true, allowApi: false, origin: "map", scale: 1, position: { x: -320, y, width: 320, height: 210 } });
+    } catch {
+      return;
+    }
+    const tick = setInterval(() => {
+      const t = (Date.now() - start) / dauer;
+      if (t >= 1) {
+        clearInterval(tick);
+        try {
+          WA.room.website.delete("gong");
+        } catch {
+        }
+        return;
+      }
+      try {
+        h.x = Math.round(-320 + t * B);
+        h.y = Math.round(y + Math.sin(t * 10) * 8);
+      } catch {
+      }
+    }, 80);
+  }
   function kurzMeldung(text, ms = 7e3) {
     try {
       const m = WA.ui.displayActionMessage({ message: text, callback: () => {
@@ -2833,6 +2870,7 @@
     if (!HANDY) hundStarten();
     pokemonStarten();
     paradeStarten();
+    gongStarten();
     fliegerStarten();
     gokuStarten();
     profilKarten();
