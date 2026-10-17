@@ -1093,7 +1093,8 @@
     { name: "poster-ferhat", srv: "ferhat-poster.webp", x: MI(1.95 + DX), y: 48.75, w: 2.2, h: 1, unsichtbar: true }
   ];
   function posterAufhaengen() {
-    for (const p of POSTER) {
+    const POSTER_AKTIV = true ? [] : POSTER;
+    for (const p of POSTER_AKTIV) {
       if (p.ohneWhiteboard) {
         const t = [];
         for (let x = p.ohneWhiteboard.x; x < p.ohneWhiteboard.x + p.ohneWhiteboard.w; x++) for (let y = p.ohneWhiteboard.y; y < p.ohneWhiteboard.y + p.ohneWhiteboard.h; y++) t.push({ x, y, tile: null, layer: "fx-ideen" });
