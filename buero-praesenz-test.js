@@ -1,0 +1,2900 @@
+(() => {
+  // main.ts
+  var ENDPOINT = "https://swdigitaltest.de/buero-praesenz/melden";
+  var BUERO_KEY = "a21b2aa2a42fe6189b05773c07bbc9ad78e38b34ba3bb6fe";
+  var DASHBOARD = "https://swdigitaltest.de";
+  var SITZUNG = Math.random().toString(36).slice(2) + Date.now().toString(36);
+  var DY = 26;
+  var MI = (x) => x >= 48 ? x + 8 : x;
+  var MI32 = (px) => px >= 48 * 32 ? px + 256 : px;
+  var DX = 2;
+  var HANDY = (screen.width || 1200) < 768 || /Android|iPhone|iPod|Mobile/i.test(navigator.userAgent);
+  var aktuellerBereich = null;
+  var beendet = false;
+  var bereit = Promise.resolve();
+  var position = null;
+  var gespraech = /* @__PURE__ */ new Set();
+  var zuletztGemeldet = 0;
+  function beenden() {
+    if (beendet) return;
+    beendet = true;
+    WA.ui.displayActionMessage({
+      message: "Du bist an einem anderen Ort ins B\xFCro gegangen \u2013 diese Sitzung wird beendet.",
+      callback: () => rausZu(DASHBOARD)
+    });
+    setTimeout(() => rausZu(DASHBOARD), 4e3);
+  }
+  function rausZu(url) {
+    try {
+      WA.player.state.saveVariable("swGehtRaus", Date.now(), { public: false, persist: false });
+    } catch {
+    }
+    setTimeout(() => WA.nav.goToPage(url), 150);
+  }
+  var mitteilungen = [];
+  var mtFenster = null;
+  var mtAnzahl = -1;
+  var mtLage = "";
+  function mitteilung(m, autoWegMs = 0) {
+    const id = Math.random().toString(36).slice(2, 9);
+    mitteilungen = [{ ...m, id, t: Date.now() }, ...mitteilungen].slice(0, 5);
+    if (m.art === "klopfen") ton("klopfen");
+    else if (m.art === "termin" || m.art === "nachricht") ton("klingel");
+    mtZeigen();
+    if (autoWegMs) setTimeout(() => mtWeg(id), autoWegMs);
+    return id;
+  }
+  function mtWeg(id) {
+    const n = mitteilungen.length;
+    mitteilungen = mitteilungen.filter((x) => x.id !== id);
+    if (mitteilungen.length !== n) mtZeigen();
+  }
+  async function mtZeigen() {
+    try {
+      await WA.player.state.saveVariable("swMitteilungen", mitteilungen, { public: false, persist: false });
+    } catch {
+    }
+    if (HANDY && grundriss) return;
+    let rechts = 12;
+    if (glasOffen) {
+      try {
+        const g = glasLage();
+        if (g.position && g.position.horizontal === "right") rechts = parseInt(g.margin.right) + parseInt(g.size.width) + 10;
+      } catch {
+      }
+    }
+    const lage = mitteilungen.length + ":" + rechts;
+    if (lage === mtLage && mtFenster) return;
+    mtLage = lage;
+    const alt = mtFenster;
+    mtFenster = null;
+    if (mitteilungen.length) try {
+      mtFenster = await WA.ui.website.open({
+        url: SEITEN + "mitteilungen.html?v=4",
+        allowApi: true,
+        visible: true,
+        position: { vertical: "top", horizontal: HANDY ? "middle" : "right" },
+        size: {
+          width: HANDY ? Math.min(360, Math.round((screen.width || 390) - 16)) + "px" : "330px",
+          height: mitteilungen.reduce((s, x) => {
+            const t = String((x.art === "info" ? x.kurz : x.text) || ""), z = Math.ceil(t.length / (HANDY ? 36 : 40));
+            return s + 104 + Math.max(0, Math.min(x.art === "info" || x.art === "push" ? 10 : x.art === "nachricht" ? 3 : 1, z) - 1) * 18;
+          }, 0) + 8 + "px"
+          /* 16.10.2026: Höhe nach Textlänge */
+        },
+        margin: HANDY ? { top: "110px" } : { top: "64px", right: rechts + "px" }
+      });
+    } catch {
+    }
+    try {
+      alt && alt.close();
+    } catch {
+    }
+    void mtAnzahl;
+  }
+  var MT_AKTIONEN = {
+    mtWeg: (m) => mtWeg(m.id),
+    mtReinlassen: (m) => {
+      try {
+        WA.event.broadcast("sw-reinlassen", { fuer: m.von, variable: m.variable });
+      } catch {
+      }
+      mtWeg(m.id);
+    },
+    mtGleich: (m) => {
+      try {
+        WA.event.broadcast("sw-gleich", { fuer: m.von, von: WA.player.name });
+      } catch {
+      }
+      mtWeg(m.id);
+    },
+    mtHin: (m) => {
+      if (m.raum) zuRaum(m.raum);
+      mtWeg(m.id);
+    },
+    mtChat: (m) => {
+      glasFenster(SEITEN + "wer.html?an=" + encodeURIComponent(m.von || "") + "&t=" + Date.now());
+      mtWeg(m.id);
+    },
+    mtPush: (m) => {
+      glasFenster(SEITEN + "push-start.html?t=" + Date.now());
+      mtWeg(m.id);
+    }
+    // 16.10.2026: Benachrichtigungen auf diesem Gerät
+  };
+  var nachrichtHinweis = null;
+  var pushHinweisGezeigt = false;
+  function nachrichtZeigen(m) {
+    {
+      mitteilung({ art: "nachricht", von: m.von, text: String(m.text || "").slice(0, 300) });
+      return;
+    }
+    try {
+      nachrichtHinweis && nachrichtHinweis.remove();
+    } catch {
+    }
+    const vorname2 = String(m.von || "").split(" ")[0];
+    try {
+      nachrichtHinweis = WA.ui.displayActionMessage({
+        message: `\u{1F4AC} ${vorname2}: ${String(m.text || "").slice(0, 140)} \xB7 Leertaste = antworten`,
+        callback: () => {
+          nachrichtHinweis = null;
+          glasFenster(SEITEN + "wer.html?an=" + encodeURIComponent(m.von) + "&t=" + Date.now());
+        }
+      });
+      const h = nachrichtHinweis;
+      setTimeout(() => {
+        try {
+          if (nachrichtHinweis === h) {
+            h.remove();
+            nachrichtHinweis = null;
+          }
+        } catch {
+        }
+      }, 3e4);
+    } catch {
+    }
+  }
+  function melden(event, start = false) {
+    if (beendet || gesperrt && event !== "verlassen") return Promise.resolve();
+    zuletztGemeldet = Date.now();
+    const meine = meineTuer();
+    return fetch(ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Buero-Key": BUERO_KEY },
+      body: JSON.stringify({
+        name: WA.player.name,
+        bereich: aktuellerBereich,
+        event,
+        sitzung: SITZUNG,
+        start,
+        tuer: meine ? { raum: meine.raum, status: tuerStatus(meine) } : null,
+        pos: position,
+        gespraech: [...gespraech],
+        ruhe: Date.now() - letzteAktivitaet,
+        handy: HANDY,
+        ...start ? { karte: String(WA.room.mapURL || "").slice(0, 300) } : {}
+      }),
+      // karte: welche Karten-Datei geladen ist (13.10., Umbau Mandanten-Stockwerk) // handy: am Handy bleibt man drin, bis man sich abmeldet (12.10., Sam) // 12.10.: ms seit der letzten Bewegung — der Server rechnet alle Aktivitäten zusammen (10 Min Ruhe → raus)
+      keepalive: true
+    }).then((r) => r.json()).then((d) => {
+      if (d && typeof d.system === "boolean") mitSystemZeit = d.system;
+      if (d && Array.isArray(d.nachrichten)) for (const m of d.nachrichten) nachrichtZeigen(m);
+      if (d && Array.isArray(d.termine)) termineErinnern(d.termine);
+      if (d && Array.isArray(d.glocke)) for (const g of d.glocke) mitteilung({ art: "info", kurz: String(g.text || "").slice(0, 200) }, 6e4);
+      if (d && d.pushAktiv === false && !pushHinweisGezeigt) {
+        pushHinweisGezeigt = true;
+        setTimeout(() => mitteilung({ art: "push", kurz: "Benachrichtigungen aktivieren", text: "Damit du Nachrichten und Anklopfen auch siehst, wenn das B\xFCro im Hintergrund ist." }), 15e3);
+      }
+      if (d && d.inaktiv) return wegVomRechner();
+      if (d && d.abgeloest) beenden();
+    }).catch(() => {
+    });
+  }
+  var ERSATZ_BEREICHE = [
+    "B\xFCro Sam",
+    "B\xFCro Emre",
+    "B\xFCro Kadir",
+    "B\xFCro Noura",
+    "Townhall",
+    "B\xFCro Attila",
+    "B\xFCro Ferhat",
+    "B\xFCro Angelina",
+    "B\xFCro Leutrim",
+    "Besprechung 1",
+    "Besprechung 2",
+    "B\xFCro Katharina",
+    "B\xFCro Tanja",
+    "B\xFCro Kerstin",
+    "B\xFCro Kubilay",
+    "B\xFCro Bin",
+    "B\xFCro Ilona",
+    "K\xFCche & Kaffee",
+    "B\xFCro Angelika",
+    "B\xFCro Bahjat",
+    "B\xFCro Christiane",
+    "B\xFCro Dilber",
+    "B\xFCro Fatih",
+    "B\xFCro Jana",
+    "B\xFCro Julien",
+    "B\xFCro Leonita",
+    "B\xFCro Onur",
+    "Chill-Zone"
+  ];
+  var karte = null;
+  async function ladeKarte() {
+    if (karte) return karte;
+    let k = await (await fetch(WA.room.mapURL)).json();
+    if (!k.layers && k.mapUrl) k = await (await fetch(new URL(k.mapUrl, WA.room.mapURL).toString())).json();
+    return karte = k;
+  }
+  async function kartenBereiche() {
+    try {
+      const karte2 = await ladeKarte();
+      const namen = [];
+      const lauf = (ls) => ls.forEach((l) => {
+        if (l.type === "group") lauf(l.layers || []);
+        if (l.type === "objectgroup") (l.objects || []).forEach((o) => {
+          if ((o.class === "area" || o.type === "area") && o.name && o.name !== "start" && !o.name.startsWith("zu-") && !namen.includes(o.name)) namen.push(o.name);
+        });
+      });
+      lauf(karte2.layers || []);
+      return namen.length ? namen : ERSATZ_BEREICHE;
+    } catch {
+      return ERSATZ_BEREICHE;
+    }
+  }
+  var tueren = [];
+  var schildGids = {};
+  var schildGidsSenk = {};
+  var kollisionGid = 3;
+  var freigabe = /* @__PURE__ */ new Map();
+  var vorname = (n) => String(n || "").trim().split(/\s+/)[0].toLowerCase();
+  var istBesitzer = (t) => t.offen ? zimmerDaten(t).s !== "frei" && vorname(zimmerDaten(t).wer) === vorname(WA.player.name) : t.besitzer.toLowerCase() === vorname(WA.player.name);
+  var meineTuer = () => tueren.find((t) => !t.offen && istBesitzer(t));
+  var fokusBis = (t) => {
+    const v = String(WA.state[t.variable] || "");
+    return v.startsWith("fokus:") ? Number(v.slice(6)) || 0 : 0;
+  };
+  var offenBis = (t) => {
+    const v = String(WA.state[t.variable] || "");
+    return v.startsWith("offen:") ? Number(v.slice(6)) || 0 : 0;
+  };
+  var immerZu = (t) => !t.offen && (info.immerZu || []).includes(vorname(t.besitzer));
+  var besitzerDa = (t) => !Array.isArray(info.da) || info.da.includes(vorname(t.besitzer));
+  var telefoniertGerade = (n) => (info.telefoniert || []).some((x) => vorname(x) === vorname(n));
+  function autoZu(t) {
+    const wer = vorname(t.besitzer), gleich = (n) => String(n).toLowerCase() === wer;
+    if (!besitzerDa(t)) return "";
+    if ((info.telefoniert || []).some(gleich)) return "telefoniert";
+    if ((info.imTermin || []).some(gleich) && (!info.imTerminRaum || info.imTerminRaum[wer] === t.raum)) return "hat einen Termin";
+    if ((info.zuRaeume || []).includes(t.raum)) return "hat Besuch";
+    return "";
+  }
+  var tuerStatus = (t) => {
+    if (t.offen) {
+      const d = zimmerDaten(t);
+      return d.s !== "frei" && telefoniertGerade(d.wer) ? "zu" : d.s;
+    }
+    if (immerZu(t) && !(offenBis(t) > Date.now())) return "zu";
+    if (!besitzerDa(t)) return "frei";
+    if (autoZu(t)) return "zu";
+    return fokusBis(t) > Date.now() ? "fokus" : "frei";
+  };
+  var bisText = (ms) => new Date(ms).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
+  var TEXT = { frei: "\u{1F7E2} T\xFCr: frei", fokus: "\u{1F3AF} Fokus", zu: "\u{1F534} T\xFCr: zu" };
+  function fokusSetzen(t, min) {
+    WA.state.saveVariable(t.variable, min > 0 ? "fokus:" + (Date.now() + min * 6e4) : "frei");
+  }
+  var FOKUS_MIN = 25;
+  var FOKUS_MAX = 3;
+  var heuteTag = () => (/* @__PURE__ */ new Date()).toLocaleDateString("sv-SE", { timeZone: "Europe/Berlin" });
+  var fokusGenutzt = () => {
+    const z = WA.player.state.swFokusZaehler;
+    return z && z.tag === heuteTag() ? Number(z.n) || 0 : 0;
+  };
+  function fokusErlaubt() {
+    const n = fokusGenutzt();
+    if (n >= FOKUS_MAX) {
+      kurzMeldung("\u{1F3AF} Heute schon " + FOKUS_MAX + "\xD7 Fokus genutzt \u2013 morgen wieder", 6e3);
+      return false;
+    }
+    try {
+      WA.player.state.saveVariable("swFokusZaehler", { tag: heuteTag(), n: n + 1 }, { public: false, persist: true });
+    } catch {
+    }
+    kurzMeldung("\u{1F512} Fokus: dein Zimmer ist " + FOKUS_MIN + " Min abgeschlossen \xB7 heute noch " + (FOKUS_MAX - n - 1) + "\xD7", 6e3);
+    return true;
+  }
+  function offenUmschalten(t) {
+    if (offenBis(t) > Date.now()) {
+      WA.state.saveVariable(t.variable, "frei");
+      kurzMeldung("\u{1F512} Deine T\xFCr ist wieder zu", 4e3);
+      return;
+    }
+    const ende = /* @__PURE__ */ new Date();
+    ende.setHours(23, 59, 0, 0);
+    WA.state.saveVariable(t.variable, "offen:" + ende.getTime());
+    kurzMeldung("\u{1F7E2} Deine T\xFCr bleibt heute offen \u2013 nochmal tippen = wieder zu", 5e3);
+  }
+  function fokusUmschalten(t) {
+    if (immerZu(t)) return offenUmschalten(t);
+    if (fokusBis(t) > Date.now()) return fokusSetzen(t, 0);
+    if (fokusErlaubt()) fokusSetzen(t, FOKUS_MIN);
+  }
+  function tuerAnwenden(t) {
+    const s = tuerStatus(t);
+    const darfDurch = istBesitzer(t) || (freigabe.get(t.variable) || 0) > Date.now() || aktuellerBereich === t.raum;
+    const kacheln = t.felder.map(([x, y]) => ({ x, y, tile: (s === "zu" || s === "fokus") && !darfDurch ? kollisionGid : null, layer: "collisions" }));
+    const sg = (t.senk ? schildGidsSenk : schildGids)[s] || null;
+    t.schild.forEach(([x, y], i) => kacheln.push({ x, y, tile: sg ? sg[i] : null, layer: "furniture/labels" }));
+    try {
+      WA.room.setTiles(kacheln);
+    } catch {
+    }
+    try {
+      schilderAktualisieren();
+    } catch {
+    }
+  }
+  function tuerKnopf() {
+    const t = meineTuer();
+    if (!t || !HANDY || true) return;
+    try {
+      WA.ui.actionBar.removeButton("sw-tuer");
+    } catch {
+    }
+    WA.ui.actionBar.addButton({ id: "sw-tuer", label: TEXT[tuerStatus(t)] || TEXT.frei, callback: () => fokusUmschalten(t) });
+  }
+  function tuerWache(raum) {
+    const t = tueren.find((x) => x.raum === raum);
+    if (!t || !t.draussen || !["zu", "fokus"].includes(tuerStatus(t)) || istBesitzer(t) || (freigabe.get(t.variable) || 0) > Date.now()) return;
+    WA.player.teleport(t.draussen[0] * 32 + 16, t.draussen[1] * 32 + 16);
+    kurzMeldung(`\u{1F512} ${t.raum} ist gerade nicht frei \u2013 Leertaste vor der T\xFCr = anklopfen`, 6e3);
+  }
+  var hinweis = null;
+  var hinweisTuer = null;
+  var geklopft = /* @__PURE__ */ new Map();
+  function naheTuer(px, py) {
+    const fx2 = Math.floor(px / 32), fy = Math.floor(py / 32);
+    return tueren.find((t) => !istBesitzer(t) && tuerStatus(t) !== "frei" && aktuellerBereich !== t.raum && t.felder.some(([x, y]) => Math.max(Math.abs(x - fx2), Math.abs(y - fy)) <= 2)) || null;
+  }
+  function hinweisZeigen(t) {
+    if ((t ? t.variable : null) === hinweisTuer) return;
+    if (hinweis) {
+      try {
+        hinweis.remove();
+      } catch {
+      }
+      hinweis = null;
+    }
+    hinweisTuer = t ? t.variable : null;
+    if (!t) return;
+    const st = tuerStatus(t), wer = String(werVon(t)).split(/\s+/)[0];
+    const grund = t.offen ? st === "zu" ? "nicht zu st\xF6ren \u2013 Zimmer abgeschlossen" : "besch\xE4ftigt" : st === "fokus" ? "im Fokus bis " + bisText(fokusBis(t)) : st === "zu" ? autoZu(t) || (immerZu(t) ? "hat die T\xFCr zu" : "besch\xE4ftigt") : "besch\xE4ftigt";
+    hinweis = WA.ui.displayActionMessage({
+      message: `${t.raum}: ${wer} ${t.offen || st !== "zu" ? "ist " : ""}${grund}. Leertaste = anklopfen`,
+      callback: () => anklopfen(t)
+    });
+  }
+  function anklopfen(t) {
+    if (Date.now() - (geklopft.get(t.variable) || 0) < 15e3) return;
+    geklopft.set(t.variable, Date.now());
+    WA.event.broadcast("sw-klopfen", { an: werVon(t), von: WA.player.name, variable: t.variable });
+    fetch(ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Buero-Key": BUERO_KEY },
+      body: JSON.stringify({ name: WA.player.name, event: "klopfen", an: werVon(t), raum: t.raum, sitzung: SITZUNG })
+    }).catch(() => {
+    });
+    hinweisTuer = null;
+    hinweisZeigen(null);
+    const m = WA.ui.displayActionMessage({ message: `Angeklopft bei ${String(werVon(t)).split(/\s+/)[0]} \u2013 einen Moment \u2026`, callback: () => {
+    } });
+    setTimeout(() => {
+      try {
+        m.remove();
+      } catch {
+      }
+    }, 6e3);
+  }
+  async function tuerenStarten() {
+    try {
+      const k = await ladeKarte();
+      const p = (k.properties || []).find((x) => x.name === "tuerSchilder");
+      if (p) schildGids = JSON.parse(p.value);
+      const ps = (k.properties || []).find((x) => x.name === "tuerSchilderSenk");
+      if (ps) schildGidsSenk = JSON.parse(ps.value);
+      const zonen = (k.tilesets || []).find((t) => t.name === "WA_Special_Zones");
+      if (zonen) kollisionGid = zonen.firstgid + 2;
+      const lauf = (ls) => ls.forEach((l) => {
+        if (l.type === "group") lauf(l.layers || []);
+        if (l.type === "objectgroup") (l.objects || []).forEach((o) => {
+          const pr = (n) => ((o.properties || []).find((x) => x.name === n) || {}).value;
+          if (pr("tuerVariable")) tueren.push({ raum: o.name, besitzer: pr("besitzer"), variable: pr("tuerVariable"), felder: JSON.parse(pr("tuerFelder")), schild: JSON.parse(pr("schildFelder")), rechteck: [o.x / 32, o.y / 32, o.width / 32, o.height / 32], senk: !!pr("schildSenk"), offen: !!pr("offen") });
+        });
+      });
+      lauf(k.layers || []);
+      const alle = [];
+      (function f(ls) {
+        ls.forEach((l) => {
+          if (l.type === "group") f(l.layers || []);
+          else alle.push(l);
+        });
+      })(k.layers || []);
+      const kol = (alle.find((l) => l.name === "collisions") || { data: [] }).data, W = k.width;
+      for (const t of tueren) {
+        const [rx, ry, rw, rh] = t.rechteck, drin = (x, y) => x >= rx && x < rx + rw && y >= ry && y < ry + rh;
+        for (const [x, y] of t.felder) for (const [dx, dy] of [[0, 1], [0, -1], [1, 0], [-1, 0]])
+          if (!t.draussen && !drin(x + dx, y + dy) && !kol[(y + dy) * W + x + dx] && !t.felder.some(([a, b]) => a === x + dx && b === y + dy)) t.draussen = [x + dx, y + dy];
+      }
+    } catch {
+      return;
+    }
+    for (const t of tueren) {
+      tuerAnwenden(t);
+      WA.state.onVariableChange(t.variable).subscribe(() => {
+        tuerAnwenden(t);
+        if (t.offen) {
+          if (aktuellerBereich === t.raum) zimmerKnopf();
+          return;
+        }
+        if (istBesitzer(t)) {
+          tuerKnopf();
+          melden("heartbeat");
+        }
+      });
+    }
+    tuerKnopf();
+    WA.player.onPlayerMove((e) => hinweisZeigen(naheTuer(e.x, e.y)));
+    WA.event.on("sw-klopfen").subscribe((ev) => {
+      const d = ev.data || {};
+      const t = tueren.find((x) => x.offen && x.variable === d.variable && istBesitzer(x)) || meineTuer();
+      if (!t || vorname(d.an) !== vorname(WA.player.name)) return;
+      if (!HANDY) {
+        mitteilung({ art: "klopfen", von: d.von, text: "an " + (t.offen ? t.raum : "deine T\xFCr"), variable: t.variable }, 6e4);
+        return;
+      }
+      const m = WA.ui.displayActionMessage({
+        message: `\u270A ${d.von} klopft an ${t.offen ? t.raum : "deine T\xFCr"} \u2013 Leertaste = reinlassen`,
+        callback: () => WA.event.broadcast("sw-reinlassen", { fuer: d.von, variable: t.variable })
+      });
+      setTimeout(() => {
+        try {
+          m.remove();
+        } catch {
+        }
+      }, 2e4);
+    });
+    WA.event.on("sw-gleich").subscribe((ev) => {
+      const d = ev.data || {};
+      if (d.fuer !== WA.player.name) return;
+      mitteilung({ art: "info", von: d.von, kurz: "kommt gleich", text: "Einen Moment \u2013 gleich geht die T\xFCr auf." }, 3e4);
+    });
+    WA.event.on("sw-reinlassen").subscribe((ev) => {
+      const d = ev.data || {};
+      if (d.fuer !== WA.player.name) return;
+      const t = tueren.find((x) => x.variable === d.variable);
+      if (!t) return;
+      freigabe.set(t.variable, Date.now() + 3e4);
+      tuerAnwenden(t);
+      mitteilung({ art: "info", von: werVon(t), kurz: "hat dich reingelassen", text: "Komm rein \u2013 die T\xFCr ist 30 Sekunden offen." }, 1e4);
+      setTimeout(() => tuerAnwenden(t), 30500);
+    });
+  }
+  function zimmerDaten(t) {
+    try {
+      const d = JSON.parse(String(WA.state[t.variable] || ""));
+      if (d && d.s && Date.now() - Number(d.t || 0) < 3 * 6e4) {
+        if (d.s === "zu" && !(Number(d.bis) > Date.now())) d.s = "besetzt";
+        return d;
+      }
+    } catch {
+    }
+    return { s: "frei", wer: "", t: 0 };
+  }
+  function werVon(t) {
+    return t.offen ? zimmerDaten(t).wer : t.besitzer;
+  }
+  function zimmerSetzen(t, s, bis = 0) {
+    WA.state.saveVariable(t.variable, s === "frei" ? "" : JSON.stringify({ s, wer: WA.player.name, t: Date.now(), ...bis ? { bis } : {} }));
+  }
+  var ZTEXT = { frei: "\u{1F7E2} frei", besetzt: "\u{1F7E1} besetzt", zu: "\u{1F512} Fokus" };
+  function zimmerKnopf() {
+    try {
+      WA.ui.actionBar.removeButton("sw-zimmer");
+    } catch {
+    }
+    const t = tueren.find((x) => x.offen && x.raum === aktuellerBereich);
+    if (!t) return;
+    const d = zimmerDaten(t), fremd = d.s !== "frei" && vorname(d.wer) !== vorname(WA.player.name), wer = String(d.wer).split(/\s+/)[0];
+    try {
+      WA.ui.actionBar.addButton({ id: "sw-zimmer", label: fremd ? "\u{1F512} " + t.raum + ": " + wer : "\u{1F6AA} " + t.raum + ": " + (ZTEXT[d.s] || ZTEXT.frei), callback: () => {
+        const n = zimmerDaten(t);
+        if (n.s !== "frei" && vorname(n.wer) !== vorname(WA.player.name)) return kurzMeldung(t.raum + " hat gerade " + String(n.wer).split(/\s+/)[0] + " \u2013 nur wer es eingestellt hat, kann umstellen", 5e3);
+        if (n.s === "besetzt") {
+          if (fokusErlaubt()) zimmerSetzen(t, "zu", Date.now() + FOKUS_MIN * 6e4);
+          return;
+        }
+        zimmerSetzen(t, n.s === "frei" ? "besetzt" : "frei");
+      } });
+    } catch {
+    }
+  }
+  var zimmerWeg = /* @__PURE__ */ new Map();
+  function zimmerRein(raum) {
+    for (const x of tueren) if (!x.offen && x.raum === raum) tuerAnwenden(x);
+    const t = tueren.find((x) => x.offen && x.raum === raum);
+    if (!t) return;
+    clearTimeout(zimmerWeg.get(raum));
+    tuerAnwenden(t);
+    zimmerKnopf();
+  }
+  function zimmerRaus(raum) {
+    for (const x of tueren) if (!x.offen && x.raum === raum) {
+      freigabe.delete(x.variable);
+      setTimeout(() => tuerAnwenden(x), 600);
+    }
+    const t = tueren.find((x) => x.offen && x.raum === raum);
+    if (!t) return;
+    tuerAnwenden(t);
+    zimmerKnopf();
+    if (istBesitzer(t)) zimmerWeg.set(raum, setTimeout(() => {
+      if (aktuellerBereich !== raum && istBesitzer(t)) zimmerSetzen(t, "frei");
+    }, 2 * 6e4));
+  }
+  setInterval(() => {
+    for (const t of tueren) if (t.offen) {
+      if (aktuellerBereich === t.raum && istBesitzer(t)) {
+        const d = zimmerDaten(t);
+        zimmerSetzen(t, d.s, d.s === "zu" ? Number(d.bis) || 0 : 0);
+      }
+      tuerAnwenden(t);
+    }
+  }, 6e4);
+  var INFO = "https://swdigitaltest.de/buero-praesenz/info";
+  var info = { durchsage: null, geburtstage: [], reservierungen: [] };
+  var durchsageGezeigt = null;
+  var begruesst = false;
+  var ballonsGesetzt = "";
+  var hm = (d) => d.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin" });
+  var infoLeiste = null;
+  var hinweiseOffen = 0;
+  var LEISTE_UNTEN = "3px";
+  function leisteVerschieben() {
+    try {
+      if (infoLeiste) infoLeiste.visible = hinweiseOffen === 0;
+    } catch {
+    }
+  }
+  function hinweiseUeberwachen() {
+    try {
+      const orig = WA.ui.displayActionMessage.bind(WA.ui);
+      const stapel = [];
+      const zeigen = (e) => {
+        e.m = orig({ ...e.o, callback: () => {
+          e.m = null;
+          raus(e);
+          try {
+            return e.o.callback && e.o.callback();
+          } catch (x) {
+            console.warn(x);
+          }
+        } });
+      };
+      const zaehlen = () => {
+        hinweiseOffen = stapel.length;
+        leisteVerschieben();
+      };
+      const raus = (e) => {
+        if (e.weg) return;
+        e.weg = true;
+        try {
+          e.m && e.m.remove();
+        } catch {
+        }
+        e.m = null;
+        const i = stapel.indexOf(e);
+        if (i >= 0) stapel.splice(i, 1);
+        const oben = stapel[stapel.length - 1];
+        if (i === stapel.length && oben && !oben.m) zeigen(oben);
+        zaehlen();
+      };
+      WA.ui.displayActionMessage = (o) => {
+        const vorher = stapel[stapel.length - 1];
+        if (vorher && vorher.m) {
+          try {
+            vorher.m.remove();
+          } catch {
+          }
+          vorher.m = null;
+        }
+        const e = { o, m: null, weg: false };
+        stapel.push(e);
+        zeigen(e);
+        zaehlen();
+        return { remove: () => raus(e) };
+      };
+    } catch {
+    }
+  }
+  async function ausweisWeitergeben(token) {
+    try {
+      await WA.player.state.saveVariable("swAusweisNeu", token, { public: false, persist: false });
+    } catch {
+    }
+  }
+  function ausweisPruefen() {
+    return new Promise((fertig) => {
+      let abo = null;
+      const start = Date.now();
+      const ende = (s) => {
+        clearTimeout(uhr);
+        try {
+          abo && abo.unsubscribe();
+        } catch {
+        }
+        fertig(s);
+      };
+      const uhr = setTimeout(() => ende("ok"), 8e3);
+      try {
+        abo = WA.player.state.onVariableChange("swAusweisStand").subscribe((v) => {
+          if (v && Number(v.t) >= start - 1e3) ende(v.s === "fehlt" ? "fehlt" : "ok");
+        });
+      } catch {
+        ende("ok");
+        return;
+      }
+      WA.ui.website.open({ url: SEITEN + "ausweis-sync.html?v=2&t=" + Date.now(), allowApi: true, visible: true, position: { vertical: "top", horizontal: "left" }, size: { width: "1px", height: "1px" }, margin: { top: "0px", left: "0px" } }).catch(() => ende("ok"));
+    });
+  }
+  function leertasteAus(_) {
+    return { remove: () => {
+    } };
+  }
+  function kurzMeldung(text, ms = 7e3) {
+    try {
+      const m = WA.ui.displayActionMessage({ message: text, callback: () => {
+      } });
+      setTimeout(() => {
+        try {
+          m.remove();
+        } catch {
+        }
+      }, ms);
+    } catch {
+    }
+  }
+  function reservierungZeigen(raum) {
+    const jetzt = hm(/* @__PURE__ */ new Date());
+    const r = (info.reservierungen || []).filter((x) => x.raum === raum && x.bis > jetzt);
+    if (!r.length) return;
+    const aktiv = r.find((x) => x.von <= jetzt);
+    const teil = (x) => `${x.von}\u2013${x.bis} (${x.wer}${x.thema ? " \xB7 " + x.thema : ""})`;
+    kurzMeldung(aktiv ? `\u{1F4C5} ${raum} ist gerade belegt: ${teil(aktiv)}` : `\u{1F4C5} ${raum} heute reserviert: ${r.map(teil).join(", ")}`);
+  }
+  function ballonsSetzen() {
+    const zonen = (karte && karte.tilesets || []).find((t) => t.name === "WA_Decoration");
+    if (!zonen) return;
+    const ballon = zonen.firstgid + 94, kinder = (info.geburtstage || []).map((n) => n.toLowerCase());
+    const schluessel = kinder.join(",");
+    if (schluessel === ballonsGesetzt) return;
+    ballonsGesetzt = schluessel;
+    const kacheln = [];
+    for (const t of tueren) {
+      const [x, y, w] = t.rechteck, an = kinder.includes(t.besitzer.toLowerCase());
+      for (const fx2 of [x, x + w - 1]) kacheln.push({ x: fx2, y, tile: an ? ballon : null, layer: "above/above2" });
+    }
+    try {
+      WA.room.setTiles(kacheln);
+    } catch {
+    }
+  }
+  var tuerVorTelefon = null;
+  var telefonGemeldet = false;
+  function telefonTuer() {
+    for (const x of tueren) if (!x.offen) tuerAnwenden(x);
+    const t = meineTuer();
+    if (!t) return;
+    if (WA.state[t.variable] === "besetzt" || WA.state[t.variable] === "zu") WA.state.saveVariable(t.variable, "frei");
+    if (fokusBis(t) && fokusBis(t) <= Date.now()) {
+      fokusSetzen(t, 0);
+      kurzMeldung("\u2615 Fokuszeit vorbei \u2013 deine T\xFCr ist wieder frei", 8e3);
+    }
+    const grund = autoZu(t), tel = telefoniertGerade(WA.player.name);
+    void tel;
+    void telefonGemeldet;
+    if (grund && tuerVorTelefon === null) {
+      tuerVorTelefon = "x";
+      kurzMeldung(`\u{1F534} Deine T\xFCr ist zu \u2013 du ${grund === "hat Besuch" ? "hast Besuch" : grund === "hat einen Termin" ? "hast einen Termin" : "telefonierst (\u{1F4DE} am Schild)"}`, 5e3);
+    } else if (!grund && tuerVorTelefon !== null) tuerVorTelefon = null;
+    return;
+    const ich = vorname(WA.player.name), gleich = (n) => String(n).toLowerCase() === ich;
+    const telefonat = (info.telefoniert || []).some(gleich), termin = (info.imTermin || []).some(gleich), telefoniere = telefonat || termin;
+    if (telefoniere && tuerVorTelefon === null) {
+      tuerVorTelefon = tuerStatus(t);
+      if (tuerVorTelefon === "frei") WA.state.saveVariable(t.variable, "besetzt");
+      kurzMeldung(telefonat ? "\u{1F4DE} Du telefonierst \u2013 deine T\xFCr steht auf \u201Ebesetzt\u201C" : "\u{1F4C5} Du hast gerade einen Termin \u2013 deine T\xFCr steht auf \u201Ebesetzt\u201C", 5e3);
+    } else if (!telefoniere && tuerVorTelefon !== null) {
+      if (tuerVorTelefon === "frei" && tuerStatus(t) === "besetzt") WA.state.saveVariable(t.variable, "frei");
+      tuerVorTelefon = null;
+    }
+  }
+  var fxStand = {};
+  var FEIERABEND_RAEUME = ["Besprechung 11", "Besprechung Glas", "Pause", "Lernzimmer", "Helpcenter", "Fitnessraum", "Fibu Backoffice"];
+  var toene = {};
+  function ton(name) {
+    try {
+      (toene[name] || (toene[name] = WA.sound.loadSound(SEITEN + "toene/" + name + ".wav"))).play({ volume: 0.5 });
+    } catch {
+    }
+  }
+  var SPAR_EBENE = /^fx-(regen|schnee|trueb|blitz|pfuetzen|abend|nacht|lichter|dunkel|feierabend)/;
+  function fx(name, an) {
+    if (HANDY && SPAR_EBENE.test(name)) an = false;
+    if (fxStand[name] === an) return;
+    fxStand[name] = an;
+    try {
+      an ? WA.room.showLayer(name) : WA.room.hideLayer(name);
+    } catch {
+    }
+  }
+  async function aussenweltAus() {
+    try {
+      const k = await ladeKarte();
+      const geh = (ls, pfad) => {
+        for (const l of ls || []) {
+          if (l.type === "group") geh(l.layers, pfad + l.name + "/");
+          else if (/-aussen$/.test(l.name)) {
+            try {
+              WA.room.hideLayer(pfad + l.name);
+            } catch {
+            }
+            if (pfad) try {
+              WA.room.hideLayer(l.name);
+            } catch {
+            }
+          }
+        }
+      };
+      geh(k.layers, "");
+    } catch {
+    }
+  }
+  function effekte() {
+    schilderAktualisieren();
+    for (const o of ((karte && karte.layers || []).find((l) => l.name === "floorLayer") || { objects: [] }).objects) {
+      if (!/^(Büro |Google Meet |Zoom |Teams )|^(Paris|Berlin|Lissabon|New York|Amsterdam|Moskau)$/.test(o.name)) continue;
+      const an = aktuellerBereich === o.name || (info.belegt || []).includes(o.name);
+      fx("fx-dunkel-" + o.name.normalize("NFD").replace(/[^A-Za-z0-9]/g, ""), !an);
+    }
+    const teile = (/* @__PURE__ */ new Date()).toLocaleString("sv-SE", { timeZone: "Europe/Berlin" }).split(/[- :]/).map(Number);
+    const monat = teile[1], min = teile[3] * 60 + teile[4];
+    const w = info.wetter;
+    const hm2 = (t) => {
+      const m = /^(\d{1,2}):(\d{2})/.exec(String(t || ""));
+      return m ? +m[1] * 60 + +m[2] : null;
+    };
+    const auf = hm2(w && w.auf), unter = hm2(w && w.unter);
+    const nacht = auf !== null && unter !== null ? min >= unter + 30 || min < auf - 30 : min >= 20 * 60 || min < 6 * 60 + 30;
+    const abend = !nacht && (auf !== null && unter !== null ? min >= unter - 45 || min < auf + 30 : min >= 18 * 60 || min < 7 * 60 + 30);
+    fx("fx-nacht", nacht);
+    fx("fx-lichter", nacht);
+    fx("fx-abend", abend);
+    for (const n of FEIERABEND_RAEUME) fx("fx-feierabend-" + n.normalize("NFD").replace(/[^A-Za-z0-9]/g, ""), (min >= 18 * 60 || nacht) && aktuellerBereich !== n && !(info.belegt || []).includes(n));
+    if (w) {
+      regenAn = !!w.regen;
+      fx("fx-pfuetzen", !!w.regen);
+      fx("fx-trueb", !!(w.regen || w.nebel || w.trueb || w.gewitter));
+      schneeAn = !!w.schnee;
+      fx("fx-schnee", !!w.schneeLiegt);
+    } else {
+      const winter = monat === 12 || monat <= 2;
+      fx("fx-schnee", winter);
+      schneeAn = winter;
+      regenAn = false;
+      fx("fx-pfuetzen", false);
+      fx("fx-trueb", false);
+    }
+    gewitter = !!(w && w.gewitter);
+    hundRuhe = nacht || !!(w && (w.regen || w.schnee || w.gewitter));
+  }
+  var regenAn = false;
+  var schneeAn = false;
+  function wetterTakt() {
+    setInterval(() => {
+      const r = Math.floor(Date.now() / 120) % 4, sn = Math.floor(Date.now() / 300) % 4;
+      for (let i = 0; i < 4; i++) {
+        fx("fx-regen-" + (i + 1), regenAn && i === r);
+        fx("fx-schneefall-" + (i + 1), schneeAn && i === sn);
+      }
+    }, 60);
+  }
+  var hundRuhe = false;
+  async function hundStarten() {
+    let G = 0;
+    try {
+      const ts = ((await ladeKarte()).tilesets || []).find((t) => t.name === "SW_Hund");
+      if (!ts) return;
+      G = ts.firstgid;
+    } catch {
+      return;
+    }
+    const KORB = { x: MI32(400 + DX * 32), y: -144 + DY * 32 }, ECKE = { x: 48, y: -144 + DY * 32 }, UNTEN = { x: 48, y: 272 + DY * 32 }, TEMPO = 32;
+    const d1 = (KORB.x - ECKE.x) / TEMPO, d2 = (UNTEN.y - ECKE.y) / TEMPO;
+    const PHASEN = [["lieg", 40], ["wedelK", 4], ["links", d1], ["runter", d2], ["sitz", 12], ["hoch", d2], ["rechts", d1], ["sitzK", 6]];
+    const ZYKLUS = PHASEN.reduce((s, p) => s + p[1], 0);
+    let alt = [], letzter = "", wedelBis = 0, hier = { x: KORB.x, y: KORB.y };
+    const zeigen = (bild, px, py) => {
+      const qx = Math.round(px / 8) * 8, qy = Math.round(py / 8) * 8, tx0 = Math.floor(qx / 32) - 1, ty0 = Math.floor(qy / 32) - 1;
+      const schl = bild + ":" + tx0 + ":" + ty0;
+      if (schl === letzter) return;
+      letzter = schl;
+      hier = { x: qx, y: qy };
+      const neu = [];
+      for (let y = 0; y < 3; y++) for (let x = 0; x < 3; x++) neu.push({ x: tx0 + x, y: ty0 + y, tile: G + bild * 9 + y * 3 + x, layer: "hund" });
+      const weg = alt.filter((a) => !neu.some((n) => n.x === a.x && n.y === a.y)).map((a) => ({ ...a, tile: null }));
+      try {
+        WA.room.setTiles([...weg, ...neu]);
+        alt = neu;
+      } catch {
+      }
+    };
+    const off = (q) => Math.round(q / 8) * 8 % 32 / 8;
+    const tick = () => {
+      const jetzt = Date.now(), bein = Math.floor(jetzt / 250) % 2, wedel = Math.floor(jetzt / 300) % 2;
+      if (wedelBis > jetzt) return zeigen(32 + (hier.x > ECKE.x + 8 ? 3 : 0) + (wedel ? 1 : 0), hier.x, hier.y);
+      if (hundRuhe) return zeigen(32 + 3 + 2, KORB.x, KORB.y);
+      let t = jetzt / 1e3 % ZYKLUS, p = PHASEN[0];
+      for (const x of PHASEN) {
+        if (t < x[1]) {
+          p = x;
+          break;
+        }
+        t -= x[1];
+      }
+      const anteil = t / p[1];
+      switch (p[0]) {
+        case "lieg":
+          return zeigen(37, KORB.x, KORB.y);
+        case "wedelK":
+          return zeigen(35 + (wedel ? 1 : 0), KORB.x, KORB.y);
+        // links: 35 sitz, 36 wedel, 37 lieg
+        case "sitzK":
+          return zeigen(35, KORB.x, KORB.y);
+        case "links": {
+          const x = KORB.x - (KORB.x - ECKE.x) * anteil;
+          return zeigen(8 + off(x) * 2 + bein, x, ECKE.y);
+        }
+        case "rechts": {
+          const x = ECKE.x + (KORB.x - ECKE.x) * anteil;
+          return zeigen(off(x) * 2 + bein, x, ECKE.y);
+        }
+        case "runter": {
+          const y = ECKE.y + (UNTEN.y - ECKE.y) * anteil;
+          return zeigen(16 + off(y) * 2 + bein, ECKE.x, y);
+        }
+        case "hoch": {
+          const y = UNTEN.y - (UNTEN.y - ECKE.y) * anteil;
+          return zeigen(24 + off(y) * 2 + bein, ECKE.x, y);
+        }
+        default:
+          return zeigen(32 + (t < 5 && wedel ? 1 : 0), UNTEN.x, UNTEN.y);
+      }
+    };
+    tick();
+    setInterval(tick, 150);
+    let meldung = null;
+    WA.player.onPlayerMove((e) => {
+      const nah = Math.hypot(e.x - hier.x, e.y - hier.y) < 56;
+      if (nah && !meldung) {
+        try {
+          meldung = WA.ui.displayActionMessage({ message: "\u{1F415} Leertaste: Hund streicheln", callback: () => {
+            wedelBis = Date.now() + 4e3;
+            meldung = null;
+          } });
+        } catch {
+        }
+      } else if (!nah && meldung) {
+        try {
+          meldung.remove();
+        } catch {
+        }
+        meldung = null;
+      }
+    });
+  }
+  var gewitter = false;
+  setInterval(() => {
+    if (!gewitter || Math.random() > 0.15) return;
+    fx("fx-blitz", true);
+    setTimeout(() => fx("fx-blitz", false), 120);
+    setTimeout(() => {
+      fx("fx-blitz", true);
+      setTimeout(() => fx("fx-blitz", false), 80);
+    }, 260);
+  }, 4e3);
+  var SEITEN = "https://samjabbar90.github.io/sw-buero/";
+  var glasOffen = null;
+  var glasNeu = 0;
+  function glasLage() {
+    let e = {};
+    try {
+      e = WA.player.state.swFenster || {};
+    } catch {
+    }
+    const SW = screen.availWidth || 1600, SH = screen.availHeight || 900, zw = (v, a, z) => Math.min(z, Math.max(a, v));
+    const b = Math.round(zw(Number(e.b) || Math.min(780, SW * 0.44), 340, SW - 40)), hv = Math.round(zw(Number(e.hv) || 78, 30, 92));
+    e = { ...e, r: zw(Number(e.r ?? 14) || 0, 0, Math.min(360, Math.max(0, SW - b - 20))), o: zw(Number(e.o ?? 70) || 0, 0, 160) };
+    if (HANDY) return { position: { vertical: "bottom", horizontal: "middle" }, size: { width: Math.round(screen.width || 390) + "px", height: "76vh" }, margin: { bottom: "0px" } };
+    if (e.voll) return { position: { vertical: "top", horizontal: "middle" }, size: { width: Math.round(screen.availWidth * 0.94) + "px", height: "90vh" }, margin: { top: "40px" } };
+    return { position: { vertical: "top", horizontal: "right" }, size: { width: b + "px", height: hv + "vh" }, margin: { top: Math.round(Number(e.o) || 70) + "px", right: Math.round(Number(e.r ?? 14)) + "px" } };
+  }
+  async function glasOeffnen(u) {
+    return await WA.ui.website.open({ url: u, allowApi: true, visible: true, ...glasLage() });
+  }
+  async function glasFenster(url) {
+    const u = url + (url.includes("?") ? "&" : "?") + "glas=1";
+    try {
+      glasOffen && glasOffen.handle && glasOffen.handle.close();
+    } catch {
+    }
+    if (HANDY) handyBlattZu();
+    try {
+      glasOffen = { url: u, handle: await glasOeffnen(u) };
+      if (mitteilungen.length) mtZeigen();
+    } catch (e) {
+      console.warn("Glasfenster", e);
+      try {
+        return await WA.nav.openCoWebSite(url, true);
+      } catch {
+        return null;
+      }
+    }
+    const meins = glasOffen;
+    return { close: () => {
+      if (glasOffen === meins) {
+        try {
+          meins.handle.close();
+        } catch {
+        }
+        glasOffen = null;
+      }
+    } };
+  }
+  function glasBeobachten() {
+    try {
+      glasNeu = Number((WA.player.state.swFenster || {}).neu) || 0;
+    } catch {
+    }
+    try {
+      WA.player.state.onVariableChange("swFenster").subscribe(async (v) => {
+        const n = Number(v && v.neu) || 0;
+        if (!n || n === glasNeu) return;
+        glasNeu = n;
+        if (!glasOffen) return;
+        const u = glasOffen.url;
+        try {
+          glasOffen.handle.close();
+        } catch {
+        }
+        try {
+          glasOffen.handle = await glasOeffnen(u);
+        } catch (e) {
+          console.warn("Glasfenster neu", e);
+        }
+      });
+    } catch {
+    }
+  }
+  var NEWS_SCHIRM = { x: MI32(1325 + DX * 32), y: 962 + DY * 32, w: 214, h: 70 };
+  var NEWS_BEREICH = { x: (41 + DX) * 32, y: (33 + DY) * 32, w: 8 * 32, h: 3 * 32 };
+  var newsFenster = null;
+  var newsHinweis = null;
+  async function newsOeffnen() {
+    try {
+      newsHinweis && newsHinweis.remove();
+    } catch {
+    }
+    try {
+      newsFenster = await glasFenster(SEITEN + "news.html?t=" + Date.now());
+    } catch {
+    }
+  }
+  var HELPCENTER = true ? [{ x: 63, y: 70 }] : [{ x: MI(40 + DX), y: 22 + DY }];
+  var hcFenster = null;
+  var hcHinweis = null;
+  function helpcenterRoboter() {
+    HELPCENTER.forEach((h, i) => {
+      const n = i + 1, bereich = { x: (h.x - 1) * 32, y: (h.y + 3) * 32, w: 8 * 32, h: 3 * 32 };
+      const rein = () => {
+        fx(`fx-hc${n}-aktiv`, true);
+        fx(`fx-hc${n}-ruhe`, false);
+        try {
+          hcHinweis = WA.ui.displayActionMessage({ message: "\u{1F4AC} Helpcenter \xB7 Leertaste", callback: async () => {
+            try {
+              hcHinweis && hcHinweis.remove();
+            } catch {
+            }
+            try {
+              hcFenster = await glasFenster(SEITEN + "helpdesk.html?name=" + encodeURIComponent(WA.player.name || "") + "&t=" + Date.now());
+            } catch {
+            }
+          } });
+        } catch {
+        }
+      };
+      const raus = () => {
+        fx(`fx-hc${n}-aktiv`, false);
+        fx(`fx-hc${n}-ruhe`, true);
+        try {
+          hcHinweis && hcHinweis.remove();
+        } catch {
+        }
+        hcHinweis = null;
+        try {
+          hcFenster && hcFenster.close();
+        } catch {
+        }
+        hcFenster = null;
+      };
+      try {
+        WA.room.area.create({ name: "helpcenter-" + n, x: bereich.x, y: bereich.y, width: bereich.w, height: bereich.h });
+        WA.room.area.onEnter("helpcenter-" + n).subscribe(rein);
+        WA.room.area.onLeave("helpcenter-" + n).subscribe(raus);
+      } catch {
+        let drin = false;
+        WA.player.onPlayerMove((e) => {
+          const j = e.x >= bereich.x && e.x < bereich.x + bereich.w && e.y >= bereich.y && e.y < bereich.y + bereich.h;
+          if (j && !drin) rein();
+          if (!j && drin) raus();
+          drin = j;
+        });
+      }
+    });
+  }
+  function lernzimmer() {
+    let fenster = null, hinweis2 = null;
+    try {
+      WA.room.area.onEnter("Lernzimmer").subscribe(() => {
+        try {
+          hinweis2 = WA.ui.displayActionMessage({ message: "\u{1F393} Schulungen \xB7 Leertaste", callback: async () => {
+            try {
+              hinweis2 && hinweis2.remove();
+            } catch {
+            }
+            try {
+              fenster = await glasFenster(SEITEN + "lernen.html?name=" + encodeURIComponent(WA.player.name || "") + "&t=" + Date.now());
+            } catch {
+            }
+          } });
+        } catch {
+        }
+      });
+      WA.room.area.onLeave("Lernzimmer").subscribe(() => {
+        try {
+          hinweis2 && hinweis2.remove();
+        } catch {
+        }
+        hinweis2 = null;
+        try {
+          fenster && fenster.close();
+        } catch {
+        }
+        fenster = null;
+      });
+    } catch {
+    }
+  }
+  var FITNESS = { x: MI(78 + DX), y: 6 + DY };
+  var POSTER = [
+    { name: "poster-zimmer4", bild: "kubilay.jpg", x: MI(31 + DX), y: 18.15 + DY, w: 2.5, h: 1.4, zimmerX: MI(29 + DX), zimmerY: 17 + DY, unsichtbar: true },
+    // 16.10.2026 (Sam): Büro Ferhat – Bild statt Whiteboard (Whiteboard = Ebene fx-ideen x 4–8 / y 49–50); Bild liegt auf dem Server (wa-bilder)
+    { name: "poster-ferhat", srv: "ferhat-poster.webp", x: MI(1.95 + DX), y: 48.75, w: 2.2, h: 1, unsichtbar: true }
+  ];
+  function posterAufhaengen() {
+    for (const p of POSTER) {
+      if (p.ohneWhiteboard) {
+        const t = [];
+        for (let x = p.ohneWhiteboard.x; x < p.ohneWhiteboard.x + p.ohneWhiteboard.w; x++) for (let y = p.ohneWhiteboard.y; y < p.ohneWhiteboard.y + p.ohneWhiteboard.h; y++) t.push({ x, y, tile: null, layer: "fx-ideen" });
+        try {
+          WA.room.setTiles(t);
+        } catch {
+        }
+      }
+      try {
+        WA.room.website.create({
+          name: p.name,
+          url: SEITEN + "poster.html?v=2&" + (p.srv ? "srv=" + encodeURIComponent(p.srv) + (p.pos ? "&pos=" + encodeURIComponent(p.pos) : "") : "bild=" + encodeURIComponent(p.bild)) + (p.unsichtbar ? "&klick=1" : ""),
+          visible: true,
+          allowApi: true,
+          origin: "map",
+          scale: 1,
+          position: { x: Math.round(p.x * 32), y: Math.round(p.y * 32), width: Math.round(p.w * 32), height: Math.round(p.h * 32) }
+        });
+      } catch {
+      }
+    }
+  }
+  var OFFENE_RAEUME = [14, 19, 24, 29, 52, 57, 62, 67].map((x) => x + DX).flatMap((x) => [17 + DY, 27 + DY].map((y) => ({ x, y, w: 5, h: 6 })));
+  var ideenFenster = null;
+  var ideenHinweis = null;
+  async function ideenOeffnen() {
+    try {
+      ideenHinweis && ideenHinweis.remove();
+    } catch {
+    }
+    try {
+      ideenFenster = await glasFenster(SEITEN + "ideen.html?t=" + Date.now());
+    } catch {
+    }
+  }
+  function ideenHinweisZeigen() {
+    try {
+      ideenHinweis = leertasteAus({ message: "\u{1F4A1} Meine Ideen \xB7 Leertaste", callback: () => {
+        ideenOeffnen();
+      } });
+    } catch {
+    }
+  }
+  function ideenHinweisWeg() {
+    try {
+      ideenHinweis && ideenHinweis.remove();
+    } catch {
+    }
+    ideenHinweis = null;
+    try {
+      ideenFenster && ideenFenster.close();
+    } catch {
+    }
+    ideenFenster = null;
+  }
+  function ideen() {
+    try {
+      const eigen = "B\xFCro " + String(WA.player.name || "").split(/\s+/)[0];
+      WA.room.area.onEnter(eigen).subscribe(ideenHinweisZeigen);
+      WA.room.area.onLeave(eigen).subscribe(ideenHinweisWeg);
+    } catch {
+    }
+    OFFENE_RAEUME.forEach((o, i) => {
+      if (POSTER.some((p) => p.zimmerX === o.x && p.zimmerY === o.y)) return;
+      try {
+        WA.room.area.create({ name: "offen-" + (i + 1), x: o.x * 32, y: o.y * 32, width: o.w * 32, height: o.h * 32 });
+        WA.room.area.onEnter("offen-" + (i + 1)).subscribe(ideenHinweisZeigen);
+        WA.room.area.onLeave("offen-" + (i + 1)).subscribe(ideenHinweisWeg);
+      } catch {
+      }
+    });
+  }
+  var BW = () => Math.round(screen.width || 390) + "px";
+  var handyBlatt = null;
+  function handyBlattZu() {
+    const war = handyBlatt && handyBlatt.name;
+    if (handyBlatt) {
+      try {
+        handyBlatt.h.close();
+      } catch {
+      }
+    }
+    handyBlatt = null;
+    if (war === "arbeiten") {
+      arbeitenOffen = false;
+      grundrissZeigen();
+    }
+  }
+  async function handyBlattUmschalten(name, url, hoehe) {
+    const war = handyBlatt && handyBlatt.name;
+    handyBlattZu();
+    if (war === name) return;
+    try {
+      glasOffen && glasOffen.handle && glasOffen.handle.close();
+    } catch {
+    }
+    glasOffen = null;
+    try {
+      const h = await WA.ui.website.open({ url, allowApi: true, visible: true, position: { vertical: "bottom", horizontal: "middle" }, size: { width: BW(), height: hoehe }, margin: { bottom: "0px" } });
+      handyBlatt = { name, h };
+    } catch {
+      handyBlatt = null;
+    }
+  }
+  var hinweisWeb = null;
+  var hinweisNr = 0;
+  var hinweisAkt = null;
+  function hinweisText(t) {
+    return String(t || "").replace(/\s*[·–-]?\s*Leertaste\s*=\s*/gi, " \u2192 ").replace(/\s*[·–-]?\s*Leertaste\s*(zum Sprechen|zum|:)?\s*/gi, " ").replace(/\s+/g, " ").replace(/\s*[·:–-]\s*$/, "").trim();
+  }
+  function handyHinweis(o) {
+    const nr = ++hinweisNr, cb = o && o.callback || (() => {
+    }), knopf = String(cb).replace(/\s/g, "") !== "()=>{}";
+    hinweisAkt = { nr, cb };
+    if (grundriss) {
+      try {
+        WA.player.state.saveVariable("swAppHinweis", { text: hinweisText(o && o.message), knopf, nr, t: Date.now() }, { public: false, persist: false });
+      } catch {
+      }
+      return { remove: () => {
+        if (hinweisAkt && hinweisAkt.nr === nr) {
+          hinweisAkt = null;
+          try {
+            WA.player.state.saveVariable("swAppHinweis", null, { public: false, persist: false });
+          } catch {
+          }
+        }
+      } };
+    }
+    const url = SEITEN + "hinweis.html?nr=" + nr + (knopf ? "&knopf=1" : "") + "&text=" + encodeURIComponent(hinweisText(o && o.message));
+    const alt = hinweisWeb;
+    hinweisWeb = null;
+    WA.ui.website.open({
+      url,
+      allowApi: true,
+      visible: true,
+      position: { vertical: "bottom", horizontal: "middle" },
+      size: { width: Math.round((screen.width || 390) - 28) + "px", height: "56px" },
+      margin: { bottom: "232px" }
+    }).then((h) => {
+      try {
+        alt && alt.close();
+      } catch {
+      }
+      if (hinweisAkt && hinweisAkt.nr === nr) hinweisWeb = h;
+      else {
+        try {
+          h.close();
+        } catch {
+        }
+      }
+    }).catch(() => {
+      try {
+        alt && alt.close();
+      } catch {
+      }
+    });
+    return { remove: () => {
+      if (hinweisAkt && hinweisAkt.nr === nr) {
+        hinweisAkt = null;
+        try {
+          hinweisWeb && hinweisWeb.close();
+        } catch {
+        }
+        hinweisWeb = null;
+      }
+    } };
+  }
+  function hinweisGetippt(nr) {
+    if (hinweisAkt && hinweisAkt.nr === nr) {
+      const cb = hinweisAkt.cb;
+      try {
+        cb();
+      } catch (e) {
+        console.warn(e);
+      }
+    }
+  }
+  function leertasteBereich(name, b, text, aktion, raus) {
+    let hinweis2 = null;
+    const zeigen = () => {
+      try {
+        hinweis2 = WA.ui.displayActionMessage({ message: typeof text === "function" ? text() : text, callback: () => {
+          aktion();
+          setTimeout(() => {
+            if (drin) zeigen();
+          }, 1500);
+        } });
+      } catch {
+      }
+    };
+    let drin = false;
+    const rein = () => {
+      drin = true;
+      zeigen();
+    };
+    const weg = () => {
+      drin = false;
+      try {
+        hinweis2 && hinweis2.remove();
+      } catch {
+      }
+      hinweis2 = null;
+      raus && raus();
+    };
+    try {
+      WA.room.area.create({ name, x: b.x * 32, y: b.y * 32, width: b.w * 32, height: b.h * 32 });
+      WA.room.area.onEnter(name).subscribe(rein);
+      WA.room.area.onLeave(name).subscribe(weg);
+    } catch {
+    }
+  }
+  function zitatTafel() {
+    let fenster = null;
+    leertasteBereich("zitat-tafel", { x: MI(45 + DX), y: 50 + DY, w: 4, h: 4 }, "\u{1F4DC} Leertaste: Zitat des Tages sehen", async () => {
+      try {
+        fenster = await glasFenster(SEITEN + "zitat.html?t=" + Date.now());
+      } catch {
+      }
+    }, () => {
+      try {
+        fenster && fenster.close();
+      } catch {
+      }
+      fenster = null;
+    });
+  }
+  function dankeWand() {
+    let fenster = null;
+    leertasteBereich("danke-wand", { x: MI(64 + DX), y: 38 + DY, w: 2, h: 1 }, "\u{1F49B} Leertaste: Danke-Wand", async () => {
+      try {
+        fenster = await glasFenster(SEITEN + "danke.html?t=" + Date.now());
+      } catch {
+      }
+    }, () => {
+      try {
+        fenster && fenster.close();
+      } catch {
+      }
+      fenster = null;
+    });
+  }
+  function schaufenster() {
+    let fenster = null;
+    leertasteBereich("schaufenster", { x: MI(66 + DX), y: 37 + DY, w: 2, h: 1 }, "\u{1F6CD}\uFE0F Leertaste: Mitarbeiter-Rabatte", async () => {
+      try {
+        fenster = await glasFenster(SEITEN + "rabatte.html?t=" + Date.now());
+      } catch {
+      }
+    }, () => {
+      try {
+        fenster && fenster.close();
+      } catch {
+      }
+      fenster = null;
+    });
+  }
+  var GESPRAECHS_RAEUME = [
+    // 14.10.2026: Besprechung 10 ist jetzt das Lernzimmer
+    { raum: "Besprechung 11", x: MI(25 + DX), y: 39 + DY, w: 7, h: 5 },
+    true ? { raum: "Besprechung Glas", x: 45, y: 34, w: 12, h: 16 } : { raum: "Besprechung Glas", x: MI(45 + DX), y: 6 + DY, w: 8, h: 8 }
+  ];
+  function gespraechsRaeume() {
+    for (const r of GESPRAECHS_RAEUME) {
+      let fenster = null;
+      leertasteBereich("gesp-" + r.raum.replace(/\s+/g, "-"), r, "\u{1F4AC} Leertaste: Gespr\xE4ch / Notizen", async () => {
+        try {
+          fenster = await glasFenster(SEITEN + "gespraech.html?raum=" + encodeURIComponent(r.raum) + "&t=" + Date.now());
+        } catch {
+        }
+      }, () => {
+        try {
+          fenster && fenster.close();
+        } catch {
+        }
+        fenster = null;
+      });
+    }
+  }
+  var zimmerLeiste = null;
+  var zimmerId = "";
+  var zimmerRaum = "";
+  var zimmerHinweis = null;
+  var zimmerZurueck = null;
+  var zimmerAndere = /* @__PURE__ */ new Set();
+  var istBueroRaum = (n) => !!n && /^(Büro\s+|Zimmer\s+\d+$)/i.test(n);
+  function zimmerSagen(was, raum, id = "") {
+    try {
+      WA.event.broadcast("sw-zimmer", { was, raum, id, wer: WA.player.name });
+    } catch {
+    }
+  }
+  function zimmerHinweisWeg() {
+    try {
+      zimmerHinweis && zimmerHinweis.remove();
+    } catch {
+    }
+    zimmerHinweis = null;
+  }
+  function zimmerHinweisPruefen() {
+    const raum = aktuellerBereich;
+    if (!istBueroRaum(raum) || zimmerId || !zimmerAndere.size || gesperrt) return zimmerHinweisWeg();
+    if (zimmerHinweis) return;
+    const mit = [...zimmerAndere].map((n) => n.split(/\s+/)[0]).join(", ");
+    try {
+      zimmerHinweis = WA.ui.displayActionMessage({ message: `\u{1F4AC} Leertaste: Gespr\xE4ch mit ${mit} f\xFChren`, callback: () => {
+        zimmerHinweis = null;
+        glasFenster(SEITEN + "gespraech.html?zimmer=1&raum=" + encodeURIComponent(String(raum)) + "&t=" + Date.now());
+        setTimeout(zimmerHinweisPruefen, 1500);
+      } });
+    } catch {
+    }
+  }
+  async function zimmerLeisteAuf(id, raum, weiter = false, hoch = false) {
+    if (zimmerLeiste) {
+      try {
+        zimmerLeiste.close();
+      } catch {
+      }
+    }
+    zimmerId = id;
+    zimmerRaum = raum;
+    zimmerHinweisWeg();
+    try {
+      zimmerLeiste = await WA.ui.website.open({
+        url: SEITEN + "zimmer-leiste.html?id=" + encodeURIComponent(id) + "&raum=" + encodeURIComponent(raum) + (weiter ? "&weiter=1" : "") + (hoch ? "&hoch=1" : "") + "&t=" + Date.now(),
+        allowApi: true,
+        allowPolicy: "microphone",
+        visible: true,
+        position: { vertical: "bottom", horizontal: "middle" },
+        size: { width: HANDY ? Math.round((screen.width || 390) - 20) + "px" : "560px", height: hoch ? "200px" : "50px" },
+        margin: { bottom: HANDY ? "160px" : "64px" }
+      });
+    } catch {
+    }
+  }
+  function zimmerLeisteZu() {
+    if (zimmerLeiste) {
+      try {
+        zimmerLeiste.close();
+      } catch {
+      }
+    }
+    zimmerLeiste = null;
+    zimmerId = "";
+    zimmerRaum = "";
+    zimmerHinweisPruefen();
+  }
+  function zimmerAbschluss(id) {
+    glasFenster(SEITEN + "gespraech.html?id=" + encodeURIComponent(id) + "&abschluss=1&t=" + Date.now());
+  }
+  function zimmerBetreten(raum) {
+    zimmerAndere.clear();
+    zimmerHinweisWeg();
+    if (!istBueroRaum(raum)) return;
+    zimmerSagen("rein", raum);
+    if (zimmerZurueck && zimmerZurueck.raum === raum && Date.now() - zimmerZurueck.t < 3 * 60 * 1e3) {
+      const id = zimmerZurueck.id;
+      zimmerZurueck = null;
+      try {
+        glasOffen && glasOffen.handle && glasOffen.handle.close();
+      } catch {
+      }
+      glasOffen = null;
+      zimmerLeisteAuf(id, raum, true);
+      zimmerSagen("start", raum, id);
+    }
+  }
+  function zimmerVerlassen(raum) {
+    if (!istBueroRaum(raum)) return;
+    zimmerSagen("raus", raum);
+    zimmerAndere.clear();
+    zimmerHinweisWeg();
+    if (zimmerId && zimmerRaum === raum) {
+      const id = zimmerId;
+      zimmerLeiste && (() => {
+        try {
+          zimmerLeiste.close();
+        } catch {
+        }
+      })();
+      zimmerLeiste = null;
+      zimmerId = "";
+      zimmerRaum = "";
+      zimmerZurueck = { id, raum, t: Date.now() };
+      zimmerSagen("ende", raum, id);
+      zimmerAbschluss(id);
+    }
+  }
+  var ZIMMER_AKTIONEN = {
+    zimmerLeiste: (v) => {
+      try {
+        glasOffen && glasOffen.handle && glasOffen.handle.close();
+      } catch {
+      }
+      glasOffen = null;
+      const raum = String(v.raum || aktuellerBereich || "");
+      zimmerLeisteAuf(String(v.id), raum);
+      zimmerSagen("start", raum, String(v.id));
+    },
+    zimmerLeisteZu: () => zimmerLeisteZu(),
+    zimmerLeisteGroesse: (v) => {
+      if (zimmerId) zimmerLeisteAuf(zimmerId, zimmerRaum, false, !!v.hoch);
+    },
+    // Glastür zum Anbau: PIN stimmte (glastuer.html) → für diese Sitzung frei, Tür auf (12.10.)
+    glastuerAuf: () => {
+      anbauFrei = true;
+      glastuerOeffnen();
+      setTimeout(() => {
+        try {
+          glasOffen && glasOffen.handle && glasOffen.handle.close();
+        } catch {
+        }
+        glasOffen = null;
+        const z = anbauZiel;
+        anbauZiel = null;
+        if (z) WA.player.moveTo(z.x, z.y, 10).catch(() => {
+        });
+      }, 1200);
+    },
+    zimmerEnde: (v) => {
+      const id = String(v.id || zimmerId), raum = zimmerRaum;
+      zimmerLeisteZu();
+      if (raum) zimmerSagen("ende", raum, id);
+      zimmerAbschluss(id);
+    },
+    zimmerAbschluss: (v) => {
+      const id = String(v.id || zimmerId);
+      zimmerLeisteZu();
+      zimmerAbschluss(id);
+    },
+    gespraechOeffnen: (v) => glasFenster(SEITEN + "gespraech.html?id=" + encodeURIComponent(String(v.id || zimmerId)) + (v.fokus ? "&fokus=" + encodeURIComponent(v.fokus) : "") + "&t=" + Date.now())
+  };
+  function zimmerGespraeche() {
+    try {
+      WA.event.on("sw-zimmer").subscribe((ev) => {
+        const d = ev && ev.data || {}, wer = String(d.wer || ""), raum = String(d.raum || "");
+        if (d.was === "raus" || d.was === "ende") setTimeout(infoLaden, 1500);
+        if (!wer || wer === WA.player.name || raum !== aktuellerBereich) return;
+        if (d.was === "rein") {
+          zimmerAndere.add(wer);
+          zimmerSagen("da", raum);
+          if (zimmerId && zimmerRaum === raum) zimmerSagen("start", raum, zimmerId);
+        }
+        if (d.was === "da") zimmerAndere.add(wer);
+        if (d.was === "raus") zimmerAndere.delete(wer);
+        if (d.was === "start" && d.id && !zimmerId) {
+          zimmerAndere.add(wer);
+          zimmerLeisteAuf(String(d.id), raum);
+          kurzMeldung(`\u{1F4AC} ${wer.split(/\s+/)[0]} hat ein Gespr\xE4ch gestartet \u2013 die Zeit l\xE4uft`, 5e3);
+        }
+        if (d.was === "ende" && d.id && zimmerId === String(d.id)) {
+          const id = zimmerId;
+          zimmerLeisteZu();
+          zimmerAbschluss(id);
+        }
+        zimmerHinweisPruefen();
+      });
+    } catch {
+    }
+  }
+  var GLASTUER = [[MI(88 + DX), 29 + DY], [MI(88 + DX), 30 + DY]];
+  var anbauFrei = false;
+  var glastuerZu = null;
+  var anbauZiel = null;
+  var anbauPinZuletzt = 0;
+  var imAnbau = (px, py) => {
+    const x = Math.floor(px / 32), y = Math.floor(py / 32);
+    return x >= MI(89 + DX) && x <= MI(113 + DX) && y >= 3 + DY && y <= 33 + DY;
+  };
+  function glastuer(offen) {
+    try {
+      WA.room.setTiles(GLASTUER.flatMap(([x, y]) => [{ x, y, tile: offen ? null : kollisionGid, layer: "collisions" }, { x, y, tile: offen ? null : 4104, layer: "walls1" }]));
+    } catch {
+    }
+  }
+  function glastuerOeffnen(ms = 15e3) {
+    glastuer(true);
+    clearTimeout(glastuerZu);
+    const zu = async () => {
+      try {
+        const p = await WA.player.getPosition(), fx2 = Math.floor(p.x / 32), fy = Math.floor(p.y / 32);
+        if (fx2 >= MI(87 + DX) && fx2 <= MI(89 + DX) && fy >= 28 + DY && fy <= 31 + DY) {
+          glastuerZu = setTimeout(zu, 3e3);
+          return;
+        }
+      } catch {
+      }
+      glastuer(false);
+    };
+    glastuerZu = setTimeout(zu, ms);
+  }
+  function glaswandAgenten() {
+    leertasteBereich(
+      "glastuer-aussen",
+      { x: MI(85 + DX), y: 28 + DY, w: 3, h: 4 },
+      () => anbauFrei ? "\u{1F6AA} Leertaste: Glast\xFCr \xF6ffnen" : "\u{1F512} Bereich der KI-Agenten \xB7 Leertaste: PIN eingeben",
+      () => {
+        if (anbauFrei) glastuerOeffnen();
+        else glasFenster(SEITEN + "glastuer.html?t=" + Date.now());
+      }
+    );
+    leertasteBereich("glastuer-innen", { x: MI(89 + DX), y: 28 + DY, w: 3, h: 4 }, "\u{1F6AA} Leertaste: Glast\xFCr \xF6ffnen", () => glastuerOeffnen());
+    WA.player.onPlayerMove((e) => {
+      if (anbauFrei || !imAnbau(e.x, e.y)) return;
+      anbauZiel = { x: e.x, y: e.y };
+      WA.player.teleport((86 + DX) * 32 + 16, (29 + DY) * 32 + 16);
+      if (Date.now() - anbauPinZuletzt > 5e3) {
+        anbauPinZuletzt = Date.now();
+        glasFenster(SEITEN + "glastuer.html?t=" + Date.now());
+      }
+      kurzMeldung("\u{1F512} Bereich der KI-Agenten \u2013 bitte die PIN eingeben", 6e3);
+    });
+  }
+  var KUECHE_GERAETE = ["kuehlschrank", "herd", "kaffee"];
+  function kueche() {
+    const aus = /* @__PURE__ */ new Map();
+    const benutzen = (g) => {
+      if (g === "kaffee" && !aus.has("dampf")) {
+        fx("kueche-kaffee-dampf", true);
+        aus.set("dampf", setTimeout(() => {
+          aus.delete("dampf");
+          fx("kueche-kaffee-dampf", false);
+          benutzen("kaffee");
+        }, 4e3));
+        return;
+      }
+      if (g === "kaffee" && aus.has("dampf")) return;
+      fx("kueche-" + g + "-an", true);
+      fx("kueche-" + g + "-aus", false);
+      clearTimeout(aus.get(g));
+      aus.set(g, setTimeout(() => {
+        fx("kueche-" + g + "-an", false);
+        fx("kueche-" + g + "-aus", true);
+      }, 8e3));
+    };
+    try {
+      WA.event.on("sw-kueche").subscribe((ev) => {
+        const g = ev && ev.data && ev.data.g;
+        if (KUECHE_GERAETE.includes(g)) benutzen(g);
+      });
+    } catch {
+    }
+    const los = (g) => {
+      benutzen(g);
+      try {
+        WA.event.broadcast("sw-kueche", { g });
+      } catch {
+      }
+    };
+    leertasteBereich("kueche-kuehlschrank", { x: MI(67 + DX), y: 37 + DY, w: 4, h: 1 }, "\u{1F9CA} K\xFChlschrank \xF6ffnen \xB7 Leertaste", () => los("kuehlschrank"));
+    leertasteBereich("kueche-herd", { x: MI(75 + DX), y: 37 + DY, w: 3, h: 1 }, "\u{1F373} Spiegelei braten \xB7 Leertaste", () => los("herd"));
+    leertasteBereich("kueche-kaffee", { x: MI(81 + DX), y: 36 + DY, w: 2, h: 4 }, "\u2615 Kaffee holen \xB7 Leertaste", () => {
+      los("kaffee");
+      kurzMeldung("\u2615 Kaffee l\xE4uft durch \u2026", 3800);
+      setTimeout(() => {
+        ton("kaffee");
+        kurzMeldung("\u2615 Kaffee ist fertig \u2013 lass ihn dir schmecken!", 5e3);
+      }, 4e3);
+    });
+  }
+  var richtung = "";
+  function klingel() {
+    let zuletzt = 0, aus = null;
+    const laeuten = (wer, ich) => {
+      ton("klingel");
+      fx("fx-klingel", true);
+      clearTimeout(aus);
+      aus = setTimeout(() => fx("fx-klingel", false), 3500);
+      if (!ich) kurzMeldung("\u{1F514} Ding-Dong \u2013 " + wer + " ist am Eingang", 6e3);
+    };
+    try {
+      WA.event.on("sw-klingel").subscribe((ev) => laeuten(String(ev && ev.data && ev.data.wer || "Jemand"), false));
+    } catch {
+    }
+    try {
+      WA.room.area.create({ name: "eingang-klingel", x: (43 + DX) * 32, y: (52 + DY) * 32, width: 4 * 32, height: 2 * 32 });
+      WA.room.area.onEnter("eingang-klingel").subscribe(() => {
+        if (richtung !== "up" || Date.now() - zuletzt < 2e4) return;
+        zuletzt = Date.now();
+        const wer = String(WA.player.name || "Jemand").split(/\s+/)[0];
+        laeuten(wer, true);
+        try {
+          WA.event.broadcast("sw-klingel", { wer });
+        } catch {
+        }
+      });
+    } catch {
+    }
+  }
+  var konfettiOffen = false;
+  async function konfetti(name) {
+    if (konfettiOffen) return;
+    konfettiOffen = true;
+    try {
+      const w = await WA.ui.website.open({
+        url: SEITEN + "konfetti.html?name=" + encodeURIComponent(name),
+        allowApi: false,
+        visible: true,
+        position: { vertical: "top", horizontal: "middle" },
+        size: { width: Math.round(screen.availWidth || 1600) + "px", height: "100vh" },
+        margin: { top: "0px" }
+      });
+      ton("klingel");
+      setTimeout(() => {
+        try {
+          w.close();
+        } catch {
+        }
+        konfettiOffen = false;
+      }, 6500);
+    } catch {
+      konfettiOffen = false;
+    }
+  }
+  function konfettiHeute() {
+    if (HANDY) return;
+    const kinder = info.geburtstage || [];
+    if (!kinder.length) return;
+    const heute = (/* @__PURE__ */ new Date()).toLocaleDateString("sv-SE", { timeZone: "Europe/Berlin" });
+    try {
+      if (localStorage.getItem("sw-konfetti") === heute) return;
+      localStorage.setItem("sw-konfetti", heute);
+    } catch {
+    }
+    konfetti(kinder.join(" & "));
+  }
+  function toreVon(name) {
+    try {
+      return Number(JSON.parse(String(WA.state.fussball_tore || "{}"))[name]) || 0;
+    } catch {
+      return 0;
+    }
+  }
+  function profilOeffnen(name) {
+    glasFenster(SEITEN + "profil.html?name=" + encodeURIComponent(name) + "&tore=" + toreVon(name) + "&t=" + Date.now()).catch(() => {
+    });
+  }
+  function profilKarten() {
+    try {
+      WA.ui.onRemotePlayerClicked.subscribe((p) => {
+        try {
+          p.addAction("\u{1F464} Profil ansehen", () => profilOeffnen(String(p.name || "")));
+        } catch {
+        }
+      });
+    } catch {
+    }
+  }
+  async function zuPerson(name) {
+    try {
+      await WA.players.configureTracking({ players: true, movement: true });
+      const p = [...WA.players.list()].find((x) => String(x.name || "").toLowerCase() === name.toLowerCase());
+      if (p && p.position) {
+        await WA.player.moveTo(p.position.x, p.position.y + 32, 10);
+        return;
+      }
+    } catch {
+    }
+    kurzMeldung("\u{1F6B6} " + name.split(/\s+/)[0] + " ist gerade nicht im B\xFCro", 5e3);
+  }
+  async function zuRaum(ort) {
+    try {
+      const k = await ladeKarte(), q = ort.toLowerCase().trim();
+      const alle = ((k.layers || []).find((l) => l.name === "floorLayer") || { objects: [] }).objects.filter((o) => o.name && o.width && o.height);
+      const r = alle.find((o) => o.name.toLowerCase() === q) || alle.find((o) => q.includes(o.name.toLowerCase()) || o.name.toLowerCase().includes(q));
+      if (r) {
+        kurzMeldung("\u{1F6B6} Unterwegs zu " + r.name, 4e3);
+        await WA.player.moveTo(r.x + r.width / 2, r.y + r.height / 2, 10);
+        return;
+      }
+    } catch {
+    }
+    kurzMeldung("\u{1F4CD} \u201E" + ort + "\u201C ist kein Raum im B\xFCro", 5e3);
+  }
+  var SCHILD_PERSON = {
+    "Zimmer 1": "Tanja R.",
+    "Zimmer 2": "Christiane S.",
+    "Zimmer 3": "Jana J.",
+    "Zimmer 4": "Kubilay A.",
+    "Zimmer 5": "Bin W.",
+    "Zimmer 6": "Onur K.",
+    "Zimmer 7": "Dilber A.",
+    "Zimmer 8": "Fatih K.",
+    "Zimmer 9": "Kerstin C.",
+    "Zimmer 10": "Angelika T.",
+    "Zimmer 11": "",
+    "Zimmer 12": "",
+    "Zimmer 13": "Ilona S.",
+    "Zimmer 14": "Julien M.",
+    "Zimmer 15": "Bahjat D.",
+    "Zimmer 16": "",
+    "B\xFCro Leutrim": "Leutrim S.",
+    "B\xFCro Katharina": "Katharina K.",
+    "B\xFCro Ferhat": "Ferhat F.",
+    "B\xFCro Angelina": "Angelina M.",
+    "B\xFCro Sam": "Sam J.",
+    "B\xFCro Noura": "Noura A.",
+    "B\xFCro Emre": "Emre A.",
+    "B\xFCro Kadir": "Kadir K.",
+    "B\xFCro Attila": "Attila K."
+  };
+  var schilder = /* @__PURE__ */ new Map();
+  function schildStatus(t) {
+    {
+      const wer = t.offen ? zimmerDaten(t).wer : t.besitzer;
+      if (wer && telefoniertGerade(wer)) return "tel";
+    }
+    if (t.offen ? zimmerDaten(t).s === "zu" : tuerStatus(t) === "fokus") return "fokus";
+    return aktuellerBereich === t.raum || (info.belegt || []).includes(t.raum) ? "da" : "weg";
+  }
+  var schildUrl = (t, n, st) => SEITEN + "schild.html?v=4&n=" + encodeURIComponent(n) + "&raum=" + encodeURIComponent(t.raum) + "&s=" + st;
+  async function namensschilder() {
+    if (HANDY) return;
+    for (const t of tueren) {
+      const [rx, ry, rw] = t.rechteck, n = t.raum in SCHILD_PERSON ? SCHILD_PERSON[t.raum] : t.besitzer ? t.besitzer.charAt(0).toUpperCase() + t.besitzer.slice(1) : "";
+      const st = schildStatus(t);
+      void rw;
+      try {
+        const h = await WA.room.website.create({
+          name: "schild-" + t.variable,
+          url: schildUrl(t, n, st),
+          visible: true,
+          allowApi: false,
+          origin: "map",
+          scale: 1,
+          position: { x: Math.round((rx + 0.05) * 32), y: Math.round((ry - 2.35) * 32), width: 46, height: 16 }
+        });
+        schilder.set(t.variable, { h, n, s: st });
+      } catch {
+      }
+    }
+  }
+  function schilderAktualisieren() {
+    for (const t of tueren) {
+      const x = schilder.get(t.variable);
+      if (!x) continue;
+      const st = schildStatus(t);
+      if (st === x.s) continue;
+      x.s = st;
+      try {
+        x.h.url = schildUrl(t, x.n, st);
+      } catch {
+      }
+    }
+  }
+  var grundrissOeffnet = false;
+  var grundriss = null;
+  var grundrissAn = true;
+  var imGespraech = false;
+  var arbeitenOffen = false;
+  async function grundrissZeigen() {
+    if (!HANDY) return;
+    const soll = grundrissAn && !imGespraech && !gesperrt && !arbeitenOffen;
+    if (!soll) {
+      if (grundriss) {
+        try {
+          grundriss.close();
+        } catch {
+        }
+        grundriss = null;
+      }
+      return;
+    }
+    if (grundriss || grundrissOeffnet) return;
+    grundrissOeffnet = true;
+    try {
+      grundriss = await WA.ui.website.open({
+        url: SEITEN + "app.html?v=5",
+        allowApi: true,
+        visible: true,
+        position: { vertical: "top", horizontal: "left" },
+        size: { width: Math.round(screen.width || 390) + "px", height: "100vh" },
+        margin: { top: "0px", left: "0px" }
+      });
+    } catch {
+      grundriss = null;
+    }
+    grundrissOeffnet = false;
+    if (grundriss && !(grundrissAn && !imGespraech && !gesperrt && !arbeitenOffen)) {
+      try {
+        grundriss.close();
+      } catch {
+      }
+      grundriss = null;
+    }
+  }
+  function grundrissUmschalten(an) {
+    grundrissAn = an === void 0 ? !grundrissAn : an;
+    mtLage = "";
+    if (grundrissAn) {
+      try {
+        mtFenster && mtFenster.close();
+      } catch {
+      }
+      mtFenster = null;
+    } else setTimeout(() => mtZeigen(), 600);
+    try {
+      WA.player.state.saveVariable("swGrundriss", grundrissAn, { public: false, persist: true });
+    } catch {
+    }
+    grundrissZeigen();
+    klassikPruefen();
+  }
+  var klassik = [];
+  var klassikOeffnen = null;
+  var klassikOffen = false;
+  async function klassikPruefen() {
+    if (!HANDY) return;
+    const soll = !grundrissAn;
+    if (soll && !klassikOffen) {
+      klassikOffen = true;
+      try {
+        klassikOeffnen && await klassikOeffnen();
+      } catch {
+      }
+      try {
+        klassik.push(await WA.ui.website.open({ url: SEITEN + "handy-menue.html?v=4&appknopf=1", allowApi: true, visible: true, position: { vertical: "top", horizontal: "middle" }, size: { width: "120px", height: "40px" }, margin: { top: "64px" } }));
+      } catch {
+      }
+    }
+    if (!soll && klassikOffen) {
+      klassikOffen = false;
+      klassik.splice(0).forEach((h) => {
+        try {
+          h.close();
+        } catch {
+        }
+      });
+    }
+  }
+  async function arbeitenAuf() {
+    handyBlattZu();
+    arbeitenOffen = true;
+    grundrissZeigen();
+    try {
+      glasOffen && glasOffen.handle && glasOffen.handle.close();
+    } catch {
+    }
+    glasOffen = null;
+    try {
+      const h = await WA.ui.website.open({
+        url: SEITEN + "handy.html?imBuero=1&t=" + Date.now(),
+        allowApi: true,
+        visible: true,
+        position: { vertical: "top", horizontal: "middle" },
+        size: { width: Math.round(screen.width || 390) + "px", height: "78vh" },
+        margin: { top: "104px" }
+      });
+      handyBlatt = { name: "arbeiten", h };
+    } catch {
+      arbeitenOffen = false;
+      grundrissZeigen();
+    }
+  }
+  function arbeitenZu() {
+    if (handyBlatt && handyBlatt.name === "arbeiten") handyBlattZu();
+    arbeitenOffen = false;
+    grundrissZeigen();
+  }
+  async function grundrissRaum(name) {
+    const t = tueren.find((x) => x.raum === name);
+    if (t && t.draussen) {
+      WA.player.teleport(t.draussen[0] * 32 + 16, t.draussen[1] * 32 + 16);
+      if (tuerStatus(t) === "frei" || istBesitzer(t)) {
+        const [rx, ry, rw, rh] = t.rechteck;
+        setTimeout(() => WA.player.moveTo((rx + rw / 2) * 32, (ry + rh / 2) * 32, 10).catch(() => {
+        }), 300);
+      }
+      return;
+    }
+    zuRaum(name);
+  }
+  async function grundrissPerson(name) {
+    try {
+      const p = [...WA.players.list()].find((x) => String(x.name || "") === name);
+      if (p && p.position) {
+        WA.player.teleport(p.position.x, p.position.y + 32);
+        return;
+      }
+    } catch {
+    }
+    kurzMeldung("\u{1F6B6} " + name.split(/\s+/)[0] + " ist gerade nicht im B\xFCro", 5e3);
+  }
+  var raumVon = (px, py) => {
+    const fx2 = px / 32, fy = py / 32;
+    const t = tueren.find((x) => {
+      const [rx, ry, rw, rh] = x.rechteck;
+      return fx2 >= rx && fx2 < rx + rw && fy >= ry && fy < ry + rh;
+    });
+    return t ? t.raum : "";
+  };
+  function wandGespraeche() {
+    let aus = false;
+    const c = WA.controls;
+    if (!c.disablePlayerProximityMeeting) return;
+    try {
+      WA.players.configureTracking({ players: true, movement: true });
+    } catch {
+    }
+    setInterval(async () => {
+      if (gesperrt) return;
+      try {
+        const ich = await WA.player.getPosition(), meinRaum = raumVon(ich.x, ich.y);
+        const nah = [...WA.players.list()].filter((p) => p.position && Math.hypot(p.position.x - ich.x, p.position.y - ich.y) < 160);
+        const fremd = nah.filter((p) => raumVon(p.position.x, p.position.y) !== meinRaum);
+        const sperren = fremd.length > 0 && fremd.length === nah.length;
+        if (sperren && !aus) {
+          aus = true;
+          c.disablePlayerProximityMeeting();
+        } else if (!sperren && aus) {
+          aus = false;
+          c.restorePlayerProximityMeeting();
+        }
+      } catch {
+      }
+    }, 700);
+  }
+  var terminGezeigt = /* @__PURE__ */ new Map();
+  var terminHinweis = null;
+  function raumFuerOrt(ort) {
+    const q = String(ort || "").toLowerCase().trim();
+    if (!q || !karte) return null;
+    const alle = ((karte.layers || []).find((l) => l.name === "floorLayer") || { objects: [] }).objects.filter((o) => o.name && o.width && o.height);
+    const r = alle.find((o) => o.name.toLowerCase() === q) || alle.find((o) => q.includes(o.name.toLowerCase()) || o.name.toLowerCase().includes(q));
+    return r ? r.name : null;
+  }
+  function termineErinnern(liste) {
+    if (gesperrt) return;
+    const jetzt = hm(/* @__PURE__ */ new Date());
+    const minBis = (z) => {
+      const [h, m] = String(z).split(":").map(Number), n = /* @__PURE__ */ new Date();
+      return h * 60 + m - (n.getHours() * 60 + n.getMinutes());
+    };
+    for (const t of liste) {
+      const schon = terminGezeigt.get(t.id) || /* @__PURE__ */ new Set();
+      terminGezeigt.set(t.id, schon);
+      const raum = raumFuerOrt(t.ort), dort = !!raum && aktuellerBereich === raum, rest = minBis(t.von);
+      const stufe = t.von > jetzt && rest <= 5 ? "vorher" : t.von <= jetzt && !dort ? "beginn" : "";
+      if (!stufe || schon.has(stufe)) continue;
+      schon.add(stufe);
+      if (stufe === "beginn" && !raum) continue;
+      try {
+        terminHinweis && terminHinweis.remove();
+      } catch {
+      }
+      const text = (stufe === "vorher" ? `\u{1F4C5} In ${Math.max(1, rest)} Min: ` : "\u{1F4C5} Dein Termin hat begonnen: ") + t.titel + (t.ort ? " \xB7 " + t.ort : "") + (raum && !dort ? " \xB7 Leertaste = hinlaufen" : "");
+      if (!HANDY) {
+        mitteilung({ art: "termin", titel: (stufe === "vorher" ? "In " + Math.max(1, rest) + " Min: " : "Hat begonnen: ") + t.titel, text: t.ort ? "\u{1F4CD} " + t.ort : "", raum: raum && !dort ? raum : "" });
+        continue;
+      }
+      ton("klingel");
+      terminHinweis = WA.ui.displayActionMessage({ message: text, callback: () => {
+        terminHinweis = null;
+        if (raum && aktuellerBereich !== raum) zuRaum(raum);
+      } });
+      const h = terminHinweis;
+      setTimeout(() => {
+        try {
+          if (terminHinweis === h) {
+            h.remove();
+            terminHinweis = null;
+          }
+        } catch {
+        }
+      }, 6e4);
+      try {
+        WA.ui.banner.openBanner({ id: "sw-termin", text, bgColor: "#1d4ed8", textColor: "#ffffff", closable: true, timeToClose: 3e4 });
+      } catch {
+      }
+    }
+  }
+  var FUSSBALL = {
+    tore: [
+      { name: "platz-tor-oben", x: MI(172 + DX), y: 5 + DY, w: 13, h: 6 },
+      { name: "platz-tor-unten", x: MI(172 + DX), y: 34 + DY, w: 13, h: 6 },
+      { name: "bolzplatz-tor-oben", x: MI(198 + DX), y: 5 + DY, w: 7, h: 4 },
+      { name: "bolzplatz-tor-unten", x: MI(198 + DX), y: 23 + DY, w: 7, h: 4 }
+    ],
+    vereinsheim: { x: MI(194 + DX), y: 38 + DY, w: 14, h: 2 }
+  };
+  function torGeschossen(wer, wo) {
+    try {
+      WA.ui.banner.openBanner({ id: "sw-tor", text: `\u26BD TOOOR! ${wer} trifft ${wo}!`, bgColor: "#0f766e", textColor: "#ffffff", closable: true, timeToClose: 6e3 });
+    } catch {
+      kurzMeldung(`\u26BD TOOOR! ${wer} trifft ${wo}!`, 6e3);
+    }
+  }
+  function fussball() {
+    try {
+      WA.event.on("sw-tor").subscribe((ev) => {
+        const d = ev && ev.data;
+        if (d && d.wer) torGeschossen(d.wer, d.wo);
+      });
+    } catch {
+    }
+    for (const t of FUSSBALL.tore) {
+      const wo = t.name.startsWith("bolz") ? "auf dem Bolzplatz" : "auf dem Fu\xDFballplatz";
+      leertasteBereich(t.name, t, "\u26BD Torschuss \xB7 Leertaste", () => {
+        if (Math.random() >= 0.65) {
+          kurzMeldung(["Knapp vorbei! \u{1F62C}", "Pfosten! \u{1F945}", "Gehalten! \u{1F9E4}", "Dr\xFCber! \u2601\uFE0F"][Math.floor(Math.random() * 4)], 3500);
+          return;
+        }
+        const wer = String(WA.player.name || "Jemand").split(/\s+/)[0];
+        torGeschossen(wer, wo);
+        try {
+          WA.event.broadcast("sw-tor", { wer, wo });
+        } catch {
+        }
+        try {
+          const tore = JSON.parse(String(WA.state.fussball_tore || "{}"));
+          tore[WA.player.name] = (tore[WA.player.name] || 0) + 1;
+          WA.state.saveVariable("fussball_tore", JSON.stringify(tore));
+        } catch {
+        }
+      });
+    }
+    let fenster = null;
+    leertasteBereich("vereinsheim", FUSSBALL.vereinsheim, "\u{1F3DF} Vereinsheim FC SW Digital \xB7 Leertaste", async () => {
+      try {
+        fenster = await glasFenster(SEITEN + "vereinsheim.html?t=" + Date.now());
+      } catch {
+      }
+    }, () => {
+      try {
+        fenster && fenster.close();
+      } catch {
+      }
+      fenster = null;
+    });
+  }
+  function ronPlatz() {
+    let fenster = null;
+    leertasteBereich("ron-platz", { x: MI(106 + DX), y: 31 + 14, w: 2, h: 2 }, "\u{1F4AC} Ron \xB7 Onboarding \u2013 Leertaste", async () => {
+      try {
+        fenster = await glasFenster(SEITEN + "ron.html?t=" + Date.now());
+      } catch {
+      }
+    }, () => {
+      try {
+        fenster && fenster.close();
+      } catch {
+      }
+      fenster = null;
+    });
+  }
+  function itPlatz() {
+    [["rengid", "Rengid \xB7 IT-Agent", 94], ["olga", "Olga \xB7 IT", 96]].forEach(([k, t, x]) => {
+      let fenster = null;
+      leertasteBereich("it-" + k + "-platz", { x: x + DX, y: 19 + DY, w: 2, h: 2 }, "\u{1F4AC} " + t + " \u2013 Leertaste", async () => {
+        try {
+          fenster = await glasFenster(SEITEN + "it-status.html?agent=" + k + "&t=" + Date.now());
+        } catch {
+        }
+      }, () => {
+        try {
+          fenster && fenster.close();
+        } catch {
+        }
+        fenster = null;
+      });
+    });
+  }
+  function jaPlatz() {
+    let fenster = null;
+    leertasteBereich("ja-abschluss-platz", { x: MI(92 + DX), y: 8 + DY, w: 2, h: 2 }, "\u{1F4AC} Harvey \xB7 Abschluss-Agent \u2013 Leertaste", async () => {
+      try {
+        fenster = await glasFenster(SEITEN + "ja-team.html?t=" + Date.now());
+      } catch {
+      }
+    }, () => {
+      try {
+        fenster && fenster.close();
+      } catch {
+      }
+      fenster = null;
+    });
+  }
+  function utePlatz() {
+    let fenster = null;
+    leertasteBereich("ute-platz", { x: MI(51 + DX) - (true ? 4 : 0), y: 6 + 14, w: 6, h: 2 }, "\u{1F5D3} Termine mit Donna \u2013 Leertaste: freie Zeiten finden und buchen", async () => {
+      try {
+        fenster = await glasFenster(SEITEN + "ute.html?t=" + Date.now());
+      } catch {
+      }
+    }, () => {
+      try {
+        fenster && fenster.close();
+      } catch {
+      }
+      fenster = null;
+    });
+  }
+  function minaPlatz() {
+    [["leon", "Leon \xB7 Recherche", 104], ["mina", "Mina \xB7 Social Media", 106], ["sophie", "Sophie \xB7 Content", 108]].forEach(([k, t, x]) => {
+      let fenster = null;
+      leertasteBereich(k + "-platz", { x: x + DX, y: 8 + DY, w: 2, h: 2 }, "\u{1F4AC} " + t + " \u2013 Leertaste zum Sprechen", async () => {
+        try {
+          fenster = await glasFenster(SEITEN + "mina.html?agent=" + k + "&t=" + Date.now());
+        } catch {
+        }
+      }, () => {
+        try {
+          fenster && fenster.close();
+        } catch {
+        }
+        fenster = null;
+      });
+    });
+  }
+  var AMPEL_START = Date.now();
+  var AMPEL_KREUZUNGEN = [{ x: MI(115 + DX), y: 67 + DY, sv: 4, sh: 6 }, { x: MI(115 + DX), y: 84 + DY, sv: 4, sh: 4 }];
+  var editorAn = null;
+  function editorPruefen() {
+    if (!Array.isArray(info.editoren)) return;
+    const soll = info.editoren.includes(vorname(WA.player.name));
+    if (soll === editorAn) return;
+    editorAn = soll;
+    try {
+      const c = WA.controls;
+      soll ? c.restoreMapEditor?.() : c.disableMapEditor?.();
+    } catch {
+    }
+  }
+  async function infoLaden() {
+    try {
+      info = await (await fetch(INFO, { headers: { "X-Buero-Key": BUERO_KEY } })).json();
+    } catch {
+      return;
+    }
+    try {
+      const mt = tueren.find((x) => !x.offen && x.besitzer.toLowerCase() === vorname(WA.player.name));
+      const iz = !!(mt && immerZu(mt));
+      if (WA.player.state.swTuerImmerZu !== iz) WA.player.state.saveVariable("swTuerImmerZu", iz, { public: false, persist: false });
+    } catch {
+    }
+    editorPruefen();
+    try {
+      const d = info.durchsage;
+      if (d && d.id !== durchsageGezeigt) {
+        durchsageGezeigt = d.id;
+        WA.ui.banner.openBanner({ id: "sw-durchsage", text: `\u{1F4E2} ${d.text} \u2014 ${d.von}`, bgColor: "#0d9488", textColor: "#ffffff", closable: true, timeToClose: 0 });
+      }
+      if (!d && durchsageGezeigt) {
+        durchsageGezeigt = null;
+        WA.ui.banner.closeBanner();
+      }
+    } catch {
+    }
+    ballonsSetzen();
+    konfettiHeute();
+    telefonTuer();
+    effekte();
+    if (!begruesst) {
+      begruesst = true;
+      if (HANDY) return;
+      const v = String(WA.player.name || "").split(/\s+/)[0], h = (/* @__PURE__ */ new Date()).getHours();
+      const gruss = h < 11 ? "Guten Morgen" : h < 17 ? "Hallo" : "Guten Abend";
+      const teile = [];
+      if ((info.geburtstage || []).some((n) => n.toLowerCase() === v.toLowerCase())) teile.push("\u{1F389} Alles Gute zum Geburtstag!");
+      const andere = (info.geburtstage || []).filter((n) => n.toLowerCase() !== v.toLowerCase());
+      if (andere.length) teile.push(`\u{1F382} ${andere.join(", ")} ${andere.length === 1 ? "hat" : "haben"} heute Geburtstag`);
+      if ((info.reservierungen || []).length) teile.push(`\u{1F4C5} ${info.reservierungen.length} Raum-Reservierung${info.reservierungen.length === 1 ? "" : "en"} heute`);
+      kurzMeldung(`${gruss} ${v}! ` + (teile.join(" \xB7 ") || "Sch\xF6n, dass du da bist."), 9e3);
+    }
+  }
+  function beobachten(name, api) {
+    api.onEnter(name).subscribe(() => {
+      aktuellerBereich = name;
+      const kind = (info.geburtstage || []).find((n) => "b\xFCro " + n.toLowerCase() === name.toLowerCase());
+      if (kind) konfetti(kind);
+      tuerWache(name);
+      bereit.then(() => melden("betreten"));
+      reservierungZeigen(name);
+      effekte();
+      bereit.then(() => zimmerBetreten(name));
+      zimmerRein(name);
+    });
+    api.onLeave(name).subscribe(() => {
+      if (aktuellerBereich === name) aktuellerBereich = null;
+      bereit.then(() => melden("betreten"));
+      effekte();
+      zimmerVerlassen(name);
+      zimmerRaus(name);
+    });
+  }
+  function feierabendOeffnen() {
+    glasFenster(SEITEN + "kernzeit.html?feierabend=1&t=" + Date.now());
+  }
+  function kernzeitStarten() {
+    let zuletzt = 0;
+    const pruefen = async () => {
+      if (gesperrt || Date.now() - zuletzt < 30 * 60 * 1e3) return;
+      try {
+        const r = await fetch(ENDPOINT.replace(/melden$/, "kernzeit/hinweis"), { method: "POST", headers: { "Content-Type": "application/json", "X-Buero-Key": BUERO_KEY }, body: JSON.stringify({ name: WA.player.name, kurzZuvor: (() => {
+          try {
+            const v = Number(WA.player.state.swSchlossZeit || 0);
+            return v > 0 && Date.now() - v < 5 * 60 * 1e3;
+          } catch {
+            return false;
+          }
+        })() }) });
+        const d = await r.json();
+        if (d && d.zeigen) {
+          zuletzt = Date.now();
+          glasFenster(SEITEN + "kernzeit.html?t=" + Date.now());
+        }
+      } catch {
+      }
+    };
+    setTimeout(pruefen, 8e3);
+    setInterval(pruefen, 3 * 60 * 1e3);
+  }
+  var SCHLOSS_PAUSE_MS = 30 * 60 * 1e3;
+  var gesperrt = false;
+  var letzteAktivitaet = Date.now();
+  var schlossOffen = () => {
+    try {
+      return Date.now() - Number(sessionStorage.getItem("swSchlossOffen") || 0) < SCHLOSS_PAUSE_MS;
+    } catch {
+      return false;
+    }
+  };
+  var schlossMerken = (an) => {
+    try {
+      an ? sessionStorage.setItem("swSchlossOffen", String(Date.now())) : sessionStorage.removeItem("swSchlossOffen");
+    } catch {
+    }
+    try {
+      WA.player.state.saveVariable("swSchlossZeit", an ? Date.now() : 0, { public: false, persist: true });
+    } catch {
+    }
+  };
+  function schliessen(grund = "") {
+    gesperrt = true;
+    schlossMerken(false);
+    try {
+      WA.controls.disablePlayerControls();
+    } catch {
+    }
+    const sperrWache = setTimeout(() => {
+      if (gesperrt && !beendet) {
+        beendet = true;
+        rausZu(SEITEN + "weg.html?grund=gesperrt");
+      }
+    }, 10 * 60 * 1e3);
+    try {
+      WA.ui.modal.closeModal();
+    } catch {
+    }
+    WA.ui.website.getAll().then((alle) => alle.forEach((w) => {
+      if (!/info\.html|leiste\.html|schloss\.html|tagescheck\.html\?karte|oben\.html\?v|oben\.html\?alle|handy-menue\.html\?knopf/.test(String(w.url || ""))) w.close().catch(() => {
+      });
+    })).catch(() => {
+    });
+    return new Promise((fertig) => {
+      let fenster = null, abo = null;
+      try {
+        abo = WA.player.state.onVariableChange("swSchloss").subscribe((v) => {
+          if (!v || v.sitzung !== SITZUNG) return;
+          clearTimeout(sperrWache);
+          try {
+            abo.unsubscribe();
+          } catch {
+          }
+          try {
+            fenster && fenster.close();
+          } catch {
+          }
+          try {
+            WA.controls.restorePlayerControls();
+          } catch {
+          }
+          gesperrt = false;
+          letzteAktivitaet = Date.now();
+          schlossMerken(true);
+          fertig();
+          grundriss = null;
+          grundrissZeigen();
+        });
+      } catch {
+        gesperrt = false;
+        fertig();
+        return;
+      }
+      WA.ui.website.open({
+        url: SEITEN + "schloss.html?sitzung=" + SITZUNG + (grund ? "&grund=" + grund : "") + "&t=" + Date.now(),
+        allowApi: true,
+        visible: true,
+        position: { vertical: "middle", horizontal: "middle" },
+        size: { width: "100vw", height: "100vh" }
+      }).then((w) => {
+        fenster = w;
+      }).catch(() => {
+        gesperrt = false;
+        try {
+          WA.controls.restorePlayerControls();
+        } catch {
+        }
+        fertig();
+      });
+    });
+  }
+  var mitSystemZeit = false;
+  function wegVomRechner() {
+    if (beendet) return;
+    beendet = true;
+    schlossMerken(false);
+    rausZu(SEITEN + "weg.html");
+  }
+  function schlossWache() {
+    setInterval(async () => {
+      if (gesperrt || HANDY) return;
+      if (gespraech.size) {
+        letzteAktivitaet = Date.now();
+      }
+      if (mitSystemZeit || Date.now() - letzteAktivitaet < SCHLOSS_PAUSE_MS) {
+        schlossMerken(true);
+        return;
+      }
+      await melden("verlassen");
+      await schliessen("pause");
+      bereit = melden("betreten", true);
+    }, 6e4);
+  }
+  WA.onInit().then(async () => {
+    try {
+      if (WA.room.hashParameters && WA.room.hashParameters.handy) HANDY = true;
+    } catch {
+    }
+    try {
+      const c = WA.controls;
+      c.disableInviteButton?.();
+      c.disableInviteUserButton?.();
+      c.disableMapEditor?.();
+    } catch {
+    }
+    if (HANDY) try {
+      WA.ui.displayActionMessage = handyHinweis;
+    } catch {
+    }
+    else hinweiseUeberwachen();
+    const frisch = async () => {
+      try {
+        const r = await fetch(ENDPOINT.replace(/melden$/, "ausweis/frisch"), { method: "POST", headers: { "Content-Type": "application/json", "X-Buero-Key": BUERO_KEY }, body: JSON.stringify({ name: WA.player.name }) });
+        const d = await r.json();
+        if (d.token) ausweisWeitergeben(d.token);
+        return !!d.frisch;
+      } catch {
+        return false;
+      }
+    };
+    if (!schlossOffen()) {
+      if (await frisch()) schlossMerken(true);
+      else await schliessen();
+    }
+    if (!gesperrt && await ausweisPruefen() === "fehlt" && !gesperrt) await schliessen();
+    schlossWache();
+    bereit = melden("betreten", true);
+    const tiled = await kartenBereiche();
+    for (const name of tiled) beobachten(name, WA.room.area);
+    try {
+      for (const area of WA.mapEditor.area.list()) {
+        const name = area.name;
+        if (name && !tiled.includes(name)) beobachten(name, WA.mapEditor.area);
+      }
+    } catch {
+    }
+    await tuerenStarten();
+    namensschilder();
+    try {
+      const z = WA.room.hashParameters && WA.room.hashParameters.ziel;
+      if (z) {
+        const t = tueren.find((x) => x.raum === z);
+        if (t && t.draussen) {
+          WA.player.teleport(t.draussen[0] * 32 + 16, t.draussen[1] * 32 + 16);
+          kurzMeldung("\u{1F6AA} Du stehst vor " + z + " \u2013 Leertaste = anklopfen, sonst einfach reingehen", 7e3);
+        } else zuRaum(String(z));
+      }
+    } catch {
+    }
+    let kzAktiv = false, tcAktiv = false;
+    try {
+      const r = await fetch(ENDPOINT.replace(/melden$/, "kernzeit/hinweis"), { method: "POST", headers: { "Content-Type": "application/json", "X-Buero-Key": BUERO_KEY }, body: JSON.stringify({ name: WA.player.name }) });
+      const h = await r.json();
+      kzAktiv = !!h.aktiv;
+      tcAktiv = !!h.tc;
+    } catch {
+    }
+    if (tcAktiv && !HANDY) {
+      try {
+        await WA.ui.website.open({ url: SEITEN + "tagescheck.html?karte=1&v=3", allowApi: true, visible: true, position: { vertical: "top", horizontal: "left" }, size: { width: "280px", height: "150px" }, margin: { top: "64px", left: "10px" } });
+      } catch {
+      }
+    }
+    effekte();
+    setInterval(effekte, 6e4);
+    if (!HANDY) wetterTakt();
+    if (HANDY) aussenweltAus();
+    infoLaden();
+    setInterval(infoLaden, 15e3);
+    let klassikLeiste = null;
+    if (HANDY) {
+      klassikOeffnen = async () => {
+        try {
+          klassik.push(await WA.ui.website.open({
+            url: SEITEN + "info.html?v=7&teil=status" + (kzAktiv ? "&kz=1" : ""),
+            allowApi: true,
+            visible: true,
+            position: { vertical: "top", horizontal: "left" },
+            size: { width: "150px", height: "36px" },
+            margin: { top: "64px", left: "12px" }
+          }));
+        } catch {
+        }
+        if (meineTuer()) try {
+          klassik.push(await WA.ui.website.open({
+            url: SEITEN + "info.html?v=7&teil=tuer",
+            allowApi: true,
+            visible: true,
+            position: { vertical: "top", horizontal: "right" },
+            size: { width: "92px", height: "36px" },
+            margin: { top: "64px", right: "12px" }
+          }));
+        } catch {
+        }
+        try {
+          klassik.push(await WA.ui.website.open({
+            url: SEITEN + "blick.html?teil=karte&v=4",
+            allowApi: true,
+            visible: true,
+            position: { vertical: "bottom", horizontal: "right" },
+            size: { width: "130px", height: "99px" },
+            margin: { bottom: "158px", right: "14px" }
+          }));
+        } catch {
+        }
+        if (klassikLeiste) await klassikLeiste();
+      };
+    } else try {
+      infoLeiste = await WA.ui.website.open({
+        url: "https://samjabbar90.github.io/sw-buero/info.html?v=8&flach=1" + (kzAktiv ? "&kz=1" : ""),
+        allowApi: true,
+        visible: true,
+        // genau so groß wie die Leiste (kein weißer Rand): mit eigener Tür breiter (Tür + Fokus), sonst nur Uhrzeit + Kollegen
+        position: { vertical: HANDY ? "top" : "bottom", horizontal: "middle" },
+        size: { width: HANDY ? Math.max(300, (screen.width || 390) - 16) + "px" : 520 + (meineTuer() ? 170 : 0) + (kzAktiv ? 160 : 0) + "px", height: HANDY ? "40px" : "38px" },
+        margin: HANDY ? { top: "64px" } : { bottom: LEISTE_UNTEN }
+      });
+    } catch {
+    }
+    glasBeobachten();
+    ideen();
+    if (!HANDY) posterAufhaengen();
+    helpcenterRoboter();
+    lernzimmer();
+    if (false) fitnessEmpfang();
+    if (false) ranglistenTafel();
+    kueche();
+    zitatTafel();
+    schaufenster();
+    dankeWand();
+    gespraechsRaeume();
+    zimmerGespraeche();
+    glaswandAgenten();
+    fussball();
+    minaPlatz();
+    utePlatz();
+    jaPlatz();
+    itPlatz();
+    ronPlatz();
+    klingel();
+    if (!HANDY) hundStarten();
+    profilKarten();
+    wandGespraeche();
+    if (HANDY) {
+      grundrissAn = false;
+      grundrissZeigen();
+    }
+    kernzeitStarten();
+    const breite = (116 + DX) * 32, hoehe = (62 + DY) * 32;
+    void karte;
+    let blick = 0, uebersichtAn = false;
+    const uebersicht = () => {
+      uebersichtAn = true;
+      try {
+        const sw = screen.width || 390, sh = screen.height || 800;
+        if (HANDY) {
+          const q = sh > sw ? sw / sh : 9 / 19.5;
+          WA.camera.set(breite / 2, hoehe / 2, Math.round(hoehe * 0.8 * q), Math.round(hoehe * 0.8), true, true);
+        } else WA.camera.set(breite / 2, hoehe / 2, breite, hoehe, false, true);
+      } catch {
+      }
+    };
+    const zuMir = () => {
+      blick = 0;
+      uebersichtAn = false;
+      try {
+        WA.camera.followPlayer(true);
+      } catch {
+      }
+    };
+    const blicken = async (felder) => {
+      try {
+        blick += felder;
+        const p = await WA.player.getPosition();
+        WA.camera.set(p.x, p.y + blick * 32, void 0, void 0, true, true);
+      } catch {
+      }
+    };
+    try {
+      const w = WA.ui.website;
+      if (!HANDY) await w.open({
+        url: SEITEN + "blick.html?teil=stick&v=4",
+        allowApi: true,
+        visible: true,
+        position: { vertical: "bottom", horizontal: "left" },
+        size: { width: HANDY ? "96px" : "116px", height: HANDY ? "96px" : "116px" },
+        margin: { bottom: HANDY ? "96px" : "20px", left: HANDY ? "8px" : "20px" }
+      });
+      if (!HANDY) await w.open({
+        url: SEITEN + "blick.html?teil=karte&v=4",
+        allowApi: true,
+        visible: true,
+        position: { vertical: "bottom", horizontal: "right" },
+        size: { width: HANDY ? "130px" : "232px", height: HANDY ? "99px" : "176px" },
+        margin: { bottom: HANDY ? "158px" : "20px", right: HANDY ? "14px" : "92px" }
+      });
+    } catch {
+    }
+    const schnellreise = () => {
+      try {
+        WA.ui.modal.openModal({ title: "Schnellreise", src: SEITEN + "schnellreise.html", allowApi: true, position: HANDY ? "center" : "right" });
+      } catch {
+      }
+    };
+    try {
+      if (!HANDY) {
+        const KNOEPFE = [
+          ["sw-uebersicht", "\xDCbersicht", "karte", () => uebersichtAn ? zuMir() : uebersicht()],
+          ["sw-zu-mir", "Zu mir", "zumir", zuMir],
+          ["sw-schnellreise", "Reise", "reise", schnellreise],
+          ["sw-ideen", "Ideen", "ideen", () => ideenOeffnen()],
+          ["sw-kalender", "Kalender", "kalender", () => glasFenster(SEITEN + "kalender.html?t=" + Date.now())],
+          ["sw-wer", "Wer ist da", "wer", () => glasFenster(SEITEN + "wer.html?t=" + Date.now())],
+          // 11.10.: Liste mit Live-Anzeige (Recht „live“)
+          ["sw-mein-profil", "Profil", "profil", () => glasFenster(SEITEN + "profil.html?ich=1&tore=" + toreVon(WA.player.name || "") + "&t=" + Date.now())],
+          ...tcAktiv ? [["sw-tagescheck", "Tages-Check", "tagescheck", () => glasFenster(SEITEN + "tagescheck.html?t=" + Date.now())]] : [],
+          ...kzAktiv ? [["sw-arbeitszeit", "Arbeitszeit", "arbeitszeit", () => glasFenster(SEITEN + "kernzeit.html?t=" + Date.now())], ["sw-feierabend", "Feierabend", "feierabend", feierabendOeffnen]] : []
+        ];
+        const noetig = 300 + 520 + KNOEPFE.reduce((s2, k) => s2 + 52 + k[1].length * 7.5, 0);
+        const breitGenug = (screen.availWidth || screen.width || 0) >= noetig;
+        for (const [id, label, bild, cb] of KNOEPFE) {
+          try {
+            WA.ui.actionBar.addButton({ id, ...breitGenug ? { label } : {}, toolTip: label, imageSrc: SEITEN + "icons/" + (breitGenug ? "" : "u-") + bild + ".svg?v=3", location: "top", callback: cb });
+          } catch {
+          }
+        }
+      } else {
+        let leiste = null;
+        const leisteAuf = async () => {
+          let lage = "links";
+          try {
+            lage = String(WA.player.state.swLeisteLage || "links");
+          } catch {
+          }
+          const sw = Math.round(screen.width || 390), opt = lage === "oben" ? { position: { vertical: "top", horizontal: "middle" }, size: { width: sw - 24 + "px", height: "62px" }, margin: { top: "108px" } } : lage === "mitte" ? { position: { vertical: "bottom", horizontal: "middle" }, size: { width: sw - 24 + "px", height: "62px" }, margin: { bottom: "88px" } } : { position: { vertical: "bottom", horizontal: "left" }, size: { width: sw - 12 - 66 + "px", height: "62px" }, margin: { bottom: "88px", left: "12px" } };
+          try {
+            leiste && leiste.close();
+          } catch {
+          }
+          if (!klassikOffen) return;
+          try {
+            leiste = await WA.ui.website.open({ url: SEITEN + "handy-leiste.html?v=3", allowApi: true, visible: true, ...opt });
+            klassik.push(leiste);
+          } catch {
+          }
+        };
+        klassikLeiste = leisteAuf;
+        try {
+          WA.player.state.onVariableChange("swLeisteLage").subscribe(() => leisteAuf());
+        } catch {
+        }
+      }
+    } catch {
+    }
+    if (HANDY) klassikPruefen();
+    let menue = null, menueName = "";
+    const menueZu = () => {
+      if (menue) {
+        try {
+          menue.close();
+        } catch {
+        }
+      }
+      menue = null;
+      menueName = "";
+    };
+    const menueUmschalten = async (m) => {
+      const war = menueName;
+      menueZu();
+      if (war === m) return;
+      const n = m === "karte" ? 4 : 4 + (tcAktiv ? 1 : 0) + (kzAktiv ? 2 : 0);
+      menueName = m;
+      try {
+        menue = await WA.ui.website.open({
+          url: SEITEN + "oben.html?menue=" + m + (tcAktiv ? "&tc=1" : "") + (kzAktiv ? "&kz=1" : ""),
+          allowApi: true,
+          visible: true,
+          // unter dem ☰-Knopf (rechts, vor „Teilen“, „Werkzeuge“ und dem eigenen Profil)
+          position: { vertical: "top", horizontal: "right" },
+          size: { width: "220px", height: n * 37 + 12 + "px" },
+          margin: { top: "64px", right: "330px" }
+        });
+      } catch {
+        menueName = "";
+      }
+    };
+    let handyMenue = null;
+    const handyMenueZu = () => {
+      if (handyMenue) {
+        try {
+          handyMenue.close();
+        } catch {
+        }
+      }
+      handyMenue = null;
+      if (handyBlatt && handyBlatt.name === "mehr") handyBlattZu();
+    };
+    const handyMenueUmschalten = async () => {
+      return handyBlattUmschalten("mehr", SEITEN + "handy-menue.html?v=3" + (tcAktiv ? "&tc=1" : "") + (kzAktiv ? "&kz=1" : "") + (meineTuer() ? "&tuer=1" : ""), Math.min(520, Math.round((screen.height || 800) * 0.7)) + "px");
+      if (handyMenue) return handyMenueZu();
+      try {
+        handyMenue = await WA.ui.website.open({
+          url: SEITEN + "handy-menue.html?v=1" + (tcAktiv ? "&tc=1" : "") + (kzAktiv ? "&kz=1" : "") + (meineTuer() ? "&tuer=1" : ""),
+          allowApi: true,
+          visible: true,
+          // 12.10.2026: unter der Info-Leiste (oben 108 px) und über der WorkAdventure-Leiste — sonst waren Name und ✕ oben abgeschnitten
+          position: { vertical: "top", horizontal: "left" },
+          size: { width: Math.min(290, Math.round((screen.width || 390) * 0.78)) + "px", height: Math.max(320, (screen.height || 800) - 108 - 92) + "px" },
+          margin: { top: "108px", left: "0px" }
+        });
+      } catch {
+        handyMenue = null;
+      }
+    };
+    let letzteAktion = 0;
+    try {
+      WA.player.state.onVariableChange("swAktiv").subscribe(() => {
+        letzteAktivitaet = Date.now();
+      });
+    } catch {
+    }
+    try {
+      WA.chat.onChatMessage((text, ev) => {
+        const von = ev && ev.author && ev.author.name;
+        if (!von || von === WA.player.name || !document.hidden) return;
+        fetch(ENDPOINT.replace(/melden$/, "chat-eingang"), { method: "POST", headers: { "Content-Type": "application/json", "X-Buero-Key": BUERO_KEY }, body: JSON.stringify({ name: WA.player.name, von, text: String(text || "").slice(0, 300) }) }).catch(() => {
+        });
+      }, { scope: "bubble" });
+    } catch {
+    }
+    try {
+      letzteAktion = Number((WA.player.state.swAktion || {}).t) || 0;
+    } catch {
+    }
+    try {
+      WA.player.state.onVariableChange("swAktion").subscribe((v) => {
+        if (!v || !v.t || v.t === letzteAktion) return;
+        letzteAktion = v.t;
+        if (v.was === "menue") return menueUmschalten(String(v.m || ""));
+        if (v.was === "handyMenue") return handyMenueUmschalten();
+        if (v.was === "hinweisTipp") return hinweisGetippt(Number(v.nr) || 0);
+        if (v.was === "team") return HANDY ? handyBlattUmschalten("team", SEITEN + "wer.html?sheet=1&t=" + Date.now(), "78vh") : glasFenster(SEITEN + "wer.html?t=" + Date.now());
+        if (ZIMMER_AKTIONEN[v.was]) return ZIMMER_AKTIONEN[v.was](v);
+        if (v.was === "grundrissRaum") return grundrissRaum(String(v.name || ""));
+        if (v.was === "grundrissPerson") return grundrissPerson(String(v.name || ""));
+        if (v.was === "grundrissAus" || v.was === "appAus") return grundrissUmschalten(false);
+        if (v.was === "appAn") return grundrissUmschalten(true);
+        if (v.was === "arbeiten") return arbeitenOffen ? arbeitenZu() : arbeitenAuf();
+        if (v.was === "arbeitenZu") return arbeitenZu();
+        if (v.was === "arbeitenHin") {
+          arbeitenZu();
+          return grundrissRaum(String(v.name || ""));
+        }
+        if (v.was === "karte" && HANDY) {
+          menueZu();
+          handyMenueZu();
+          handyBlattZu();
+          return grundrissUmschalten();
+        }
+        if (MT_AKTIONEN[v.was]) {
+          const m = mitteilungen.find((x) => x.id === v.id);
+          return m ? MT_AKTIONEN[v.was](m) : void 0;
+        }
+        if (v.was === "feierabendGehen") {
+          return melden("verlassen").then(() => {
+            beendet = true;
+            rausZu(SEITEN + "weg.html?grund=feierabend");
+          });
+        }
+        if (v.was === "handyListe") return melden("verlassen").then(() => {
+          beendet = true;
+          rausZu(SEITEN + "handy.html?von=karte");
+        });
+        if (v.was === "abmelden") {
+          return melden("verlassen").then(() => {
+            beendet = true;
+            rausZu(SEITEN + "weg.html?grund=abgemeldet");
+          });
+        }
+        menueZu();
+        handyMenueZu();
+        if (HANDY) handyBlattZu();
+        const tuer = meineTuer();
+        ({
+          ideen: () => ideenOeffnen(),
+          uebersicht,
+          karte: () => uebersichtAn ? zuMir() : uebersicht(),
+          zumir: zuMir,
+          reise: schnellreise,
+          news: () => newsOeffnen(),
+          feierabend: () => feierabendOeffnen(),
+          kalender: () => glasFenster(SEITEN + "kalender.html?t=" + Date.now()),
+          tagescheck: () => glasFenster(SEITEN + "tagescheck.html?t=" + Date.now()),
+          arbeitszeit: () => glasFenster(SEITEN + "kernzeit.html?t=" + Date.now()),
+          mehr: () => glasFenster(SEITEN + "mehr.html?tuer=" + (tuer ? encodeURIComponent(tuerStatus(tuer)) : "") + "&t=" + Date.now()),
+          hoch: () => blicken(-6),
+          runter: () => blicken(6),
+          zuPerson: () => zuPerson(String(v.name || "")),
+          zuRaum: () => zuRaum(String(v.name || "")),
+          meinProfil: () => glasFenster(SEITEN + "profil.html?ich=1&tore=" + toreVon(WA.player.name || "") + "&t=" + Date.now()),
+          tuer: () => {
+            if (tuer) fokusUmschalten(tuer);
+          }
+          // 14.10.2026: immer 25 Min, max. 3× am Tag
+        })[v.was]?.();
+      });
+    } catch {
+    }
+    try {
+      const p = await WA.player.getPosition();
+      position = { x: p.x, y: p.y };
+    } catch {
+    }
+    WA.player.onPlayerMove((e) => {
+      position = { x: e.x, y: e.y };
+      letzteAktivitaet = Date.now();
+      richtung = e.direction || richtung;
+      if (Date.now() - zuletztGemeldet > 5e3) melden("heartbeat");
+    });
+    try {
+      const pm = WA.player.proximityMeeting;
+      const neu = () => melden("heartbeat");
+      try {
+        const c = WA.controls;
+        c.restoreWebcam?.();
+        c.restoreMicrophone?.();
+      } catch {
+      }
+      pm.onJoin().subscribe(() => {
+        imGespraech = true;
+        grundrissZeigen();
+      });
+      pm.onLeave().subscribe(() => {
+        imGespraech = false;
+        setTimeout(grundrissZeigen, 800);
+      });
+      pm.onJoin().subscribe((leute) => {
+        gespraech.clear();
+        (leute || []).forEach((p) => p && p.name && gespraech.add(p.name));
+        neu();
+      });
+      pm.onParticipantJoin().subscribe((p) => {
+        if (p && p.name) gespraech.add(p.name);
+        neu();
+      });
+      pm.onParticipantLeave().subscribe((p) => {
+        if (p && p.name) gespraech.delete(p.name);
+        neu();
+      });
+      pm.onLeave().subscribe(() => {
+        gespraech.clear();
+        neu();
+      });
+    } catch {
+    }
+    setInterval(() => melden("heartbeat"), 3e4);
+    window.addEventListener("pagehide", (e) => {
+      if (!HANDY || !e.persisted) melden("verlassen");
+    });
+    window.addEventListener("beforeunload", (e) => {
+      try {
+        if (HANDY || beendet) return;
+        const heute = (/* @__PURE__ */ new Date()).toLocaleDateString("sv-SE", { timeZone: "Europe/Berlin" });
+        if (WA.player.state.swFeierabendTag === heute) return;
+        e.preventDefault();
+        e.returnValue = "Du hast noch nicht auf Feierabend geklickt \u2013 B\xFCro wirklich schlie\xDFen?";
+        return e.returnValue;
+      } catch {
+      }
+    });
+  });
+})();
