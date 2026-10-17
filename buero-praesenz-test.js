@@ -731,6 +731,7 @@
     } catch {
       return;
     }
+    setTimeout(pokeAbgleich, 1200);
     if (r.raid && !r.geschafft) {
       kurzMeldung("\u2694\uFE0F Raid: " + r.treffer + " von " + r.noetig + " dabei \u2013 holt Verst\xE4rkung, dann bekommt ihr " + (p ? p.name : "es") + " alle!", 9e3);
       return;
