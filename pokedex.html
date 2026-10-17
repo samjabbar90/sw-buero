@@ -14,7 +14,7 @@
   main { padding:12px; }
   .gitter { display:grid; grid-template-columns:repeat(auto-fill, minmax(92px, 1fr)); gap:8px; }
   .k { background:#fff; border:1.5px solid #e2e8f0; border-radius:10px; padding:6px; text-align:center; position:relative; }
-  .k img { width:64px; height:64px; image-rendering:pixelated; }
+  .k img { width:64px; height:64px; object-fit:contain; }
   .k.nein img { filter:brightness(0) opacity(.18); } .k.leer { color:#94a3b8; }
   .k .nr { font-size:10.5px; color:#64748b; } .k .n { font-size:12px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .k .x { position:absolute; top:4px; right:6px; font-size:11px; font-weight:700; color:#dc2626; }
@@ -51,7 +51,7 @@ function zeigen() {
   if (reiter === 2) { m.innerHTML = daten.rang.length ? daten.rang.map(r => `<div class="z${r.ich ? " ich" : ""}"><div class="pl">${r.platz <= 3 ? ["🥇", "🥈", "🥉"][r.platz - 1] : r.platz + "."}</div><div class="na">${esc(r.name)}</div><div class="w">${r.arten} / 151</div></div>`).join("") : '<div class="leer2">Noch hat niemand etwas gefangen.</div>'; return; }
   m.innerHTML = '<div class="gitter">' + liste.map(p => { const n = hab.get(p.nr), num = "#" + String(p.nr).padStart(3, "0");
     if (!p.bild) return `<div class="k leer"><div class="fragez">?</div><div class="nr">${num}</div><div class="n">kommt bald</div></div>`;
-    return `<div class="k${n ? "" : " nein"}">${n > 1 ? `<div class="x">×${n}</div>` : ""}<img src="pokemon/${String(p.nr).padStart(3, "0")}.png?v=1" alt=""><div class="nr">${num}</div><div class="n">${n ? esc(p.name) : "???"}</div></div>`; }).join("") + "</div>";
+    return `<div class="k${n ? "" : " nein"}">${n > 1 ? `<div class="x">×${n}</div>` : ""}<img src="pokemon/${String(p.nr).padStart(3, "0")}.png?v=2" alt=""><div class="nr">${num}</div><div class="n">${n ? esc(p.name) : "???"}</div></div>`; }).join("") + "</div>";
 }
 async function laden() {
   try { liste = await (await fetch("pokemon/pokemon.json?t=" + Date.now())).json(); } catch { liste = []; }

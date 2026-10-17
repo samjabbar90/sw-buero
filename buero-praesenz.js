@@ -686,7 +686,7 @@
       try {
         const h = await WA.room.website.create({
           name: "poke-" + s.id,
-          url: SEITEN + "poke.html?v3&nr=" + s.nr + "&i=" + encodeURIComponent(s.id) + "&v=" + v,
+          url: SEITEN + "poke.html?v4&nr=" + s.nr + "&i=" + encodeURIComponent(s.id) + "&v=" + v,
           visible: true,
           allowApi: true,
           origin: "map",

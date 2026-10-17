@@ -6,7 +6,7 @@
 <title>Pokémon</title>
 <style>
   html, body { margin:0; height:100%; background:transparent; overflow:hidden; color-scheme:dark; }
-  canvas { width:100%; height:100%; cursor:pointer; display:block; image-rendering:pixelated; }
+  canvas { width:100%; height:100%; cursor:pointer; display:block; }
   canvas.zuck { animation:zuck .5s ease-in-out; }
   canvas.weg { animation:weg .45s ease-in forwards; }
   @keyframes zuck { 0%,100% { transform:translateY(0); } 40% { transform:translateY(-4%) rotate(-3deg); } 70% { transform:translateY(0) rotate(2deg); } }
@@ -21,15 +21,17 @@
 // oder im Schatten, etwas blasser, ohne Hüpfen; nur ab und zu ein kurzes Zucken. Anklicken = fangen (Spieler-Variable „swAktion“).
 const q = new URLSearchParams(location.search), nr = Number(q.get("nr")) || 25, i = q.get("i") || "0", art = q.get("v") || "busch";
 const c = document.getElementById("c"), g = c.getContext("2d"), bild = new Image();
-bild.src = "pokemon/" + String(nr).padStart(3, "0") + ".png?v=1";
-if (art === "raid") { c.width = 72; c.height = 72; document.getElementById("raid").style.display = "block"; }
+bild.src = "pokemon/" + String(nr).padStart(3, "0") + ".png?v=2"; // 17.10.2026: offizielle Bilder von pokemon.com (Sam), 192×192
+const Q = 3; c.width = c.height = 44 * Q; // 3-fache Auflösung für scharfe Bilder
+if (art === "raid") { c.width = 72 * Q; c.height = 72 * Q; document.getElementById("raid").style.display = "block"; }
 bild.onload = () => {
-  if (art === "raid") { g.imageSmoothingEnabled = false; const gr = g.createRadialGradient(36, 40, 4, 36, 40, 34); gr.addColorStop(0, "rgba(239,68,68,.45)"); gr.addColorStop(1, "rgba(239,68,68,0)"); g.fillStyle = gr; g.fillRect(0, 0, 72, 72); g.drawImage(bild, 0, 0, 64, 64, 8, 10, 56, 56); return; } // Raid-Boss groß und sichtbar
-  if (art === "blume") { g.imageSmoothingEnabled = false; g.save(); g.globalAlpha = .5; g.filter = "brightness(.8)"; g.drawImage(bild, 0, 0, 64, 64, 12, 6, 20, 20); g.restore(); for (const [x, y, f] of [[16, 30, "#f472b6"], [26, 32, "#facc15"], [21, 36, "#f9a8d4"]]) { g.fillStyle = f; g.beginPath(); g.arc(x, y, 4, 0, 7); g.fill(); } g.strokeStyle = "#3f7f2e"; g.lineWidth = 2; g.beginPath(); g.moveTo(21, 40); g.lineTo(21, 44); g.stroke(); return; } // Mew getarnt als Blume
-  g.imageSmoothingEnabled = false;
+  g.scale(Q, Q); g.imageSmoothingQuality = "high";
+  if (art === "raid") { g.imageSmoothingEnabled = true; const gr = g.createRadialGradient(36, 40, 4, 36, 40, 34); gr.addColorStop(0, "rgba(239,68,68,.45)"); gr.addColorStop(1, "rgba(239,68,68,0)"); g.fillStyle = gr; g.fillRect(0, 0, 72, 72); g.drawImage(bild, 0, 0, bild.width, bild.height, 8, 10, 56, 56); return; } // Raid-Boss groß und sichtbar
+  if (art === "blume") { g.imageSmoothingEnabled = true; g.save(); g.globalAlpha = .5; g.filter = "brightness(.8)"; g.drawImage(bild, 0, 0, bild.width, bild.height, 12, 6, 20, 20); g.restore(); for (const [x, y, f] of [[16, 30, "#f472b6"], [26, 32, "#facc15"], [21, 36, "#f9a8d4"]]) { g.fillStyle = f; g.beginPath(); g.arc(x, y, 4, 0, 7); g.fill(); } g.strokeStyle = "#3f7f2e"; g.lineWidth = 2; g.beginPath(); g.moveTo(21, 40); g.lineTo(21, 44); g.stroke(); return; } // Mew getarnt als Blume
+  g.imageSmoothingEnabled = true;
   g.save(); g.globalAlpha = .82; g.filter = art === "schatten" ? "brightness(.62) saturate(.55)" : "brightness(.7) saturate(.6)"; // 18.10.2026 (Sam): nicht leuchten, gedämpft wie die Umgebung
-  if (art === "schatten") g.drawImage(bild, 0, 0, 64, 64, 9, 12, 26, 26);
-  else g.drawImage(bild, 0, 0, 64, 44, 6, 4, 32, 22); // nur der obere Teil schaut heraus
+  if (art === "schatten") g.drawImage(bild, 0, 0, bild.width, bild.height, 9, 12, 26, 26);
+  else g.drawImage(bild, 0, 0, bild.width, bild.height * 44 / 64, 6, 4, 32, 22); // nur der obere Teil schaut heraus
   g.restore();
   const kreis = (x, y, r, f) => { g.fillStyle = f; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); };
   if (art === "busch") { for (const [x, y, r, f] of [[12, 34, 10, "#3f7f2e"], [32, 34, 10, "#3f7f2e"], [22, 29, 11, "#4c9636"], [17, 37, 8, "#4c9636"], [28, 38, 8, "#3f7f2e"]]) kreis(x, y, r, f); }

@@ -13,7 +13,7 @@
   .strahlen { position:absolute; width:520px; height:520px; left:50%; top:38%; margin:-260px 0 0 -260px; opacity:.35;
     background:repeating-conic-gradient(rgba(255,255,255,.9) 0 8deg, transparent 8deg 22deg); animation:dreh 7s linear infinite; }
   .ball { position:relative; width:150px; height:150px; margin-top:-6px; }
-  .ball img { width:150px; height:150px; image-rendering:pixelated; animation:huepf 1.2s ease-in-out infinite; filter:drop-shadow(0 6px 4px rgba(0,0,0,.4)); }
+  .ball img { width:150px; height:150px; object-fit:contain; animation:huepf 1.2s ease-in-out infinite; filter:drop-shadow(0 6px 4px rgba(0,0,0,.4)); }
   h1 { position:relative; margin:6px 12px 2px; font-size:22px; text-shadow:0 2px 3px rgba(0,0,0,.45); }
   .unter { position:relative; font-size:15.5px; font-weight:600; text-shadow:0 1px 2px rgba(0,0,0,.5); }
   .stand { position:relative; margin-top:10px; background:rgba(0,0,0,.35); border:1.5px solid rgba(255,255,255,.55); border-radius:999px; padding:6px 16px; font-weight:800; font-size:16px; }
@@ -30,7 +30,7 @@
 // Fang-Anzeige (18.10.2026, Sam): „Du hast … gefangen“ bzw. „erneut gefangen“, darunter wie oft, und der Stand im Sammelbuch
 const q = new URLSearchParams(location.search), nr = Number(q.get("nr")) || 25, name = q.get("name") || "Pokémon";
 const neu = q.get("neu") === "1", anzahl = Number(q.get("anzahl")) || 1, arten = Number(q.get("arten")) || 0;
-document.getElementById("b").src = "pokemon/" + String(nr).padStart(3, "0") + ".png?v=1";
+document.getElementById("b").src = "pokemon/" + String(nr).padStart(3, "0") + ".png?v=2";
 document.getElementById("t").textContent = neu ? "✨ Neu! Du hast " + name + " gefangen!" : "Du hast " + name + " erneut gefangen!";
 document.getElementById("u").textContent = neu ? "Das ist dein erstes " + name + "." : "Du hast " + name + " jetzt " + anzahl + "×.";
 document.getElementById("s").textContent = "📕 " + arten + " / 151 im Sammelbuch";
