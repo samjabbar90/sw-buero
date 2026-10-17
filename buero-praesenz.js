@@ -760,8 +760,9 @@
   }
   async function gokuPruefen() {
     if (gokuFliegt || HANDY) return;
-    const jetzt = Date.now(), min = Math.floor(jetzt / 6e4), std = Number((/* @__PURE__ */ new Date()).toLocaleString("de-DE", { timeZone: "Europe/Berlin", hour: "2-digit", hour12: false }));
-    if (min % 45 !== 20 || std < 8 || std >= 19) return;
+    const jetzt = Date.now(), min = Math.floor(jetzt / 6e4), b = new Date(jetzt).toLocaleString("sv-SE", { timeZone: "Europe/Berlin" });
+    const tagNr = Math.floor(Date.parse(b.slice(0, 10) + "T12:00:00Z") / 864e5), flugMin = 600 + (tagNr * 7919 + 13) % 180;
+    if (Number(b.slice(11, 13)) * 60 + Number(b.slice(14, 16)) !== flugMin) return;
     const start = min * 6e4, dauer = 3e4;
     if (jetzt - start > dauer - 2e3) return;
     gokuFliegt = true;
