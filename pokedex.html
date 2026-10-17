@@ -50,7 +50,8 @@ async function laden() {
   zeigen();
 }
 document.getElementById("r1").onclick = () => { reiter = 1; zeigen(); }; document.getElementById("r2").onclick = () => { reiter = 2; zeigen(); };
-if (window.WA) WA.onInit().then(() => { if (!NAME) NAME = WA.player.name || ""; laden(); }).catch(laden); else laden();
+let geladen = false; const los = () => { if (!geladen) { geladen = true; laden(); } };
+if (NAME) los(); else if (window.WA) { WA.onInit().then(() => { NAME = WA.player.name || ""; los(); }).catch(los); setTimeout(los, 2500); } else los();
 </script>
 </body>
 </html>
