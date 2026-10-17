@@ -753,6 +753,47 @@
       kurzMeldung((r.neu ? "\u2728 Neu! Du hast " : "Du hast ") + (p ? p.name : "Pok\xE9mon") + (r.neu ? " gefangen" : " erneut gefangen (" + (r.anzahl || 1) + "\xD7)") + (r.arten ? " \xB7 " + r.arten + " / 151" : ""), 6e3);
     }
   }
+  var gokuFliegt = false;
+  function gokuStarten() {
+    setInterval(gokuPruefen, 4e3);
+    gokuPruefen();
+  }
+  async function gokuPruefen() {
+    if (gokuFliegt || HANDY) return;
+    const jetzt = Date.now(), min = Math.floor(jetzt / 6e4), std = Number((/* @__PURE__ */ new Date()).toLocaleString("de-DE", { timeZone: "Europe/Berlin", hour: "2-digit", hour12: false }));
+    if (min % 45 !== 20 || std < 8 || std >= 19) return;
+    const start = min * 6e4, dauer = 3e4;
+    if (jetzt - start > dauer - 2e3) return;
+    gokuFliegt = true;
+    const zufall = (min * 9301 + 49297) % 233280 / 233280, rechts = min % 2 === 0, y = (8 + zufall * 70) * 32, B = 236 * 32 + 256;
+    let h = null;
+    try {
+      h = await WA.room.website.create({ name: "goku", url: SEITEN + "goku.html?v=1" + (rechts ? "" : "&l=1"), visible: true, allowApi: false, origin: "map", scale: 1, position: { x: -200, y, width: 128, height: 96 } });
+    } catch {
+      gokuFliegt = false;
+      return;
+    }
+    const tick = setInterval(() => {
+      const t = (Date.now() - start) / dauer;
+      if (t >= 1) {
+        clearInterval(tick);
+        try {
+          WA.room.website.delete("goku");
+        } catch {
+        }
+        setTimeout(() => {
+          gokuFliegt = false;
+        }, 6e4);
+        return;
+      }
+      const x = rechts ? -200 + t * B : B - 200 - t * B;
+      try {
+        h.x = Math.round(x);
+        h.y = Math.round(y + Math.sin(t * 12) * 24);
+      } catch {
+      }
+    }, 80);
+  }
   function kurzMeldung(text, ms = 7e3) {
     try {
       const m = WA.ui.displayActionMessage({ message: text, callback: () => {
@@ -2673,6 +2714,7 @@
     klingel();
     if (!HANDY) hundStarten();
     pokemonStarten();
+    gokuStarten();
     profilKarten();
     wandGespraeche();
     if (HANDY) {
