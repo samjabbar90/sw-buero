@@ -797,8 +797,14 @@
     }, 80);
   }
   var PARADE = [
-    { name: "sunny", seite: "sunny.html?v=1", w: 160, h: 300, bahn: "fluss", dauer: 18e4 }
+    { name: "sunny", seite: "schiff.html?v=1&b=sunny", w: 160, h: 300, bahn: "fluss", dauer: 18e4 },
     // Thousand Sunny (One Piece)
+    { name: "merry", seite: "schiff.html?v=1&b=merry", w: 160, h: 300, bahn: "fluss", dauer: 18e4 },
+    // Going Merry (One Piece)
+    { name: "pearl", seite: "schiff.html?v=1&b=pearl", w: 160, h: 300, bahn: "fluss", dauer: 18e4 },
+    // Black Pearl (Fluch der Karibik)
+    { name: "hollaender", seite: "schiff.html?v=1&b=hollaender", w: 160, h: 300, bahn: "fluss", dauer: 18e4 }
+    // Fliegender Holländer (Geisterschiff)
   ];
   var paradeLaeuft = false;
   function paradeStarten() {
