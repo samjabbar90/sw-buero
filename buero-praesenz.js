@@ -765,10 +765,10 @@
     const start = min * 6e4, dauer = 3e4;
     if (jetzt - start > dauer - 2e3) return;
     gokuFliegt = true;
-    const zufall = (min * 9301 + 49297) % 233280 / 233280, rechts = min % 2 === 0, y = (8 + zufall * 70) * 32, B = 236 * 32 + 256;
+    const zufall = (min * 9301 + 49297) % 233280 / 233280, rechts = min % 2 === 0, y = (zufall < 0.5 ? 2 + zufall * 10 : 84 + (zufall - 0.5) * 14) * 32, B = 236 * 32 + 256;
     let h = null;
     try {
-      h = await WA.room.website.create({ name: "goku", url: SEITEN + "goku.html?v=1" + (rechts ? "" : "&l=1"), visible: true, allowApi: false, origin: "map", scale: 1, position: { x: -200, y, width: 128, height: 96 } });
+      h = await WA.room.website.create({ name: "goku", url: SEITEN + "goku.html?v=1" + (rechts ? "" : "&l=1"), visible: true, allowApi: false, origin: "map", scale: 1, position: { x: -200, y, width: 96, height: 72 } });
     } catch {
       gokuFliegt = false;
       return;
@@ -789,7 +789,7 @@
       const x = rechts ? -200 + t * B : B - 200 - t * B;
       try {
         h.x = Math.round(x);
-        h.y = Math.round(y + Math.sin(t * 12) * 24);
+        h.y = Math.round(y + Math.sin(t * 12) * 10);
       } catch {
       }
     }, 80);
