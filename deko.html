@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Deko</title>
+<style>
+  /* Jahreszeiten- und Feiertags-Deko (17.10.2026, Sam): ein Emoji draußen auf der Karte, leicht bewegt */
+  html, body { margin:0; height:100%; background:transparent; overflow:hidden; color-scheme:dark; }
+  div { width:100%; height:100%; display:flex; align-items:flex-end; justify-content:center; font-size:26px; line-height:1;
+    font-family:"Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif; filter:drop-shadow(0 3px 2px rgba(0,0,0,.3)); user-select:none; }
+  .wippen { animation:wippen 3s ease-in-out infinite; transform-origin:50% 100%; }
+  .schweben { animation:schweben 2.4s ease-in-out infinite; }
+  .funkeln { animation:funkeln 1.6s ease-in-out infinite; }
+  @keyframes wippen { 0%,100% { transform:rotate(-5deg); } 50% { transform:rotate(5deg); } }
+  @keyframes schweben { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-14%); } }
+  @keyframes funkeln { 0%,100% { transform:scale(.85); opacity:.8; } 50% { transform:scale(1.15); opacity:1; } }
+</style>
+</head>
+<body>
+<div id="d"></div>
+<script>
+const q = new URLSearchParams(location.search), d = document.getElementById("d");
+d.textContent = (q.get("e") || "🎃").slice(0, 4); d.className = ["wippen", "schweben", "funkeln"].includes(q.get("a")) ? q.get("a") : "wippen";
+d.style.animationDelay = -(Number(q.get("i")) || 0) * .37 + "s";
+</script>
+</body>
+</html>

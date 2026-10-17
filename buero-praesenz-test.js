@@ -1030,6 +1030,59 @@
       }
     }, 80);
   }
+  var DEKO_ORTE = [[206, 68], [167, 14], [184, 87], [147, 71], [97, 71], [177, 8], [116, 83], [17, 74], [198, 80], [76, 79], [164, 52], [68, 11], [164, 78], [32, 6], [137, 25], [133, 75], [216, 12], [202, 21], [160, 22], [149, 15], [127, 19], [5, 87], [113, 25], [189, 14]];
+  function osterSonntag(j) {
+    const a = j % 19, b = Math.floor(j / 100), c = j % 100, d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3), h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451), mo = Math.floor((h + l - 7 * m + 114) / 31), t = (h + l - 7 * m + 114) % 31 + 1;
+    return Date.UTC(j, mo - 1, t);
+  }
+  function saisonHeute() {
+    const tag = (/* @__PURE__ */ new Date()).toLocaleDateString("sv-SE", { timeZone: "Europe/Berlin" }), md = tag.slice(5), j = Number(tag.slice(0, 4)), heute = Date.parse(tag + "T00:00:00Z");
+    const zw = (a, b) => a <= b ? md >= a && md <= b : md >= a || md <= b, os = osterSonntag(j), ost = (v, b) => heute >= os + v * 864e5 && heute <= os + b * 864e5;
+    const l = [];
+    if (zw("10-24", "10-31")) l.push({ e: "\u{1F383}", n: 8, a: "wippen", gruss: "\u{1F383} Happy Halloween! Drau\xDFen stehen K\xFCrbisse \u2013 und die Flederm\xE4use sind unterwegs." }, { e: "\u{1F987}", n: 4, a: "schweben" });
+    if (md === "11-11") l.push({ e: "\u{1F3AD}", n: 6, a: "wippen", gruss: "\u{1F389} Helau! Heute um 11:11 Uhr beginnt die Karnevalssession." });
+    if (zw("12-01", "12-23")) l.push({ e: "\u{1F384}", n: 6, a: "funkeln", gruss: "\u{1F56F}\uFE0F Sch\xF6ne Adventszeit!" }, { e: "\u{1F381}", n: 4, a: "wippen" });
+    if (zw("12-24", "12-26")) l.push({ e: "\u{1F384}", n: 8, a: "funkeln", gruss: "\u{1F384} Frohe Weihnachten!" }, { e: "\u{1F381}", n: 6, a: "wippen" });
+    if (zw("12-31", "01-01")) l.push({ e: "\u{1F386}", n: 8, a: "funkeln", gruss: md === "12-31" ? "\u{1F386} Guten Rutsch ins neue Jahr!" : "\u{1F942} Frohes neues Jahr!" }, { e: "\u{1F340}", n: 4, a: "wippen" });
+    if (ost(-3, 1)) l.push({ e: "\u{1F95A}", n: 8, a: "wippen", gruss: "\u{1F423} Frohe Ostern! Drau\xDFen liegen bunte Eier." }, { e: "\u{1F430}", n: 3, a: "schweben" });
+    if (md === "06-20") l.push({ e: "\u{1F389}", n: 8, a: "funkeln", gruss: "\u{1F389} Heute ist Firmenjubil\xE4um von SW Digital Tax!" });
+    if (md === "05-01") l.push({ e: "\u{1F333}", n: 4, a: "wippen", gruss: "\u{1F333} Sch\xF6nen 1. Mai!" });
+    if (zw("03-20", "05-31")) l.push({ e: "\u{1F337}", n: 6, a: "wippen" });
+    else if (zw("06-01", "09-22")) l.push({ e: "\u{1F33B}", n: 6, a: "wippen" });
+    else if (zw("09-23", "11-30")) l.push({ e: "\u{1F342}", n: 7, a: "schweben" });
+    else l.push({ e: "\u26C4", n: 3, a: "wippen" });
+    return { tag, l };
+  }
+  var dekoTag = "";
+  var dekoNamen = [];
+  function dekoStarten() {
+    dekoPruefen();
+    setInterval(dekoPruefen, 5 * 6e4);
+  }
+  async function dekoPruefen() {
+    const { tag, l } = saisonHeute();
+    if (tag === dekoTag) return;
+    dekoTag = tag;
+    const g = l.find((x) => x.gruss);
+    if (g) setTimeout(() => kurzMeldung(g.gruss, 1e4), 8e3);
+    if (HANDY) return;
+    for (const n of dekoNamen) {
+      try {
+        WA.room.website.delete(n);
+      } catch {
+      }
+    }
+    dekoNamen = [];
+    let o = 0;
+    for (const x of l) for (let k = 0; k < x.n && o < DEKO_ORTE.length; k++, o++) {
+      const [px, py] = DEKO_ORTE[o], name = "deko-" + o;
+      try {
+        await WA.room.website.create({ name, url: SEITEN + "deko.html?v=1&a=" + x.a + "&i=" + o + "&e=" + encodeURIComponent(x.e), visible: true, allowApi: false, origin: "map", scale: 1, position: { x: px * 32 - 4, y: py * 32 - 12, width: 40, height: 44 } });
+        dekoNamen.push(name);
+      } catch {
+      }
+    }
+  }
   function kurzMeldung(text, ms = 7e3) {
     try {
       const m = WA.ui.displayActionMessage({ message: text, callback: () => {
@@ -2951,6 +3004,7 @@
     if (!HANDY) hundStarten();
     pokemonStarten();
     paradeStarten();
+    dekoStarten();
     gongStarten();
     fliegerStarten();
     gokuStarten();
