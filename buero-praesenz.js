@@ -704,7 +704,7 @@
     for (const id of [...pokeAktiv.keys()]) if (!da.has(id)) pokeWeg(id);
     for (const t of d.tauschEin || []) if (!pokeGesehen.has("t" + t.id)) {
       pokeGesehen.add("t" + t.id);
-      kurzMeldung("\u{1F504} " + t.von + " m\xF6chte mit dir Pok\xE9mon tauschen \u2013 \u{1F4D5} Sammelbuch \u203A Tausch", 9e3);
+      kurzMeldung("\u{1F504} " + t.von + " m\xF6chte mit dir Pok\xE9mon tauschen \u2013 \u{1F4DA} Sammlungen \u203A Tausch", 9e3);
     }
     for (const x of d.ruhmNeu || []) if (!pokeGesehen.has("r" + x.id)) {
       pokeGesehen.add("r" + x.id);
@@ -742,6 +742,48 @@
       }
     }
     for (const s of [...dbAktiv.keys()]) if (!offen.has(s)) dbWeg(s);
+    dbGefundenListe = (d.kugeln || []).filter((k) => k.gefunden).map((k) => k.s);
+    if (d.wunschOffen && !wunschErinnert) {
+      wunschErinnert = true;
+      kurzMeldung("\u{1F409} Shenlong wartet noch auf deinen Wunsch \u2013 \u{1F4DA} Sammlungen \u203A Dragon Balls", 9e3);
+    }
+    goldRand(d.goldBis);
+  }
+  var dbGefundenListe = [];
+  var wunschErinnert = false;
+  var goldAn = false;
+  var shenlongFenster = null;
+  function goldRand(bis) {
+    const an = !!bis && Date.parse(bis) > Date.now();
+    if (an === goldAn) return;
+    goldAn = an;
+    try {
+      if (an) WA.player.setOutlineColor(251, 191, 36);
+      else WA.player.removeOutlineColor();
+    } catch {
+    }
+  }
+  async function shenlongOeffnen() {
+    if (shenlongFenster) return;
+    try {
+      shenlongFenster = await WA.ui.website.open({
+        url: SEITEN + "shenlong.html?v=2&name=" + encodeURIComponent(WA.player.name || "") + "&t=" + Date.now(),
+        allowApi: true,
+        visible: true,
+        position: { vertical: "top", horizontal: "left" },
+        size: { width: "100vw", height: "100vh" },
+        margin: { top: "0px", left: "0px" }
+      });
+    } catch {
+      kurzMeldung("\u{1F409} Alle 7 Dragon Balls! Shenlong erscheint \u2013 dein Wunsch wartet unter \u{1F4DA} Sammlungen.", 9e3);
+    }
+  }
+  function shenlongZu() {
+    try {
+      shenlongFenster && shenlongFenster.close();
+    } catch {
+    }
+    shenlongFenster = null;
   }
   function dbWeg(s) {
     dbAktiv.delete(s);
@@ -765,19 +807,26 @@
     } catch {
       return;
     }
-    if (r.alle) {
-      try {
-        const w = await WA.ui.website.open({ url: SEITEN + "shenlong.html?t=" + Date.now(), allowApi: false, visible: true, position: { vertical: "middle", horizontal: "middle" }, size: { width: HANDY ? "320px" : "520px", height: HANDY ? "420px" : "460px" } });
-        setTimeout(() => {
-          try {
-            w.close();
-          } catch {
-          }
-        }, 9e3);
-      } catch {
-        kurzMeldung("\u{1F409} Alle 7 Dragon Balls! Shenlong erscheint \u2013 du stehst in der Ruhmeshalle.", 9e3);
-      }
-    } else kurzMeldung("\u{1F409} Dragon Ball " + "\u2605".repeat(s) + " gefunden \u2013 " + r.anzahl + " / 7 diese Woche", 6e3);
+    if (!dbGefundenListe.includes(s)) dbGefundenListe.push(s);
+    try {
+      const w = await WA.ui.website.open({
+        url: SEITEN + "dbfund.html?v=1&s=" + s + "&g=" + dbGefundenListe.join(",") + "&t=" + Date.now(),
+        allowApi: false,
+        visible: true,
+        position: { vertical: "top", horizontal: "left" },
+        size: { width: "100vw", height: "100vh" },
+        margin: { top: "0px", left: "0px" }
+      });
+      setTimeout(() => {
+        try {
+          w.close();
+        } catch {
+        }
+      }, 4200);
+    } catch {
+      kurzMeldung("\u{1F409} Dragon Ball " + "\u2605".repeat(s) + " gefunden \u2013 " + r.anzahl + " / 7 diese Woche", 6e3);
+    }
+    if (r.alle) setTimeout(shenlongOeffnen, 4300);
     erfolgeZeigen(r.neueErfolge);
   }
   function erfolgeZeigen(liste) {
@@ -3139,7 +3188,7 @@
           ["sw-kalender", "Kalender", "kalender", () => glasFenster(SEITEN + "kalender.html?t=" + Date.now())],
           ["sw-wer", "Wer ist da", "wer", () => glasFenster(SEITEN + "wer.html?t=" + Date.now())],
           // 11.10.: Liste mit Live-Anzeige (Recht „live“)
-          ["sw-pokedex", "Pok\xE9mon", "pokedex", () => glasFenster(SEITEN + "pokedex.html?name=" + encodeURIComponent(WA.player.name || "") + "&t=" + Date.now())],
+          ["sw-pokedex", "Sammlungen", "pokedex", () => glasFenster(SEITEN + "pokedex.html?name=" + encodeURIComponent(WA.player.name || "") + "&t=" + Date.now())],
           // 18.10.2026 Sammelbuch
           ["sw-mein-profil", "Profil", "profil", () => glasFenster(SEITEN + "profil.html?ich=1&tore=" + toreVon(WA.player.name || "") + "&t=" + Date.now())],
           ...tcAktiv ? [["sw-tagescheck", "Tages-Check", "tagescheck", () => glasFenster(SEITEN + "tagescheck.html?t=" + Date.now())]] : [],
@@ -3271,6 +3320,12 @@
         if (v.was === "team") return HANDY ? handyBlattUmschalten("team", SEITEN + "wer.html?sheet=1&t=" + Date.now(), "78vh") : glasFenster(SEITEN + "wer.html?t=" + Date.now());
         if (ZIMMER_AKTIONEN[v.was]) return ZIMMER_AKTIONEN[v.was](v);
         if (v.was === "dbFund") return dbGefunden(v);
+        if (v.was === "shenlongZu") return shenlongZu();
+        if (v.was === "shenlongAuf") return shenlongOeffnen();
+        if (v.was === "goldRand") {
+          goldAn = false;
+          return goldRand(v.bis);
+        }
         if (v.was === "pokeFang") return pokeGefangen(v);
         if (v.was === "grundrissRaum") return grundrissRaum(String(v.name || ""));
         if (v.was === "grundrissPerson") return grundrissPerson(String(v.name || ""));

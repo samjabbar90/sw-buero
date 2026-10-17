@@ -2,37 +2,72 @@
 <html lang="de">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Shenlong</title>
 <style>
-  /* 17.10.2026 (Sam): alle 7 Dragon Balls gefunden – Kugeln kreisen, Himmel wird dunkel, Shenlong erscheint */
-  html, body { margin:0; height:100%; overflow:hidden; color-scheme:dark; font-family:system-ui, sans-serif; }
-  body { background:radial-gradient(circle at 50% 45%, #1e3a2a 0%, #0b1410 70%); color:#fff; display:flex; align-items:center; justify-content:center; }
-  .kreis { position:absolute; left:50%; top:44%; width:0; height:0; animation:drehen 6s linear infinite; }
-  .kreis img { position:absolute; width:42px; height:42px; margin:-21px; filter:drop-shadow(0 0 10px #fbbf24); }
-  .licht { position:absolute; left:50%; top:44%; width:10px; height:10px; margin:-5px; border-radius:50%; background:#fef3c7; box-shadow:0 0 60px 40px rgba(251,191,36,.55); animation:licht 2.4s ease-in-out infinite; }
-  .drache { position:absolute; left:50%; top:44%; transform:translate(-50%, -50%); width:300px; max-width:80vw; opacity:0; animation:da 1.6s ease-out 1.2s forwards; filter:drop-shadow(0 0 18px #4ade80); }
-  .text { position:absolute; bottom:22px; left:0; right:0; text-align:center; }
-  .text b { display:block; font-size:21px; color:#fde68a; text-shadow:0 2px 6px #000; }
-  .text span { font-size:14px; opacity:.9; }
-  @keyframes drehen { to { transform:rotate(360deg); } }
-  @keyframes licht { 0%,100% { transform:scale(1); } 50% { transform:scale(1.5); } }
-  @keyframes da { from { opacity:0; transform:translate(-50%, -40%) scale(.6); } to { opacity:1; transform:translate(-50%, -50%) scale(1); } }
+  /* Shenlong-Finale (17.10.2026, Sam: Variante „Finale mit Wunsch“): Himmel dunkel, Kugeln kreisen, Lichtsäule, Shenlong, ein Wunsch */
+  html, body { margin:0; height:100%; overflow:hidden; background:transparent; color-scheme:dark; color:#f8fafc; font-family:system-ui,-apple-system,"Segoe UI",sans-serif; }
+  .nacht { position:absolute; inset:0; background:radial-gradient(circle at 50% 45%, #0f2a1c 0%, #020617 70%); opacity:0; transition:opacity 1.6s; } .nacht.an { opacity:.94; }
+  .kreis { position:absolute; left:50%; top:44%; width:0; height:0; } .kreis.dreht { animation:dreh 3.2s linear infinite; }
+  .kugel { position:absolute; width:40px; height:40px; margin:-20px; border-radius:50%; background:radial-gradient(circle at 35% 30%,#fff7d6,#fdba3b 30%,#c2620a); color:#dc2626; font-size:10px;
+    display:flex; align-items:center; justify-content:center; text-align:center; line-height:1; padding:4px; transition:transform 1.4s cubic-bezier(.3,.9,.3,1), box-shadow 1s; }
+  @keyframes dreh { to { transform:rotate(360deg); } }
+  .saeule { position:absolute; left:50%; bottom:56%; width:36px; margin-left:-18px; height:0; background:linear-gradient(0deg,rgba(254,240,138,.95),rgba(251,191,36,.15)); filter:blur(3px); transition:height 1s ease-in; } .saeule.an { height:56%; }
+  .drache { position:absolute; left:50%; top:3%; height:46%; transform:translateX(-50%) scale(.6); opacity:0; transition:all 1.3s cubic-bezier(.2,1.2,.3,1); filter:drop-shadow(0 0 24px #4ade80); display:flex; align-items:center; justify-content:center; font-size:min(26vh,170px); }
+  .drache img { height:100%; } .drache.da { opacity:1; transform:translateX(-50%) scale(1); }
+  .weiss { position:absolute; inset:0; background:#fff; opacity:0; pointer-events:none; } .weiss.an { animation:weiss .5s; } @keyframes weiss { 20% { opacity:.85; } 100% { opacity:0; } }
+  .wunsch { position:absolute; left:50%; bottom:18px; transform:translateX(-50%); width:min(94%,560px); background:rgba(15,23,42,.94); border:2px solid #4ade80; border-radius:16px; padding:14px; opacity:0; pointer-events:none; transition:opacity .6s; text-align:center; }
+  .wunsch.da { opacity:1; pointer-events:auto; } .wunsch b { color:#86efac; font-size:17px; } .wunsch p { margin:6px 0 0; font-size:13.5px; color:#cbd5e1; }
+  .w { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:10px; }
+  .w button { background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.2); color:#fff; border-radius:12px; padding:10px 6px; font:600 13px system-ui; cursor:pointer; }
+  .w button:hover { background:rgba(74,222,128,.28); } .w button span { display:block; font-size:26px; margin-bottom:4px; }
+  .wahl { display:grid; grid-template-columns:repeat(auto-fill,minmax(64px,1fr)); gap:6px; max-height:170px; overflow:auto; margin-top:10px; }
+  .wahl div { background:rgba(255,255,255,.07); border-radius:10px; padding:3px; font-size:10.5px; cursor:pointer; } .wahl div:hover { background:rgba(74,222,128,.3); } .wahl img { width:46px; height:46px; object-fit:contain; display:block; margin:0 auto; }
+  .ergebnis img { width:120px; height:120px; object-fit:contain; display:block; margin:6px auto 0; filter:drop-shadow(0 0 14px #fbbf24); }
+  .zu { margin-top:10px; border:0; border-radius:10px; padding:9px 18px; font-weight:800; cursor:pointer; background:#4ade80; color:#052e16; }
 </style>
+<script src="https://play.workadventu.re/iframe_api.js"></script>
 </head>
 <body>
-<div class="licht"></div>
-<div class="kreis" id="k"></div>
-<img class="drache" id="d" alt="" onerror="this.remove()">
-<div class="text"><b>🐉 Shenlong erscheint!</b><span id="t">Du hast alle 7 Dragon Balls gefunden – du stehst jetzt in der Ruhmeshalle.</span></div>
+<div class="nacht" id="nacht"></div><div class="saeule" id="saeule"></div><div class="kreis" id="kreis"></div>
+<div class="drache" id="drache"><img id="bild" alt="" onerror="this.replaceWith('🐉')"></div><div class="weiss" id="weiss"></div>
+<div class="wunsch" id="wunsch"></div>
 <script>
-// Die 7 Kugeln als kleine Bilder aus db.html-Zeichnung (Canvas → Bild), im Kreis um das Licht
-const k = document.getElementById("k");
-for (let s = 1; s <= 7; s++) { const c = document.createElement("canvas"); c.width = c.height = 64; const g = c.getContext("2d");
-  const gr = g.createRadialGradient(24, 22, 3, 32, 32, 28); gr.addColorStop(0, "#fff7d6"); gr.addColorStop(.3, "#fdba3b"); gr.addColorStop(1, "#c2620a"); g.fillStyle = gr; g.beginPath(); g.arc(32, 32, 28, 0, 7); g.fill();
-  g.fillStyle = "#dc2626"; g.font = "bold 20px sans-serif"; g.textAlign = "center"; g.fillText("★".repeat(Math.min(s, 3)), 32, 30); if (s > 3) g.fillText("★".repeat(s - 3), 32, 48);
-  const i = document.createElement("img"), a = (s - 1) / 7 * Math.PI * 2; i.src = c.toDataURL(); i.style.left = Math.cos(a) * 110 + "px"; i.style.top = Math.sin(a) * 110 + "px"; k.appendChild(i); }
-// Shenlong-Bild, sobald Sam eins schickt (shenlong.png); fehlt es, bleibt nur das Licht
-document.getElementById("d").src = "shenlong.png?v=1";
+const KEY = "a21b2aa2a42fe6189b05773c07bbc9ad78e38b34ba3bb6fe", API = "https://swdigitaltest.de/buero-praesenz/pokemon";
+const q = new URLSearchParams(location.search); let NAME = q.get("name") || "", liste = [];
+const $ = id => document.getElementById(id), esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const bildVon = nr => "pokemon/" + String(nr).padStart(3, "0") + ".png?v=2", nameVon = nr => (liste.find(p => p.nr === nr) || {}).name || "#" + nr;
+$("bild").src = "shenlong.png?v=1"; // Sams Shenlong-Bild, sobald es da ist; sonst Drachen-Emoji
+fetch("pokemon/pokemon.json?t=" + Date.now()).then(r => r.json()).then(l => liste = l).catch(() => {});
+function zu() { try { WA.player.state.saveVariable("swAktion", { was: "shenlongZu", t: Date.now() }, { public: false, persist: false }); } catch { } }
+// Ablauf
+const ks = [1, 2, 3, 4, 5, 6, 7].map(s => { const k = document.createElement("div"); k.className = "kugel"; k.textContent = "★".repeat(s); k.style.transform = `translate(${(Math.random() - .5) * 700}px, ${(Math.random() - .5) * 400}px)`; $("kreis").appendChild(k); return k; });
+const blitz = () => { $("weiss").classList.remove("an"); void $("weiss").offsetWidth; $("weiss").classList.add("an"); };
+setTimeout(() => { $("nacht").classList.add("an"); ks.forEach((k, i) => { const a = i / 7 * Math.PI * 2; k.style.transform = `translate(${Math.cos(a) * 95}px, ${Math.sin(a) * 95}px)`; k.style.boxShadow = "0 0 20px 7px rgba(251,191,36,.85)"; }); }, 150);
+setTimeout(() => $("kreis").classList.add("dreht"), 1700);
+setTimeout(() => { blitz(); $("saeule").classList.add("an"); }, 2600);
+setTimeout(() => { blitz(); $("drache").classList.add("da"); }, 3500);
+setTimeout(() => { $("wunsch").innerHTML = `<b>„Ich erfülle dir einen Wunsch!“</b><div class="w">
+  <button data-w="selten"><span>✨</span>Ein seltenes Pokémon für dich</button><button data-w="gold"><span>👑</span>Goldener Rand um deine Figur, 1 Woche</button><button data-w="doppel"><span>🔄</span>Ein Pokémon deiner Wahl doppelt</button></div>`;
+  $("wunsch").classList.add("da"); $("wunsch").querySelectorAll("[data-w]").forEach(b => b.onclick = () => waehlen(b.dataset.w)); }, 4900);
+async function senden(wahl, nr) {
+  try { const r = await fetch(API + "/db/wunsch", { method: "POST", headers: { "X-Buero-Key": KEY, "Content-Type": "application/json" }, body: JSON.stringify({ name: NAME, wahl, nr }) }), d = await r.json();
+    if (!r.ok) return fertig(`<b>${esc(d.error || "Hat nicht geklappt.")}</b>`);
+    if (wahl === "selten") return fertig(`<b>Dein Wunsch ist erfüllt!</b><p>${d.neu ? "Neu im Sammelbuch" : "Noch einmal"}: ${esc(nameVon(d.nr))}</p><div class="ergebnis"><img src="${bildVon(d.nr)}" alt=""></div>`);
+    if (wahl === "gold") { try { WA.player.state.saveVariable("swAktion", { was: "goldRand", bis: d.goldBis, t: Date.now() }, { public: false, persist: false }); } catch { }
+      return fertig(`<b>Dein Wunsch ist erfüllt!</b><p>👑 Eine Woche lang leuchtet deine Figur golden – alle im Büro sehen es.</p>`); }
+    return fertig(`<b>Dein Wunsch ist erfüllt!</b><p>${esc(nameVon(d.nr))} hast du jetzt einmal mehr.</p><div class="ergebnis"><img src="${bildVon(d.nr)}" alt=""></div>`);
+  } catch { fertig("<b>Keine Verbindung – versuch es gleich noch einmal über die Sammlungen.</b>"); }
+}
+async function waehlen(w) {
+  if (w !== "doppel") return senden(w);
+  let meine = []; try { meine = (await (await fetch(API + "?name=" + encodeURIComponent(NAME), { headers: { "X-Buero-Key": KEY } })).json()).meine || []; } catch { }
+  if (!meine.length) return fertig("<b>Du hast noch keine Pokémon – wähl einen anderen Wunsch.</b>");
+  $("wunsch").innerHTML = `<b>Welches Pokémon soll ich verdoppeln?</b><div class="wahl">${meine.sort((a, b) => a.nr - b.nr).map(p => `<div data-nr="${p.nr}"><img src="${bildVon(p.nr)}" alt="">${esc(nameVon(p.nr))}</div>`).join("")}</div>`;
+  $("wunsch").querySelectorAll("[data-nr]").forEach(e => e.onclick = () => senden("doppel", Number(e.dataset.nr)));
+}
+function fertig(html) { $("wunsch").innerHTML = html + `<br><button class="zu" id="zu">Danke, Shenlong!</button>`; $("zu").onclick = () => { $("drache").classList.remove("da"); $("nacht").classList.remove("an"); setTimeout(zu, 900); }; }
+if (window.WA) WA.onInit().then(() => { if (!NAME) NAME = WA.player.name || ""; }).catch(() => {});
 </script>
 </body>
 </html>

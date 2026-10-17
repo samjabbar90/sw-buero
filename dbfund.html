@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Dragon Ball gefunden</title>
+<style>
+  /* E1 (17.10.2026, Sam): Kugel leuchtet auf, fliegt nach oben zu „Sammlungen“, unten springt die 7er-Leiste auf. ?s=Sterne&n=Anzahl */
+  html, body { margin:0; height:100%; overflow:hidden; background:transparent; color-scheme:dark; font-family:system-ui,-apple-system,"Segoe UI",sans-serif; }
+  .kugel { position:absolute; left:50%; top:55%; width:46px; height:46px; margin:-23px; border-radius:50%; background:radial-gradient(circle at 35% 30%,#fff7d6,#fdba3b 30%,#c2620a); color:#dc2626;
+    font-size:11px; display:flex; align-items:center; justify-content:center; text-align:center; line-height:1; padding:5px; animation:auf 1.4s cubic-bezier(.5,0,.3,1) forwards; }
+  @keyframes auf { 0% { transform:scale(.6); box-shadow:0 0 0 rgba(251,191,36,0); } 30% { transform:translateY(-40px) scale(1.9); box-shadow:0 0 50px 22px rgba(251,191,36,.85); }
+    100% { transform:translateY(calc(-55vh + 30px)) scale(.45); box-shadow:0 0 10px 4px rgba(251,191,36,.6); opacity:.9; } }
+  .text { position:absolute; left:50%; top:40%; transform:translateX(-50%); color:#fde68a; font-weight:900; font-size:22px; text-shadow:0 2px 6px #000, 0 0 14px rgba(251,191,36,.8); white-space:nowrap; opacity:0; animation:text 2.2s .2s ease-out forwards; }
+  @keyframes text { 0% { opacity:0; transform:translate(-50%, 10px); } 20% { opacity:1; transform:translate(-50%, 0); } 80% { opacity:1; } 100% { opacity:0; transform:translate(-50%, -20px); } }
+  .slots { position:absolute; left:50%; bottom:90px; transform:translateX(-50%) translateY(140px); display:flex; gap:7px; background:rgba(15,23,42,.9); padding:9px 12px; border-radius:30px; border:1px solid rgba(251,191,36,.5); transition:transform .45s cubic-bezier(.2,1.4,.4,1); }
+  .slots.da { transform:translateX(-50%) translateY(0); }
+  .slots i { width:28px; height:28px; border-radius:50%; background:rgba(255,255,255,.12); display:flex; align-items:center; justify-content:center; font-style:normal; font-size:7px; color:#dc2626; line-height:1; text-align:center; }
+  .slots i.voll { background:radial-gradient(circle at 35% 30%,#fff7d6,#fdba3b 30%,#c2620a); box-shadow:0 0 10px rgba(251,191,36,.8); }
+  .slots i.neu { animation:plopp .55s .1s both; } @keyframes plopp { 0% { transform:scale(0); } 70% { transform:scale(1.5); } 100% { transform:scale(1); } }
+</style>
+</head>
+<body>
+<div class="kugel" id="k"></div><div class="text" id="t"></div><div class="slots" id="s"></div>
+<script>
+const q = new URLSearchParams(location.search), s = Math.min(7, Math.max(1, Number(q.get("s")) || 1)), gef = (q.get("g") || String(s)).split(",").map(Number), n = gef.length;
+document.getElementById("k").textContent = "★".repeat(s);
+document.getElementById("t").textContent = "★".repeat(s) + "  Dragon Ball gefunden · " + n + " / 7";
+document.getElementById("s").innerHTML = [1, 2, 3, 4, 5, 6, 7].map(i => `<i class="${gef.includes(i) ? "voll" : ""}${i === s ? " neu" : ""}">${gef.includes(i) ? "★".repeat(Math.min(i, 3)) : ""}</i>`).join("");
+setTimeout(() => document.getElementById("k").remove(), 1400);
+setTimeout(() => document.getElementById("s").classList.add("da"), 1250);
+setTimeout(() => document.getElementById("s").classList.remove("da"), 3700);
+</script>
+</body>
+</html>

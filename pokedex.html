@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Sammelbuch</title>
+<title>Sammlungen</title>
 <style>
   * { box-sizing:border-box; }
   body { margin:0; background:#f8fafc; color:#0f172a; font-family:system-ui,-apple-system,"Segoe UI",sans-serif; }
@@ -48,24 +48,33 @@
   html.glas .e, html.glas .tz, html.glas .wahl div { background:rgba(10,11,14,.68) !important; color:#fff; border-color:rgba(255,255,255,.22) !important; }
   html.glas .e .t2, html.glas .hin { color:rgba(255,255,255,.75); } html.glas .wahl div.an { border-color:#fca5a5 !important; background:rgba(220,38,38,.3) !important; }
   html.glas h3, html.glas .kugel { color:#fff; }
+  /* 17.10.2026 (Sam: Layout S1 „Regal“): Startseite mit einer Kachel je Sammlung */
+  .kacheln { display:grid; grid-template-columns:repeat(auto-fill, minmax(230px, 1fr)); gap:12px; }
+  .kachel { border-radius:14px; padding:14px; min-height:132px; position:relative; overflow:hidden; cursor:pointer; color:#fff; transition:transform .15s; }
+  .kachel:hover { transform:translateY(-3px); } .kachel b { display:block; font-size:18px; } .kachel span { font-size:13.5px; opacity:.92; }
+  .kachel .bar { height:8px; background:rgba(255,255,255,.25); border-radius:9px; margin-top:10px; width:62%; } .kachel .bar i { display:block; height:100%; border-radius:9px; background:#fff; }
+  .kachel img, .kachel .gross { position:absolute; right:-4px; bottom:-8px; width:92px; height:92px; object-fit:contain; font-size:66px; line-height:92px; text-align:center; }
+  .kp { background:linear-gradient(135deg,#dc2626,#7f1d1d); } .kd { background:linear-gradient(135deg,#f59e0b,#9a3412); } .ke { background:linear-gradient(135deg,#7c3aed,#3b0764); } .kt { background:linear-gradient(135deg,#0d9488,#134e4a); } .kr { background:linear-gradient(135deg,#2563eb,#1e3a8a); }
+  .ruf { display:block; margin:0 auto 14px; border:0; border-radius:12px; padding:11px 18px; font-weight:800; font-size:15px; cursor:pointer; background:#4ade80; color:#052e16; }
   html.glas header { background:rgba(127,29,29,.75) !important; padding-right:190px !important; }
 </style>
 <script src="glas.js?v=1792088168"></script>
 <script src="https://play.workadventu.re/iframe_api.js"></script>
 </head>
 <body>
-<header><div><h1>📕 Sammelbuch</h1><div class="u" id="u">Lade …</div></div>
-  <div class="reiter"><button id="r1" class="an">Meine</button><button id="r2">Rangliste</button><button id="r3">🐉 Dragon Balls</button><button id="r4">🏅 Erfolge</button><button id="r5">🔄 Tausch</button></div></header>
+<header><div><h1 id="titel">📚 Sammlungen</h1><div class="u" id="u">Lade …</div></div>
+  <div class="reiter"><button id="r0" class="an">📚 Übersicht</button><button id="r1">Pokémon</button><button id="r2">Rangliste</button><button id="r3">🐉 Dragon Balls</button><button id="r4">🏅 Erfolge</button><button id="r5">🔄 Tausch</button></div></header>
 <main id="m"><div class="leer2">Lade …</div></main>
 <script>
 // Pokémon-Sammelbuch (18.10.2026, Sam): alle 151, gefangene farbig, fehlende als Schatten; Rangliste im Team
 const KEY = "a21b2aa2a42fe6189b05773c07bbc9ad78e38b34ba3bb6fe", API = "https://swdigitaltest.de/buero-praesenz/pokemon";
-let NAME = new URLSearchParams(location.search).get("name") || "", liste = [], daten = { meine: [], rang: [] }, reiter = 1;
+let NAME = new URLSearchParams(location.search).get("name") || "", liste = [], daten = { meine: [], rang: [] }, reiter = 0;
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 function zeigen() {
   const m = document.getElementById("m"), hab = new Map(daten.meine.map(x => [x.nr, x.anzahl]));
-  document.getElementById("u").textContent = hab.size + " von 151 gefunden · " + [...hab.values()].reduce((s, x) => s + x, 0) + " gefangen";
-  for (let i = 1; i <= 5; i++) document.getElementById("r" + i).className = reiter === i ? "an" : "";
+  document.getElementById("u").textContent = reiter === 0 ? "Alle deine Sammlungen" : hab.size + " von 151 gefunden · " + [...hab.values()].reduce((s, x) => s + x, 0) + " gefangen";
+  for (let i = 0; i <= 5; i++) document.getElementById("r" + i).className = reiter === i ? "an" : "";
+  if (reiter === 0) return regalZeigen(m);
   if (reiter === 3) return dbZeigen(m); if (reiter === 4) return erfolgeZeigen(m); if (reiter === 5) return tauschZeigen(m);
   if (reiter === 2) { m.innerHTML = daten.rang.length ? daten.rang.map(r => `<div class="z${r.ich ? " ich" : ""}"><div class="pl">${r.platz <= 3 ? ["🥇", "🥈", "🥉"][r.platz - 1] : r.platz + "."}</div><div class="na">${esc(r.name)}</div><div class="w">${r.arten} / 151</div></div>`).join("") : '<div class="leer2">Noch hat niemand etwas gefangen.</div>'; return; }
   m.innerHTML = '<div class="gitter">' + liste.map(p => { const n = hab.get(p.nr), num = "#" + String(p.nr).padStart(3, "0");
@@ -75,9 +84,26 @@ function zeigen() {
 async function laden() {
   try { liste = await (await fetch("pokemon/pokemon.json?t=" + Date.now())).json(); } catch { liste = []; }
   try { daten = await (await fetch(API + "?name=" + encodeURIComponent(NAME), { headers: { "X-Buero-Key": KEY } })).json(); } catch { }
-  zeigen();
+  await regalLaden(); zeigen();
 }
-for (let i = 1; i <= 5; i++) document.getElementById("r" + i).onclick = async () => { reiter = i; if (i >= 3) await extraLaden(); zeigen(); };
+for (let i = 0; i <= 5; i++) document.getElementById("r" + i).onclick = () => oeffnen(i);
+async function oeffnen(i) { reiter = i; if (i >= 3) await extraLaden(); zeigen(); }
+// Regal (S1): alle Zahlen auf einen Blick, Kachel öffnet die Sammlung
+async function regalLaden() { const n = encodeURIComponent(NAME);
+  await Promise.all([["db", "/db"], ["erfolge", "/erfolge"], ["tausch", "/tausch"]].map(async ([k, p]) => { try { ex[k] = await (await fetch(API + p + "?name=" + n, { headers: H })).json(); } catch { } })); }
+function regalZeigen(m) {
+  const arten = daten.meine.length, kg = ((ex.db || {}).kugeln || []).filter(k => k.gefunden).length, el = (ex.erfolge || {}).liste || [], eh = el.filter(e => e.erreicht).length;
+  const tein = ((ex.tausch || {}).liste || []).filter(x => x.ein && x.status === "offen").length, ich = daten.rang.find(r => r.ich);
+  const k = (cls, i, titel, zeile, anteil, bild) => '<div class="kachel ' + cls + '" data-i="' + i + '"><b>' + titel + '</b><span>' + zeile + '</span><div class="bar"><i style="width:' + Math.round(Math.min(1, anteil) * 100) + '%"></i></div>' + bild + '</div>';
+  m.innerHTML = '<div class="kacheln">'
+    + k("kp", 1, "Pokémon", arten + " / 151 gefunden", arten / 151, '<img src="' + bildVon(25) + '" alt="">')
+    + k("kd", 3, "Dragon Balls", kg + " / 7 diese Woche" + ((ex.db || {}).wunschOffen ? " · Wunsch offen!" : ""), kg / 7, '<div class="gross">🐉</div>')
+    + k("ke", 4, "Erfolge", eh + " / " + (el.length || 14), eh / (el.length || 14), '<div class="gross">🏅</div>')
+    + k("kt", 5, "Tausch", tein ? tein + " Angebot" + (tein > 1 ? "e" : "") + " an dich" : "Doppelte tauschen", tein ? 1 : 0, '<div class="gross">🔄</div>')
+    + k("kr", 2, "Rangliste", ich ? "Du bist auf Platz " + ich.platz : "Noch nicht dabei", ich ? 1 / ich.platz : 0, '<div class="gross">🏆</div>')
+    + '</div>';
+  m.querySelectorAll("[data-i]").forEach(e => e.onclick = () => oeffnen(Number(e.dataset.i)));
+}
 // ===== 17.10.2026 (Sam): Dragon Balls, Erfolge, Pokémon-Tausch
 const H = { "X-Buero-Key": KEY }, nameVon = nr => (liste.find(p => p.nr === nr) || {}).name || "#" + nr, bildVon = nr => "pokemon/" + String(nr).padStart(3, "0") + ".png?v=2";
 let ex = { db: null, erfolge: null, tausch: null }, tw = { an: "", will: 0, gib: 0 }, meldung = "";
@@ -89,10 +115,12 @@ async function extraLaden() {
 }
 function dbZeigen(m) {
   const d = ex.db || { kugeln: [], ruhm: [] }, gef = (d.kugeln || []).filter(k => k.gefunden).length;
-  m.innerHTML = '<h3>Deine Dragon Balls diese Woche: ' + gef + ' / 7</h3><p class="hin">Jede Woche liegen für jeden 7 eigene Kugeln draußen versteckt – halb im Gras. Alle 7 gefunden: Shenlong erscheint und du kommst in die Ruhmeshalle.</p><div class="kugeln">'
+  m.innerHTML = (d.wunschOffen ? '<button class="ruf" id="ruf">🐉 Shenlong rufen – dein Wunsch wartet</button>' : "") + '<h3>Deine Dragon Balls diese Woche: ' + gef + ' / 7</h3><p class="hin">Jede Woche liegen für jeden 7 eigene Kugeln draußen versteckt – halb im Gras. Alle 7 gefunden: Shenlong erscheint und du kommst in die Ruhmeshalle.</p><div class="kugeln">'
     + (d.kugeln || []).map(k => '<div class="kugel' + (k.gefunden ? "" : " nein") + '"><div class="o">' + "★".repeat(k.s) + '</div>' + k.s + ' ★</div>').join("") + '</div>'
     + '<h3>🏆 Ruhmeshalle</h3>' + ((d.ruhm || []).length ? d.ruhm.map(x => '<div class="z"><div class="pl">🐉</div><div class="na">' + esc(x.name) + '</div><div class="w">' + esc(x.woche.replace("-W", " · KW ")) + '</div></div>').join("") : '<div class="leer2">Noch hat niemand Shenlong gerufen.</div>');
 }
+function rufen() { try { WA.player.state.saveVariable("swAktion", { was: "shenlongAuf", t: Date.now() }, { public: false, persist: false }); } catch { } }
+document.addEventListener("click", e => { if (e.target && e.target.id === "ruf") rufen(); });
 function erfolgeZeigen(m) {
   const l = (ex.erfolge || {}).liste || [], n = l.filter(e => e.erreicht).length;
   m.innerHTML = '<h3>' + n + ' von ' + l.length + ' Erfolgen</h3>' + l.map(e => '<div class="e' + (e.erreicht ? "" : " nein") + '"><div class="i">' + e.icon + '</div><div><div class="t1">' + esc(e.name) + '</div><div class="t2">' + esc(e.text) + (e.erreicht ? " · seit " + new Date(e.erreicht).toLocaleDateString("de-DE") : "") + '</div></div></div>').join("");
