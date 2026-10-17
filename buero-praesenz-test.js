@@ -1085,6 +1085,7 @@
   }
   var AUTOS = ["lambo", "r8", "rsq8", "amggt", "porsche911", "delorean", "kitt", "batmobil", "herbie", "ecto1", "bumblebee"];
   var autoFaehrt = false;
+  var AUTO_TEST_BIS = 1792253942e3;
   function autosStarten() {
     setInterval(autosPruefen, 4e3);
     autosPruefen();
@@ -1093,14 +1094,24 @@
     if (autoFaehrt || HANDY) return;
     const jetzt = Date.now(), b = new Date(jetzt).toLocaleString("sv-SE", { timeZone: "Europe/Berlin" });
     const tagNr = Math.floor(Date.parse(b.slice(0, 10) + "T12:00:00Z") / 864e5), std = Number(b.slice(11, 13)), mi = Number(b.slice(14, 16));
+    if (jetzt < AUTO_TEST_BIS) {
+      const slot = Math.floor(jetzt / 3e4), start = slot * 3e4, dauer = 25e3;
+      if (jetzt - start > dauer - 2e3) return;
+      return autoFahren(AUTOS[slot % AUTOS.length], slot % 2 === 0, start, dauer);
+    }
     if (std < 8 || std >= 20) return;
     for (let k = 0; k < 2; k++) {
       const seed = tagNr * 48 + std * 2 + k + 2e3, abMin = k * 30 + 10 + paradeHash(seed + 23) % 18;
       if (mi !== abMin) continue;
       const start = Math.floor(jetzt / 6e4) * 6e4, dauer = 25e3;
       if (jetzt - start > dauer - 2e3) continue;
+      return autoFahren(AUTOS[paradeHash(seed + 7) % AUTOS.length], (std + k) % 2 === 1, start, dauer);
+    }
+  }
+  async function autoFahren(wer, rechts, start, dauer) {
+    {
       autoFaehrt = true;
-      const wer = AUTOS[paradeHash(seed + 7) % AUTOS.length], rechts = (std + k) % 2 === 1, W = 160, H = 80;
+      const W = 160, H = 80;
       const y = Math.round((rechts ? 98.7 : 96.3) * 32) - H, B = 236 * 32 + W;
       let h = null;
       try {
@@ -1119,7 +1130,7 @@
           }
           setTimeout(() => {
             autoFaehrt = false;
-          }, 6e4);
+          }, Date.now() < AUTO_TEST_BIS ? 0 : 6e4);
           return;
         }
         try {
@@ -1127,7 +1138,6 @@
         } catch {
         }
       }, 60);
-      return;
     }
   }
   function kurzMeldung(text, ms = 7e3) {
