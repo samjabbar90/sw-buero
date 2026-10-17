@@ -5,9 +5,9 @@
 <title>Flieger</title>
 <style>
   html, body { margin:0; height:100%; background:transparent; overflow:hidden; color-scheme:dark; }
-  img { width:100%; height:100%; image-rendering:pixelated; animation:schweben .8s ease-in-out infinite; filter:drop-shadow(0 6px 3px rgba(0,0,0,.2)); opacity:.85; }
+  img { width:100%; height:100%; image-rendering:pixelated; animation:schweben .8s ease-in-out infinite; filter:drop-shadow(0 6px 3px rgba(0,0,0,.2)); opacity:.95; object-fit:contain; }
   @keyframes schweben { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-6%); } }
 </style>
 </head>
-<body><img id="f" alt=""><script>document.getElementById("f").src = "flieger-" + (new URLSearchParams(location.search).get("f") || "goku").replace(/[^a-z]/g, "") + ".png?v=1"; if (/[?&]l=1/.test(location.search)) document.body.style.transform = "scaleX(-1)";</script></body>
+<body><img id="f" alt=""><script>document.getElementById("f").src = "flieger-" + (new URLSearchParams(location.search).get("f") || "goku").replace(/[^a-z]/g, "") + ".png?v=2"; if (/[?&]l=1/.test(location.search)) document.body.style.transform = "scaleX(-1)";</script></body>
 </html>

@@ -863,7 +863,7 @@
       return;
     }
   }
-  var FLIEGER = ["tenshinhan", "vegeta", "bulma", "goku", "gohan", "trunks", "krillin", "yamcha", "c18", "c17", "freezer", "boo", "beerus", "kaio"];
+  var FLIEGER = ["tenshinhan", "vegeta", "bulma", "goku", "gohan", "trunks", "krillin", "yamcha", "c18", "c17", "freezer", "boo"];
   var fliegerFliegt = false;
   function fliegerStarten() {
     setInterval(fliegerPruefen, 4e3);
@@ -884,7 +884,7 @@
       const y = (z < 0.5 ? 2 + z * 10 : 84 + (z - 0.5) * 14) * 32, B = 236 * 32 + 256;
       let h = null;
       try {
-        h = await WA.room.website.create({ name: "flieger", url: SEITEN + "flieger.html?v=1&f=" + wer + (rechts ? "" : "&l=1"), visible: true, allowApi: false, origin: "map", scale: 1, position: { x: -200, y, width: 128, height: 96 } });
+        h = await WA.room.website.create({ name: "flieger", url: SEITEN + "flieger.html?v=2&f=" + wer + (rechts ? "" : "&l=1"), visible: true, allowApi: false, origin: "map", scale: 1, position: { x: -200, y, width: 192, height: 96 } });
       } catch {
         fliegerFliegt = false;
         return;
