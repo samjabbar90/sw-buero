@@ -687,12 +687,12 @@
     try {
       const h = await WA.room.website.create({
         name,
-        url: SEITEN + "poke.html?nr=" + p.nr + "&i=" + name,
+        url: SEITEN + "poke.html?v2&nr=" + p.nr + "&i=" + name + "&v=" + (Math.random() < 0.45 ? "busch" : Math.random() < 0.65 ? "gras" : "schatten"),
         visible: true,
         allowApi: true,
         origin: "map",
         scale: 1,
-        position: { x: x * 32 - 8, y: y * 32 - 16, width: 48, height: 48 }
+        position: { x: x * 32 - 6, y: y * 32 - 12, width: 44, height: 44 }
       });
       pokeAktiv.set(name, h);
     } catch {
@@ -721,7 +721,7 @@
     } catch {
     }
     kurzMeldung((r.neu ? "\u2728 Neu im Sammelbuch: " : "\u{1F389} Gefangen: ") + (p ? p.name : "Pok\xE9mon") + (r.arten ? " \xB7 " + r.arten + " / 151" : ""), 6e3);
-    setTimeout(() => pokeSetzen(), 6e4 + Math.random() * 12e4);
+    setTimeout(() => pokeSetzen(), 36e5 + Math.random() * 18e5);
   }
   function kurzMeldung(text, ms = 7e3) {
     try {
