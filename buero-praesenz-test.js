@@ -863,6 +863,55 @@
       return;
     }
   }
+  var FLIEGER = ["tenshinhan", "vegeta", "bulma", "goku", "gohan", "trunks"];
+  var fliegerFliegt = false;
+  function fliegerStarten() {
+    setInterval(fliegerPruefen, 4e3);
+    fliegerPruefen();
+  }
+  async function fliegerPruefen() {
+    if (fliegerFliegt || HANDY) return;
+    const jetzt = Date.now(), b = new Date(jetzt).toLocaleString("sv-SE", { timeZone: "Europe/Berlin" });
+    const tagNr = Math.floor(Date.parse(b.slice(0, 10) + "T12:00:00Z") / 864e5), std = Number(b.slice(11, 13)), mi = Number(b.slice(14, 16));
+    if (std < 8 || std >= 20) return;
+    for (let k = 0; k < 2; k++) {
+      const seed = tagNr * 48 + std * 2 + k + 1e3, abMin = k * 30 + 3 + paradeHash(seed + 17) % 24;
+      if (mi !== abMin) continue;
+      const start = Math.floor(jetzt / 6e4) * 6e4, dauer = 3e4;
+      if (jetzt - start > dauer - 2e3) continue;
+      fliegerFliegt = true;
+      const wer = FLIEGER[paradeHash(seed + 3) % FLIEGER.length], rechts = (std + k) % 2 === 0, z = paradeHash(seed + 29) % 1e3 / 1e3;
+      const y = (z < 0.5 ? 2 + z * 10 : 84 + (z - 0.5) * 14) * 32, B = 236 * 32 + 256;
+      let h = null;
+      try {
+        h = await WA.room.website.create({ name: "flieger", url: SEITEN + "flieger.html?v=1&f=" + wer + (rechts ? "" : "&l=1"), visible: true, allowApi: false, origin: "map", scale: 1, position: { x: -200, y, width: 128, height: 96 } });
+      } catch {
+        fliegerFliegt = false;
+        return;
+      }
+      const tick = setInterval(() => {
+        const t = (Date.now() - start) / dauer;
+        if (t >= 1) {
+          clearInterval(tick);
+          try {
+            WA.room.website.delete("flieger");
+          } catch {
+          }
+          setTimeout(() => {
+            fliegerFliegt = false;
+          }, 6e4);
+          return;
+        }
+        const x = rechts ? -200 + t * B : B - 200 - t * B;
+        try {
+          h.x = Math.round(x);
+          h.y = Math.round(y + Math.sin(t * 12) * 10);
+        } catch {
+        }
+      }, 80);
+      return;
+    }
+  }
   function kurzMeldung(text, ms = 7e3) {
     try {
       const m = WA.ui.displayActionMessage({ message: text, callback: () => {
@@ -2784,6 +2833,7 @@
     if (!HANDY) hundStarten();
     pokemonStarten();
     paradeStarten();
+    fliegerStarten();
     gokuStarten();
     profilKarten();
     wandGespraeche();
