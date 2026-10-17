@@ -1809,6 +1809,7 @@
   }
   var schildUrl = (t, n, st) => SEITEN + "schild.html?v=4&n=" + encodeURIComponent(n) + "&raum=" + encodeURIComponent(t.raum) + "&s=" + st;
   async function namensschilder() {
+    if (true) return;
     if (HANDY) return;
     for (const t of tueren) {
       const [rx, ry, rw] = t.rechteck, n = t.raum in SCHILD_PERSON ? SCHILD_PERSON[t.raum] : t.besitzer ? t.besitzer.charAt(0).toUpperCase() + t.besitzer.slice(1) : "";
@@ -1830,6 +1831,7 @@
     }
   }
   function schilderAktualisieren() {
+    if (true) return;
     for (const t of tueren) {
       const x = schilder.get(t.variable);
       if (!x) continue;
