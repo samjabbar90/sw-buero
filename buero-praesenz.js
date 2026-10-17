@@ -796,6 +796,57 @@
       }
     }, 80);
   }
+  var PARADE = [
+    { name: "sunny", seite: "sunny.html?v=1", w: 160, h: 300, bahn: "fluss", dauer: 18e4 }
+    // Thousand Sunny (One Piece)
+  ];
+  var paradeLaeuft = false;
+  function paradeStarten() {
+    setInterval(paradePruefen, 5e3);
+    paradePruefen();
+  }
+  var paradeHash = (n) => Math.imul(n, 2246822519) >>> 0 >>> 9;
+  async function paradePruefen() {
+    if (paradeLaeuft || HANDY || !PARADE.length) return;
+    const jetzt = Date.now(), b = new Date(jetzt).toLocaleString("sv-SE", { timeZone: "Europe/Berlin" });
+    const tagNr = Math.floor(Date.parse(b.slice(0, 10) + "T12:00:00Z") / 864e5), std = Number(b.slice(11, 13)), mi = Number(b.slice(14, 16));
+    if (std < 8 || std >= 20) return;
+    for (let k = 0; k < 2; k++) {
+      const seed = tagNr * 48 + std * 2 + k, abMin = k * 30 + paradeHash(seed + 11) % 27, p = PARADE[paradeHash(seed + 5) % PARADE.length];
+      if (mi < abMin || mi >= abMin + Math.ceil(p.dauer / 6e4)) continue;
+      const start = Math.floor(jetzt / 6e4) * 6e4 - (mi - abMin) * 6e4;
+      if (jetzt - start > p.dauer - 3e3) continue;
+      paradeLaeuft = true;
+      const x = 223 * 32 + 128 - p.w / 2, y0 = -p.h, y1 = 150 * 32 + 20;
+      let h = null;
+      try {
+        h = await WA.room.website.create({ name: "parade", url: SEITEN + p.seite, visible: true, allowApi: false, origin: "map", scale: 1, position: { x, y: y0, width: p.w, height: p.h } });
+      } catch {
+        paradeLaeuft = false;
+        return;
+      }
+      const tick = setInterval(() => {
+        const t = (Date.now() - start) / p.dauer;
+        if (t >= 1) {
+          clearInterval(tick);
+          try {
+            WA.room.website.delete("parade");
+          } catch {
+          }
+          setTimeout(() => {
+            paradeLaeuft = false;
+          }, 6e4);
+          return;
+        }
+        try {
+          h.y = Math.round(y0 + t * (y1 - y0));
+          h.x = Math.round(x + Math.sin(t * 9) * 12);
+        } catch {
+        }
+      }, 100);
+      return;
+    }
+  }
   function kurzMeldung(text, ms = 7e3) {
     try {
       const m = WA.ui.displayActionMessage({ message: text, callback: () => {
@@ -2716,6 +2767,7 @@
     klingel();
     if (!HANDY) hundStarten();
     pokemonStarten();
+    paradeStarten();
     gokuStarten();
     profilKarten();
     wandGespraeche();

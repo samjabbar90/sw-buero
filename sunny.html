@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Thousand Sunny</title>
+<style>
+  html, body { margin:0; height:100%; background:transparent; overflow:hidden; color-scheme:dark; }
+  /* 17.10.2026 (Sam: One Piece): Kielwasser oben, darunter die Sunny mit leichtem Schaukeln */
+  svg { position:absolute; left:0; top:0; width:160px; height:90px; animation:wellen 1.2s ease-in-out infinite; }
+  img { position:absolute; left:0; top:84px; width:160px; height:216px; image-rendering:pixelated; animation:schaukeln 2.6s ease-in-out infinite; transform-origin:50% 60%; filter:drop-shadow(0 6px 4px rgba(0,0,0,.25)); }
+  @keyframes schaukeln { 0%,100% { transform:rotate(-2deg); } 50% { transform:rotate(2deg); } }
+  @keyframes wellen { 0%,100% { opacity:.55; } 50% { opacity:.85; } }
+</style>
+</head>
+<body>
+<svg viewBox="0 0 160 90"><g fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round">
+  <path d="M40 82 Q80 98 120 82"/><path d="M28 58 Q80 76 132 58"/><path d="M18 34 Q80 54 142 34"/><path d="M10 10 Q80 32 150 10"/></g></svg>
+<img src="sunny.png?v=1" alt="">
+</body>
+</html>
