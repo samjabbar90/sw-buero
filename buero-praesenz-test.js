@@ -863,7 +863,7 @@
       return;
     }
   }
-  var FLIEGER = ["tenshinhan", "vegeta", "bulma", "goku", "gohan", "trunks"];
+  var FLIEGER = ["tenshinhan", "vegeta", "bulma", "goku", "gohan", "trunks", "krillin", "yamcha", "c18", "c17", "freezer", "boo", "beerus", "kaio"];
   var fliegerFliegt = false;
   function fliegerStarten() {
     setInterval(fliegerPruefen, 4e3);
