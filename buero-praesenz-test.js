@@ -652,73 +652,88 @@
     return { remove: () => {
     } };
   }
+  var POKE_API = "https://swdigitaltest.de/buero-praesenz/pokemon";
   var pokeListe = [];
-  var pokeOrte = [];
-  var pokeZaehler = 0;
   var pokeAktiv = /* @__PURE__ */ new Map();
+  var pokeGesehen = /* @__PURE__ */ new Set();
+  var POKE_ANSAGE = { selten: "\u{1F31F} Selten", sehrSelten: "\u{1F48E} Sehr selten", raid: "\u2694\uFE0F RAID", mew: "\u2728 Geheimnis" };
+  var pokeOrt = (x, y) => y >= 88 ? "an der Stra\xDFe" : y < 12 ? "oben im Garten" : x > 140 ? "am Sportplatz" : x > 100 ? "rechts beim Parkplatz" : x < 20 ? "links im Garten" : "im Garten";
   async function pokemonStarten() {
     try {
-      pokeListe = (await (await fetch(SEITEN + "pokemon/pokemon.json?t=" + Date.now())).json()).filter((p) => p.bild);
-      pokeOrte = await (await fetch(SEITEN + "pokemon/orte.json?v=1")).json();
+      pokeListe = await (await fetch(SEITEN + "pokemon/pokemon.json?t=" + Date.now())).json();
     } catch {
       return;
     }
-    if (HANDY) pokeOrte = pokeOrte.filter((p) => p[1] < 88);
-    if (!pokeListe.length || !pokeOrte.length) return;
-    for (let k = 0; k < (HANDY ? 6 : 15); k++) pokeSetzen();
-    setInterval(() => {
-      const n = [...pokeAktiv.keys()];
-      if (!n.length) return;
-      pokeWeg(n[Math.floor(Math.random() * n.length)]);
-      pokeSetzen();
-    }, 24e4);
+    pokeAbgleich();
+    setInterval(pokeAbgleich, 6e4);
   }
-  function pokeZiehen() {
-    const gew = pokeListe.map((p) => 1 / Math.pow(p.selten || 1, 2.2));
-    let r = Math.random() * gew.reduce((a, b) => a + b, 0);
-    for (let i = 0; i < gew.length; i++) {
-      r -= gew[i];
-      if (r <= 0) return pokeListe[i];
-    }
-    return pokeListe[0];
-  }
-  async function pokeSetzen() {
-    const p = pokeZiehen(), [x, y] = pokeOrte[Math.floor(Math.random() * pokeOrte.length)], name = "poke-" + ++pokeZaehler;
+  async function pokeAbgleich() {
+    let d;
     try {
-      const h = await WA.room.website.create({
-        name,
-        url: SEITEN + "poke.html?v2&nr=" + p.nr + "&i=" + name + "&v=" + (Math.random() < 0.45 ? "busch" : Math.random() < 0.65 ? "gras" : "schatten"),
-        visible: true,
-        allowApi: true,
-        origin: "map",
-        scale: 1,
-        position: { x: x * 32 - 6, y: y * 32 - 12, width: 44, height: 44 }
-      });
-      pokeAktiv.set(name, h);
+      d = await (await fetch(POKE_API + "/spawns?name=" + encodeURIComponent(WA.player.name || ""), { headers: { "X-Buero-Key": BUERO_KEY } })).json();
     } catch {
+      return;
     }
+    const da = /* @__PURE__ */ new Set();
+    for (const s of d.spawns || []) {
+      if (HANDY && s.y >= 88) continue;
+      if (s.raid && s.ichDabei) continue;
+      da.add(s.id);
+      if (pokeAktiv.has(s.id)) continue;
+      const p = pokeListe.find((x) => x.nr === s.nr), name = p ? p.name : "Pok\xE9mon";
+      const v = s.getarnt ? "blume" : s.raid ? "raid" : ["busch", "gras", "schatten"][(s.id.length + s.nr) % 3];
+      const gross = s.raid ? 72 : 44;
+      try {
+        const h = await WA.room.website.create({
+          name: "poke-" + s.id,
+          url: SEITEN + "poke.html?v3&nr=" + s.nr + "&i=" + encodeURIComponent(s.id) + "&v=" + v,
+          visible: true,
+          allowApi: true,
+          origin: "map",
+          scale: 1,
+          position: { x: s.x * 32 - (gross - 32) / 2, y: s.y * 32 - (gross - 20), width: gross, height: gross }
+        });
+        pokeAktiv.set(s.id, { h, s });
+      } catch {
+      }
+      if (POKE_ANSAGE[s.stufe] && !pokeGesehen.has(s.id)) {
+        pokeGesehen.add(s.id);
+        kurzMeldung(POKE_ANSAGE[s.stufe] + ": " + (s.getarnt ? "Irgendwo drau\xDFen versteckt sich etwas Besonderes \u2026" : name + " ist " + pokeOrt(s.x, s.y) + " aufgetaucht!") + (s.raid ? " Nur zusammen zu fangen: " + s.treffer + " / " + s.raid : ""), 9e3);
+      }
+    }
+    for (const id of [...pokeAktiv.keys()]) if (!da.has(id)) pokeWeg(id);
   }
-  function pokeWeg(name) {
-    const h = pokeAktiv.get(name);
-    pokeAktiv.delete(name);
+  function pokeWeg(id) {
+    const e = pokeAktiv.get(id);
+    pokeAktiv.delete(id);
     try {
-      WA.room.website.delete(name);
+      WA.room.website.delete("poke-" + id);
     } catch {
       try {
-        h && h.remove && h.remove();
+        e && e.h && e.h.remove && e.h.remove();
       } catch {
       }
     }
   }
   async function pokeGefangen(v) {
-    const name = String(v.i || ""), nr = Number(v.nr);
-    if (!pokeAktiv.has(name)) return;
-    setTimeout(() => pokeWeg(name), 450);
-    const p = pokeListe.find((x) => x.nr === nr);
+    const id = String(v.i || ""), e = pokeAktiv.get(id);
+    if (!e) return;
+    setTimeout(() => pokeWeg(id), 450);
+    const nr = e.s.nr, p = pokeListe.find((x) => x.nr === nr);
     let r = {};
     try {
-      r = await (await fetch("https://swdigitaltest.de/buero-praesenz/pokemon/fang", { method: "POST", headers: { "X-Buero-Key": BUERO_KEY, "Content-Type": "application/json" }, body: JSON.stringify({ name: WA.player.name, nr }) })).json();
+      const a = await fetch(POKE_API + "/fang", { method: "POST", headers: { "X-Buero-Key": BUERO_KEY, "Content-Type": "application/json" }, body: JSON.stringify({ name: WA.player.name, spawn: id }) });
+      r = await a.json();
+      if (!a.ok) {
+        kurzMeldung("\u{1F4A8} " + (r.error || "Weg!"), 5e3);
+        return;
+      }
     } catch {
+      return;
+    }
+    if (r.raid && !r.geschafft) {
+      kurzMeldung("\u2694\uFE0F Raid: " + r.treffer + " von " + r.noetig + " dabei \u2013 holt Verst\xE4rkung, dann bekommt ihr " + (p ? p.name : "es") + " alle!", 9e3);
+      return;
     }
     try {
       const w = await WA.ui.website.open({
@@ -737,7 +752,6 @@
     } catch {
       kurzMeldung((r.neu ? "\u2728 Neu! Du hast " : "Du hast ") + (p ? p.name : "Pok\xE9mon") + (r.neu ? " gefangen" : " erneut gefangen (" + (r.anzahl || 1) + "\xD7)") + (r.arten ? " \xB7 " + r.arten + " / 151" : ""), 6e3);
     }
-    setTimeout(() => pokeSetzen(), 36e5 + Math.random() * 18e5);
   }
   function kurzMeldung(text, ms = 7e3) {
     try {

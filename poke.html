@@ -15,14 +15,17 @@
 <script src="https://play.workadventu.re/iframe_api.js"></script>
 </head>
 <body>
-<canvas id="c" width="44" height="44"></canvas>
+<canvas id="c" width="44" height="44"></canvas><div id="raid" style="display:none;position:absolute;left:0;right:0;top:0;text-align:center;font:800 9px system-ui;color:#fff;text-shadow:0 1px 2px #000">RAID</div>
 <script>
 // Pokémon in der Karte (18.10.2026, Sam: „nicht so leuchten, versteckt, aber noch zu finden“): halb im Busch, im hohen Gras
 // oder im Schatten, etwas blasser, ohne Hüpfen; nur ab und zu ein kurzes Zucken. Anklicken = fangen (Spieler-Variable „swAktion“).
 const q = new URLSearchParams(location.search), nr = Number(q.get("nr")) || 25, i = q.get("i") || "0", art = q.get("v") || "busch";
 const c = document.getElementById("c"), g = c.getContext("2d"), bild = new Image();
 bild.src = "pokemon/" + String(nr).padStart(3, "0") + ".png?v=1";
+if (art === "raid") { c.width = 72; c.height = 72; document.getElementById("raid").style.display = "block"; }
 bild.onload = () => {
+  if (art === "raid") { g.imageSmoothingEnabled = false; const gr = g.createRadialGradient(36, 40, 4, 36, 40, 34); gr.addColorStop(0, "rgba(239,68,68,.45)"); gr.addColorStop(1, "rgba(239,68,68,0)"); g.fillStyle = gr; g.fillRect(0, 0, 72, 72); g.drawImage(bild, 0, 0, 64, 64, 8, 10, 56, 56); return; } // Raid-Boss groß und sichtbar
+  if (art === "blume") { g.imageSmoothingEnabled = false; g.save(); g.globalAlpha = .5; g.filter = "brightness(.8)"; g.drawImage(bild, 0, 0, 64, 64, 12, 6, 20, 20); g.restore(); for (const [x, y, f] of [[16, 30, "#f472b6"], [26, 32, "#facc15"], [21, 36, "#f9a8d4"]]) { g.fillStyle = f; g.beginPath(); g.arc(x, y, 4, 0, 7); g.fill(); } g.strokeStyle = "#3f7f2e"; g.lineWidth = 2; g.beginPath(); g.moveTo(21, 40); g.lineTo(21, 44); g.stroke(); return; } // Mew getarnt als Blume
   g.imageSmoothingEnabled = false;
   g.save(); g.globalAlpha = .82; g.filter = art === "schatten" ? "brightness(.62) saturate(.55)" : "brightness(.7) saturate(.6)"; // 18.10.2026 (Sam): nicht leuchten, gedämpft wie die Umgebung
   if (art === "schatten") g.drawImage(bild, 0, 0, 64, 64, 9, 12, 26, 26);
