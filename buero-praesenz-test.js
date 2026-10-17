@@ -2597,7 +2597,7 @@
         }
         try {
           klassik.push(await WA.ui.website.open({
-            url: SEITEN + "blick.html?teil=karte&v=5",
+            url: SEITEN + "blick.html?teil=karte&v=6",
             allowApi: true,
             visible: true,
             position: { vertical: "bottom", horizontal: "right" },
@@ -2683,7 +2683,7 @@
     try {
       const w = WA.ui.website;
       if (!HANDY) await w.open({
-        url: SEITEN + "blick.html?teil=stick&v=5",
+        url: SEITEN + "blick.html?teil=stick&v=6",
         allowApi: true,
         visible: true,
         position: { vertical: "bottom", horizontal: "left" },
@@ -2691,7 +2691,7 @@
         margin: { bottom: HANDY ? "96px" : "20px", left: HANDY ? "8px" : "20px" }
       });
       if (!HANDY) await w.open({
-        url: SEITEN + "blick.html?teil=karte&v=5",
+        url: SEITEN + "blick.html?teil=karte&v=6",
         allowApi: true,
         visible: true,
         position: { vertical: "bottom", horizontal: "right" },

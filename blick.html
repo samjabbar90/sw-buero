@@ -36,7 +36,8 @@ const BREITE = 126 * 32, HOEHE = 88 * 32, // 18.10.2026 Teams-Umbau: +8 in der M
   $ = id => document.getElementById(id);
 let blick = null; // aktuelle Mitte des Blicks in Pixeln der Karte
 const klemmen = (v, max) => Math.max(0, Math.min(max, v));
-function kameraSetzen(x, y, weich) { blick = { x: klemmen(x, BREITE), y: klemmen(y, HOEHE) }; try { WA.camera.set(blick.x, blick.y, undefined, undefined, true, !!weich); } catch (e) { /* ältere Version */ } }
+const KARTE_B = 236 * 32, KARTE_H = 150 * 32; // 18.10.2026 (Sam): Joystick fährt über die ganze Karte (Garten, Parkplatz, Straßen), die Mini-Karte zeigt weiter das Gebäude
+function kameraSetzen(x, y, weich) { blick = { x: klemmen(x, KARTE_B), y: klemmen(y, KARTE_H) }; try { WA.camera.set(blick.x, blick.y, undefined, undefined, true, !!weich); } catch (e) { /* ältere Version */ } }
 async function startpunkt() { if (blick) return blick; try { const p = await WA.player.getPosition(); blick = { x: p.x, y: p.y }; } catch { blick = { x: BREITE / 2, y: HOEHE / 2 }; } return blick; }
 function zuMir() { blick = null; try { WA.camera.followPlayer(true); } catch (e) { /* ältere Version */ } }
 
