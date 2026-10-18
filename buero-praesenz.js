@@ -1274,10 +1274,51 @@
     if (HANDY && SPAR_EBENE.test(name)) an = false;
     if (fxStand[name] === an) return;
     fxStand[name] = an;
+    if (TEIL_MUSTER.test(name)) {
+      if (teile) teilSchalten(name, an);
+      return;
+    }
     try {
       an ? WA.room.showLayer(name) : WA.room.hideLayer(name);
     } catch {
     }
+  }
+  var TEIL_MUSTER = /^(fx-dunkel-|fx-feierabend-|kueche-.+-(an|aus)$|kueche-kaffee-dampf$|fx-klingel$)/;
+  var teile = null;
+  var teilAn = {};
+  var teilZelle = {};
+  function teilSchalten(name, an) {
+    const t = teile && teile[name];
+    if (!t || teilAn[name] === an) return;
+    teilAn[name] = an;
+    const kacheln = t.z.map(([x, y]) => {
+      let tile = null;
+      for (const p of teilZelle[t.e + ":" + x + ":" + y]) if (teilAn[p.n]) tile = p.g;
+      return { x, y, tile, layer: t.e };
+    });
+    try {
+      WA.room.setTiles(kacheln);
+    } catch {
+    }
+  }
+  async function teileLaden() {
+    var _a;
+    const neu = {};
+    try {
+      for (const l of (await ladeKarte()).layers || []) {
+        const p = (l.properties || []).find((p2) => p2.name === "teile");
+        if (!p) continue;
+        for (const t of JSON.parse(p.value)) {
+          neu[t.n] = { e: l.name, z: t.z };
+          teilAn[t.n] = t.v;
+          for (const [x, y, g] of t.z) (teilZelle[_a = l.name + ":" + x + ":" + y] || (teilZelle[_a] = [])).push({ n: t.n, g });
+        }
+      }
+    } catch {
+      return;
+    }
+    teile = neu;
+    for (const [n, an] of Object.entries(fxStand)) if (TEIL_MUSTER.test(n)) teilSchalten(n, an);
   }
   async function aussenweltAus() {
     try {
@@ -1308,8 +1349,8 @@
       const an = aktuellerBereich === o.name || (info.belegt || []).includes(o.name);
       fx("fx-dunkel-" + o.name.normalize("NFD").replace(/[^A-Za-z0-9]/g, ""), !an);
     }
-    const teile = (/* @__PURE__ */ new Date()).toLocaleString("sv-SE", { timeZone: "Europe/Berlin" }).split(/[- :]/).map(Number);
-    const monat = teile[1], min = teile[3] * 60 + teile[4];
+    const teile2 = (/* @__PURE__ */ new Date()).toLocaleString("sv-SE", { timeZone: "Europe/Berlin" }).split(/[- :]/).map(Number);
+    const monat = teile2[1], min = teile2[3] * 60 + teile2[4];
     const w = info.wetter;
     const hm2 = (t) => {
       const m = /^(\d{1,2}):(\d{2})/.exec(String(t || ""));
@@ -1343,12 +1384,9 @@
   var schneeAn = false;
   function wetterTakt() {
     setInterval(() => {
-      const r = Math.floor(Date.now() / 120) % 4, sn = Math.floor(Date.now() / 300) % 4;
-      for (let i = 0; i < 4; i++) {
-        fx("fx-regen-" + (i + 1), regenAn && i === r);
-        fx("fx-schneefall-" + (i + 1), schneeAn && i === sn);
-      }
-    }, 60);
+      fx("fx-regen", regenAn);
+      fx("fx-schneefall", schneeAn);
+    }, 1e3);
   }
   var hundRuhe = false;
   async function hundStarten() {
@@ -2812,12 +2850,12 @@
       if (HANDY) return;
       const v = String(WA.player.name || "").split(/\s+/)[0], h = (/* @__PURE__ */ new Date()).getHours();
       const gruss = h < 11 ? "Guten Morgen" : h < 17 ? "Hallo" : "Guten Abend";
-      const teile = [];
-      if ((info.geburtstage || []).some((n) => n.toLowerCase() === v.toLowerCase())) teile.push("\u{1F389} Alles Gute zum Geburtstag!");
+      const teile2 = [];
+      if ((info.geburtstage || []).some((n) => n.toLowerCase() === v.toLowerCase())) teile2.push("\u{1F389} Alles Gute zum Geburtstag!");
       const andere = (info.geburtstage || []).filter((n) => n.toLowerCase() !== v.toLowerCase());
-      if (andere.length) teile.push(`\u{1F382} ${andere.join(", ")} ${andere.length === 1 ? "hat" : "haben"} heute Geburtstag`);
-      if ((info.reservierungen || []).length) teile.push(`\u{1F4C5} ${info.reservierungen.length} Raum-Reservierung${info.reservierungen.length === 1 ? "" : "en"} heute`);
-      kurzMeldung(`${gruss} ${v}! ` + (teile.join(" \xB7 ") || "Sch\xF6n, dass du da bist."), 9e3);
+      if (andere.length) teile2.push(`\u{1F382} ${andere.join(", ")} ${andere.length === 1 ? "hat" : "haben"} heute Geburtstag`);
+      if ((info.reservierungen || []).length) teile2.push(`\u{1F4C5} ${info.reservierungen.length} Raum-Reservierung${info.reservierungen.length === 1 ? "" : "en"} heute`);
+      kurzMeldung(`${gruss} ${v}! ` + (teile2.join(" \xB7 ") || "Sch\xF6n, dass du da bist."), 9e3);
     }
   }
   function beobachten(name, api) {
@@ -3049,6 +3087,7 @@
       } catch {
       }
     }
+    teileLaden();
     effekte();
     setInterval(effekte, 6e4);
     if (!HANDY) wetterTakt();
