@@ -22,7 +22,7 @@
 const q = new URLSearchParams(location.search), nr = Number(q.get("nr")) || 25, i = q.get("i") || "0", art = q.get("v") || "busch";
 const c = document.getElementById("c"), g = c.getContext("2d"), bild = new Image();
 bild.src = "pokemon/" + String(nr).padStart(3, "0") + ".png?v=2"; // 17.10.2026: offizielle Bilder von pokemon.com (Sam), 192×192
-const Q = 3; c.width = c.height = 44 * Q; // 3-fache Auflösung für scharfe Bilder
+const Q = matchMedia("(pointer:coarse)").matches ? 2 : 3; c.width = c.height = 44 * Q; // 3-fache Auflösung für scharfe Bilder (Handy 2-fach, spart Speicher)
 if (art === "raid") { c.width = 72 * Q; c.height = 72 * Q; document.getElementById("raid").style.display = "block"; }
 bild.onload = () => {
   g.scale(Q, Q); g.imageSmoothingQuality = "high";

@@ -675,8 +675,10 @@
       return;
     }
     const da = /* @__PURE__ */ new Set();
+    let handyZahl = 0;
     for (const s of d.spawns || []) {
       if (HANDY && s.y >= 88) continue;
+      if (HANDY && ++handyZahl > 3) continue;
       if (s.raid && s.ichDabei) continue;
       da.add(s.id);
       if (pokeAktiv.has(s.id)) continue;
@@ -686,7 +688,7 @@
       try {
         const h = await WA.room.website.create({
           name: "poke-" + s.id,
-          url: SEITEN + "poke.html?v4&nr=" + s.nr + "&i=" + encodeURIComponent(s.id) + "&v=" + v,
+          url: SEITEN + "poke.html?v5&nr=" + s.nr + "&i=" + encodeURIComponent(s.id) + "&v=" + v,
           visible: true,
           allowApi: true,
           origin: "map",
@@ -725,6 +727,7 @@
     const offen = /* @__PURE__ */ new Set();
     for (const k of d.kugeln || []) {
       if (k.gefunden) continue;
+      if (HANDY && offen.size >= 1) continue;
       offen.add(k.s);
       if (dbAktiv.has(k.s)) continue;
       try {
