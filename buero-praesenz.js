@@ -2684,6 +2684,22 @@
       fenster = null;
     });
   }
+  function novaPlatz() {
+    if (vorname(WA.player.name) !== "sam") return;
+    let fenster = null;
+    leertasteBereich("nova-platz", { x: 12, y: 27, w: 3, h: 3 }, "\u{1F4AC} NOVA \xB7 deine Assistentin \u2013 Leertaste", async () => {
+      try {
+        fenster = await glasFenster(SEITEN + "nova.html?t=" + Date.now());
+      } catch {
+      }
+    }, () => {
+      try {
+        fenster && fenster.close();
+      } catch {
+      }
+      fenster = null;
+    });
+  }
   function itPlatz() {
     [["rengid", "Rengid \xB7 IT-Agent", 94], ["olga", "Olga \xB7 IT", 96]].forEach(([k, t, x]) => {
       let fenster = null;
@@ -3109,6 +3125,7 @@
     jaPlatz();
     itPlatz();
     ronPlatz();
+    novaPlatz();
     klingel();
     if (!HANDY) hundStarten();
     if (!HANDY) {
