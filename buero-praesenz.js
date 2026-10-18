@@ -3111,13 +3111,15 @@
     ronPlatz();
     klingel();
     if (!HANDY) hundStarten();
-    pokemonStarten();
-    paradeStarten();
-    autosStarten();
-    dekoStarten();
-    gongStarten();
-    fliegerStarten();
-    gokuStarten();
+    if (!HANDY) {
+      pokemonStarten();
+      paradeStarten();
+      autosStarten();
+      dekoStarten();
+      gongStarten();
+      fliegerStarten();
+      gokuStarten();
+    }
     profilKarten();
     wandGespraeche();
     if (HANDY) {
@@ -3191,8 +3193,8 @@
           ["sw-kalender", "Kalender", "kalender", () => glasFenster(SEITEN + "kalender.html?t=" + Date.now())],
           ["sw-wer", "Wer ist da", "wer", () => glasFenster(SEITEN + "wer.html?t=" + Date.now())],
           // 11.10.: Liste mit Live-Anzeige (Recht „live“)
-          ["sw-pokedex", "Sammlungen", "pokedex", () => glasFenster(SEITEN + "pokedex.html?name=" + encodeURIComponent(WA.player.name || "") + "&t=" + Date.now())],
-          // 18.10.2026 Sammelbuch
+          ...HANDY ? [] : [["sw-pokedex", "Sammlungen", "pokedex", () => glasFenster(SEITEN + "pokedex.html?name=" + encodeURIComponent(WA.player.name || "") + "&t=" + Date.now())]],
+          // 18.10.2026 Sammlungen (nicht am Handy)
           ["sw-mein-profil", "Profil", "profil", () => glasFenster(SEITEN + "profil.html?ich=1&tore=" + toreVon(WA.player.name || "") + "&t=" + Date.now())],
           ...tcAktiv ? [["sw-tagescheck", "Tages-Check", "tagescheck", () => glasFenster(SEITEN + "tagescheck.html?t=" + Date.now())]] : [],
           ...kzAktiv ? [["sw-arbeitszeit", "Arbeitszeit", "arbeitszeit", () => glasFenster(SEITEN + "kernzeit.html?t=" + Date.now())], ["sw-feierabend", "Feierabend", "feierabend", feierabendOeffnen]] : []
