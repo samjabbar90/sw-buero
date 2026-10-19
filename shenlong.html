@@ -27,19 +27,22 @@
   .zu { margin-top:10px; border:0; border-radius:10px; padding:9px 18px; font-weight:800; cursor:pointer; background:#4ade80; color:#052e16; }
   /* 20.10.2026 (Sam: „es hängt, ich kann nicht schließen“): Kasten lag unten außerhalb des Bildes → jetzt mittig mit Bildlauf, dazu immer ein ✕ oben rechts + Esc */
   .x { position:fixed; top:110px; right:16px; z-index:9; border:0; border-radius:12px; padding:10px 14px; font:800 15px system-ui; cursor:pointer; background:rgba(15,23,42,.9); color:#fff; box-shadow:0 0 0 2px #4ade80; }
+  /* 20.10.2026 (Sam: „nimm dieses Bild“): Sams Shenlong-Bild über den ganzen Bildschirm statt Drachen-Emoji */
+  .szene { position:absolute; inset:0; background:#020617 url(shenlong.jpg?v=1) center/cover no-repeat; opacity:0; transform:scale(1.08); transition:opacity 1.4s, transform 6s ease-out; } .szene.da { opacity:1; transform:scale(1); }
+  .weg { opacity:0 !important; transition:opacity 1s !important; } .drache { display:none; }
 </style>
 <script src="https://play.workadventu.re/iframe_api.js"></script>
 </head>
 <body>
 <div class="nacht" id="nacht"></div><div class="saeule" id="saeule"></div><div class="kreis" id="kreis"></div>
-<div class="drache" id="drache"><img id="bild" alt="" onerror="this.replaceWith('🐉')"></div><div class="weiss" id="weiss"></div>
+<div class="drache" id="drache"><img id="bild" alt="" onerror="this.replaceWith('🐉')"></div><div class="weiss" id="weiss"></div><div class="szene" id="szene"></div>
 <div class="wunsch" id="wunsch"></div><button class="x" id="x" title="Schließen">✕ Schließen</button>
 <script>
 const KEY = "a21b2aa2a42fe6189b05773c07bbc9ad78e38b34ba3bb6fe", API = "https://swdigitaltest.de/buero-praesenz/pokemon";
 const q = new URLSearchParams(location.search); let NAME = q.get("name") || "", liste = [];
 const $ = id => document.getElementById(id), esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const bildVon = nr => "pokemon/" + String(nr).padStart(3, "0") + ".png?v=2", nameVon = nr => (liste.find(p => p.nr === nr) || {}).name || "#" + nr;
-$("bild").src = "shenlong.png?v=1"; // Sams Shenlong-Bild, sobald es da ist; sonst Drachen-Emoji
+new Image().src = "shenlong.jpg?v=1"; // 20.10.2026: Sams Bild vorladen
 fetch("pokemon/pokemon.json?t=" + Date.now()).then(r => r.json()).then(l => liste = l).catch(() => {});
 async function zu() { try { await WA.onInit(); } catch { } try { WA.player.state.saveVariable("swAktion", { was: "shenlongZu", t: Date.now() }, { public: false, persist: false }); } catch { } }
 $("x").onclick = zu; document.addEventListener("keydown", e => { if (e.key === "Escape") zu(); });
@@ -49,7 +52,7 @@ const blitz = () => { $("weiss").classList.remove("an"); void $("weiss").offsetW
 setTimeout(() => { $("nacht").classList.add("an"); ks.forEach((k, i) => { const a = i / 7 * Math.PI * 2; k.style.transform = `translate(${Math.cos(a) * 95}px, ${Math.sin(a) * 95}px)`; k.style.boxShadow = "0 0 20px 7px rgba(251,191,36,.85)"; }); }, 150);
 setTimeout(() => $("kreis").classList.add("dreht"), 1700);
 setTimeout(() => { blitz(); $("saeule").classList.add("an"); }, 2600);
-setTimeout(() => { blitz(); $("drache").classList.add("da"); }, 3500);
+setTimeout(() => { blitz(); $("szene").classList.add("da"); $("kreis").classList.add("weg"); $("saeule").classList.add("weg"); }, 3500);
 setTimeout(() => { $("wunsch").innerHTML = `<b>„Ich erfülle dir einen Wunsch!“</b><div class="w">
   <button data-w="selten"><span>✨</span>Ein seltenes Pokémon für dich</button><button data-w="gold"><span>👑</span>Goldener Rand um deine Figur, 1 Woche</button><button data-w="doppel"><span>🔄</span>Ein Pokémon deiner Wahl doppelt</button></div>`;
   $("wunsch").classList.add("da"); $("wunsch").querySelectorAll("[data-w]").forEach(b => b.onclick = () => waehlen(b.dataset.w)); }, 4900);
@@ -69,7 +72,7 @@ async function waehlen(w) {
   $("wunsch").innerHTML = `<b>Welches Pokémon soll ich verdoppeln?</b><div class="wahl">${meine.sort((a, b) => a.nr - b.nr).map(p => `<div data-nr="${p.nr}"><img src="${bildVon(p.nr)}" alt="">${esc(nameVon(p.nr))}</div>`).join("")}</div>`;
   $("wunsch").querySelectorAll("[data-nr]").forEach(e => e.onclick = () => senden("doppel", Number(e.dataset.nr)));
 }
-function fertig(html) { $("wunsch").innerHTML = html + `<br><button class="zu" id="zu">Danke, Shenlong!</button>`; $("zu").onclick = () => { $("drache").classList.remove("da"); $("nacht").classList.remove("an"); setTimeout(zu, 900); }; setTimeout(zu, 30000); } // spätestens nach 30 s von selbst zu
+function fertig(html) { $("wunsch").innerHTML = html + `<br><button class="zu" id="zu">Danke, Shenlong!</button>`; $("zu").onclick = () => { $("szene").classList.remove("da"); $("nacht").classList.remove("an"); setTimeout(zu, 900); }; setTimeout(zu, 30000); } // spätestens nach 30 s von selbst zu
 if (window.WA) WA.onInit().then(() => { if (!NAME) NAME = WA.player.name || ""; }).catch(() => {});
 </script>
 </body>
