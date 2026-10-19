@@ -1540,6 +1540,29 @@
       }
     } };
   }
+  var BLEIBT_OFFEN = /info\.html|leiste\.html|schloss\.html|tagescheck\.html\?karte|oben\.html|handy-menue\.html|blick\.html|app\.html|ausweis-sync\.html|mitteilungen\.html/;
+  function allesZu() {
+    try {
+      WA.ui.modal.closeModal();
+    } catch {
+    }
+    try {
+      WA.nav.closeCoWebSite();
+    } catch {
+    }
+    shenlongZu();
+    glasOffen = null;
+    konfettiOffen = false;
+    if (HANDY) try {
+      handyBlattZu();
+    } catch {
+    }
+    WA.ui.website.getAll().then((alle) => alle.forEach((w) => {
+      if (!BLEIBT_OFFEN.test(String(w.url || ""))) w.close().catch(() => {
+      });
+    })).catch(() => {
+    });
+  }
   function glasBeobachten() {
     try {
       glasNeu = Number((WA.player.state.swFenster || {}).neu) || 0;
@@ -3253,7 +3276,9 @@
           // 18.10.2026 Sammlungen (nicht am Handy)
           ["sw-mein-profil", "Profil", "profil", () => glasFenster(SEITEN + "profil.html?ich=1&tore=" + toreVon(WA.player.name || "") + "&t=" + Date.now())],
           ...tcAktiv ? [["sw-tagescheck", "Tages-Check", "tagescheck", () => glasFenster(SEITEN + "tagescheck.html?t=" + Date.now())]] : [],
-          ...kzAktiv ? [["sw-arbeitszeit", "Arbeitszeit", "arbeitszeit", () => glasFenster(SEITEN + "kernzeit.html?t=" + Date.now())], ["sw-feierabend", "Feierabend", "feierabend", feierabendOeffnen]] : []
+          ...kzAktiv ? [["sw-arbeitszeit", "Arbeitszeit", "arbeitszeit", () => glasFenster(SEITEN + "kernzeit.html?t=" + Date.now())], ["sw-feierabend", "Feierabend", "feierabend", feierabendOeffnen]] : [],
+          ["sw-alles-zu", "Alles zu", "alleszu", allesZu]
+          // 20.10.2026 (Sam): ein Klick schließt jedes offene Fenster
         ];
         const noetig = 300 + 520 + KNOEPFE.reduce((s2, k) => s2 + 52 + k[1].length * 7.5, 0);
         const breitGenug = (screen.availWidth || screen.width || 0) >= noetig;
@@ -3381,6 +3406,7 @@
         if (v.was === "team") return HANDY ? handyBlattUmschalten("team", SEITEN + "wer.html?sheet=1&t=" + Date.now(), "78vh") : glasFenster(SEITEN + "wer.html?t=" + Date.now());
         if (ZIMMER_AKTIONEN[v.was]) return ZIMMER_AKTIONEN[v.was](v);
         if (v.was === "dbFund") return dbGefunden(v);
+        if (v.was === "allesZu") return allesZu();
         if (v.was === "shenlongZu") return shenlongZu();
         if (v.was === "shenlongAuf") return shenlongOeffnen();
         if (v.was === "goldRand") {
