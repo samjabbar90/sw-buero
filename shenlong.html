@@ -16,7 +16,7 @@
   .drache { position:absolute; left:50%; top:3%; height:46%; transform:translateX(-50%) scale(.6); opacity:0; transition:all 1.3s cubic-bezier(.2,1.2,.3,1); filter:drop-shadow(0 0 24px #4ade80); display:flex; align-items:center; justify-content:center; font-size:min(26vh,170px); }
   .drache img { height:100%; } .drache.da { opacity:1; transform:translateX(-50%) scale(1); }
   .weiss { position:absolute; inset:0; background:#fff; opacity:0; pointer-events:none; } .weiss.an { animation:weiss .5s; } @keyframes weiss { 20% { opacity:.85; } 100% { opacity:0; } }
-  .wunsch { position:absolute; left:50%; bottom:18px; transform:translateX(-50%); width:min(94%,560px); background:rgba(15,23,42,.94); border:2px solid #4ade80; border-radius:16px; padding:14px; opacity:0; pointer-events:none; transition:opacity .6s; text-align:center; }
+  .wunsch { position:absolute; left:50%; top:50%; transform:translateX(-50%); max-height:calc(50vh - 16px); overflow:auto; width:min(94%,560px); background:rgba(15,23,42,.94); border:2px solid #4ade80; border-radius:16px; padding:14px; opacity:0; pointer-events:none; transition:opacity .6s; text-align:center; }
   .wunsch.da { opacity:1; pointer-events:auto; } .wunsch b { color:#86efac; font-size:17px; } .wunsch p { margin:6px 0 0; font-size:13.5px; color:#cbd5e1; }
   .w { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:10px; }
   .w button { background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.2); color:#fff; border-radius:12px; padding:10px 6px; font:600 13px system-ui; cursor:pointer; }
@@ -25,13 +25,15 @@
   .wahl div { background:rgba(255,255,255,.07); border-radius:10px; padding:3px; font-size:10.5px; cursor:pointer; } .wahl div:hover { background:rgba(74,222,128,.3); } .wahl img { width:46px; height:46px; object-fit:contain; display:block; margin:0 auto; }
   .ergebnis img { width:120px; height:120px; object-fit:contain; display:block; margin:6px auto 0; filter:drop-shadow(0 0 14px #fbbf24); }
   .zu { margin-top:10px; border:0; border-radius:10px; padding:9px 18px; font-weight:800; cursor:pointer; background:#4ade80; color:#052e16; }
+  /* 20.10.2026 (Sam: „es hängt, ich kann nicht schließen“): Kasten lag unten außerhalb des Bildes → jetzt mittig mit Bildlauf, dazu immer ein ✕ oben rechts + Esc */
+  .x { position:fixed; top:110px; right:16px; z-index:9; border:0; border-radius:12px; padding:10px 14px; font:800 15px system-ui; cursor:pointer; background:rgba(15,23,42,.9); color:#fff; box-shadow:0 0 0 2px #4ade80; }
 </style>
 <script src="https://play.workadventu.re/iframe_api.js"></script>
 </head>
 <body>
 <div class="nacht" id="nacht"></div><div class="saeule" id="saeule"></div><div class="kreis" id="kreis"></div>
 <div class="drache" id="drache"><img id="bild" alt="" onerror="this.replaceWith('🐉')"></div><div class="weiss" id="weiss"></div>
-<div class="wunsch" id="wunsch"></div>
+<div class="wunsch" id="wunsch"></div><button class="x" id="x" title="Schließen">✕ Schließen</button>
 <script>
 const KEY = "a21b2aa2a42fe6189b05773c07bbc9ad78e38b34ba3bb6fe", API = "https://swdigitaltest.de/buero-praesenz/pokemon";
 const q = new URLSearchParams(location.search); let NAME = q.get("name") || "", liste = [];
@@ -39,7 +41,8 @@ const $ = id => document.getElementById(id), esc = s => String(s).replace(/[&<>"
 const bildVon = nr => "pokemon/" + String(nr).padStart(3, "0") + ".png?v=2", nameVon = nr => (liste.find(p => p.nr === nr) || {}).name || "#" + nr;
 $("bild").src = "shenlong.png?v=1"; // Sams Shenlong-Bild, sobald es da ist; sonst Drachen-Emoji
 fetch("pokemon/pokemon.json?t=" + Date.now()).then(r => r.json()).then(l => liste = l).catch(() => {});
-function zu() { try { WA.player.state.saveVariable("swAktion", { was: "shenlongZu", t: Date.now() }, { public: false, persist: false }); } catch { } }
+async function zu() { try { await WA.onInit(); } catch { } try { WA.player.state.saveVariable("swAktion", { was: "shenlongZu", t: Date.now() }, { public: false, persist: false }); } catch { } }
+$("x").onclick = zu; document.addEventListener("keydown", e => { if (e.key === "Escape") zu(); });
 // Ablauf
 const ks = [1, 2, 3, 4, 5, 6, 7].map(s => { const k = document.createElement("div"); k.className = "kugel"; k.textContent = "★".repeat(s); k.style.transform = `translate(${(Math.random() - .5) * 700}px, ${(Math.random() - .5) * 400}px)`; $("kreis").appendChild(k); return k; });
 const blitz = () => { $("weiss").classList.remove("an"); void $("weiss").offsetWidth; $("weiss").classList.add("an"); };
@@ -66,7 +69,7 @@ async function waehlen(w) {
   $("wunsch").innerHTML = `<b>Welches Pokémon soll ich verdoppeln?</b><div class="wahl">${meine.sort((a, b) => a.nr - b.nr).map(p => `<div data-nr="${p.nr}"><img src="${bildVon(p.nr)}" alt="">${esc(nameVon(p.nr))}</div>`).join("")}</div>`;
   $("wunsch").querySelectorAll("[data-nr]").forEach(e => e.onclick = () => senden("doppel", Number(e.dataset.nr)));
 }
-function fertig(html) { $("wunsch").innerHTML = html + `<br><button class="zu" id="zu">Danke, Shenlong!</button>`; $("zu").onclick = () => { $("drache").classList.remove("da"); $("nacht").classList.remove("an"); setTimeout(zu, 900); }; }
+function fertig(html) { $("wunsch").innerHTML = html + `<br><button class="zu" id="zu">Danke, Shenlong!</button>`; $("zu").onclick = () => { $("drache").classList.remove("da"); $("nacht").classList.remove("an"); setTimeout(zu, 900); }; setTimeout(zu, 30000); } // spätestens nach 30 s von selbst zu
 if (window.WA) WA.onInit().then(() => { if (!NAME) NAME = WA.player.name || ""; }).catch(() => {});
 </script>
 </body>
