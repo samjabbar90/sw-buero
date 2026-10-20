@@ -1364,20 +1364,25 @@
       });
     }
     const neu = /* @__PURE__ */ new Map();
-    const seite = (x, y, i, z) => {
-      const k = x + ":" + y;
-      neu.set(k, (neu.get(k) || 0) | z << 2 * i);
-    };
     for (const r of rahmenRechtecke) {
       const z = rahmenStatus(r.raum);
       if (!z) continue;
-      for (let x = r.x0; x <= r.x1; x++) {
-        seite(x, r.y0, 0, z);
-        seite(x, r.y1, 2, z);
+      const f = (z - 1) * 20, w = r.x1 - r.x0 + 1, setz = (x, y, n) => neu.set(x + ":" + y, f + n);
+      if (w >= 6) {
+        const x0 = r.x0 + Math.floor(w / 2) + 1;
+        for (let j = 0; j < 2; j++) for (let i = 0; i < 3; i++) setz(x0 + i, r.y0 + j, j * 3 + i);
+      } else if (w % 2) {
+        const x0 = r.x0 + (w - 1) / 2 - 1;
+        for (let j = 0; j < 2; j++) for (let i = 0; i < 3; i++) setz(x0 + i, r.y0 + j, j * 3 + i);
+      } else {
+        const x0 = r.x0 + w / 2 - 2;
+        for (let j = 0; j < 2; j++) for (let i = 0; i < 4; i++) setz(x0 + i, r.y0 + j, 6 + j * 4 + i);
       }
-      for (let y = r.y0; y <= r.y1; y++) {
-        seite(r.x1, y, 1, z);
-        seite(r.x0, y, 3, z);
+      const t = tueren.find((x) => x.raum === r.raum);
+      for (const [x, y] of t ? t.felder : []) {
+        const inX = x >= r.x0 && x <= r.x1, inY = y >= r.y0 && y <= r.y1;
+        const s = !inY ? y > r.y1 ? 0 : 2 : !inX ? x > r.x1 ? 3 : 1 : y === r.y1 ? 2 : y === r.y0 ? 0 : x === r.x1 ? 1 : 3;
+        setz(x, y, 14 + s);
       }
     }
     const kacheln = [];
