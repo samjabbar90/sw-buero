@@ -336,6 +336,10 @@
       schilderAktualisieren();
     } catch {
     }
+    try {
+      rahmenZeichnen();
+    } catch {
+    }
   }
   function tuerKnopf() {
     const t = meineTuer();
@@ -1305,7 +1309,8 @@
     var _a;
     const neu = {};
     try {
-      for (const l of (await ladeKarte()).layers || []) {
+      const k = await ladeKarte();
+      for (const l of k.layers || []) {
         const p = (l.properties || []).find((p2) => p2.name === "teile");
         if (!p) continue;
         for (const t of JSON.parse(p.value)) {
@@ -1314,11 +1319,81 @@
           for (const [x, y, g] of t.z) (teilZelle[_a = l.name + ":" + x + ":" + y] || (teilZelle[_a] = [])).push({ n: t.n, g });
         }
       }
+      rahmenGid = Number(((k.properties || []).find((p) => p.name === "rahmenGid") || {}).value) || 0;
     } catch {
       return;
     }
     teile = neu;
     for (const [n, an] of Object.entries(fxStand)) if (TEIL_MUSTER.test(n)) teilSchalten(n, an);
+    rahmenZeichnen();
+  }
+  var RAHMEN_RAUM = /^(Büro |Google Meet |Zoom |Teams |Zimmer \d)|^(Paris|Berlin|Lissabon|New York|Amsterdam|Moskau)$/;
+  var raumBelegt = (n) => aktuellerBereich === n || (info.belegt || []).includes(n);
+  var rahmenGid = 0;
+  var rahmenRechtecke = null;
+  var rahmenAlt = /* @__PURE__ */ new Map();
+  function rahmenStatus(raum) {
+    if (!raumBelegt(raum)) return 0;
+    const t = tueren.find((x) => x.raum === raum);
+    if (!t) return 1;
+    const s = schildStatus(t);
+    return s === "tel" ? 3 : s === "fokus" ? 2 : 1;
+  }
+  function rahmenZeichnen() {
+    if (!rahmenGid || !teile || !karte) return;
+    if (!rahmenRechtecke) {
+      const r = [];
+      for (const o of ((karte && karte.layers || []).find((l) => l.name === "floorLayer") || { objects: [] }).objects) {
+        if (!RAHMEN_RAUM.test(o.name)) continue;
+        const t = teile["fx-dunkel-" + o.name.normalize("NFD").replace(/[^A-Za-z0-9]/g, "")];
+        if (!t || !t.z.length) continue;
+        const xs = t.z.map((z) => z[0]), ys = t.z.map((z) => z[1]);
+        r.push({ raum: o.name, x0: Math.min(...xs), y0: Math.min(...ys), x1: Math.max(...xs), y1: Math.max(...ys) });
+      }
+      rahmenRechtecke = r.map((a) => {
+        const n = { ...a };
+        for (const b of r) {
+          if (a === b) continue;
+          const yUeber = a.y0 <= b.y1 && b.y0 <= a.y1, xUeber = a.x0 <= b.x1 && b.x0 <= a.x1;
+          if (yUeber && a.x1 === b.x0) n.x1 = a.x1 - 1;
+          if (yUeber && a.x0 === b.x1) n.x0 = a.x0 + 1;
+          if (xUeber && a.y1 === b.y0) n.y1 = a.y1 - 1;
+          if (xUeber && a.y0 === b.y1) n.y0 = a.y0 + 1;
+        }
+        return n;
+      });
+    }
+    const neu = /* @__PURE__ */ new Map();
+    const seite = (x, y, i, z) => {
+      const k = x + ":" + y;
+      neu.set(k, (neu.get(k) || 0) | z << 2 * i);
+    };
+    for (const r of rahmenRechtecke) {
+      const z = rahmenStatus(r.raum);
+      if (!z) continue;
+      for (let x = r.x0; x <= r.x1; x++) {
+        seite(x, r.y0, 0, z);
+        seite(x, r.y1, 2, z);
+      }
+      for (let y = r.y0; y <= r.y1; y++) {
+        seite(r.x1, y, 1, z);
+        seite(r.x0, y, 3, z);
+      }
+    }
+    const kacheln = [];
+    for (const [k, n] of neu) if (rahmenAlt.get(k) !== n) {
+      const [x, y] = k.split(":").map(Number);
+      kacheln.push({ x, y, tile: rahmenGid + n, layer: "rahmen" });
+    }
+    for (const k of rahmenAlt.keys()) if (!neu.has(k)) {
+      const [x, y] = k.split(":").map(Number);
+      kacheln.push({ x, y, tile: null, layer: "rahmen" });
+    }
+    rahmenAlt = neu;
+    if (kacheln.length) try {
+      WA.room.setTiles(kacheln);
+    } catch {
+    }
   }
   async function aussenweltAus() {
     try {
@@ -1344,11 +1419,7 @@
   }
   function effekte() {
     schilderAktualisieren();
-    for (const o of ((karte && karte.layers || []).find((l) => l.name === "floorLayer") || { objects: [] }).objects) {
-      if (!/^(Büro |Google Meet |Zoom |Teams |Zimmer \d)|^(Paris|Berlin|Lissabon|New York|Amsterdam|Moskau)$/.test(o.name)) continue;
-      const an = aktuellerBereich === o.name || (info.belegt || []).includes(o.name);
-      fx("fx-dunkel-" + o.name.normalize("NFD").replace(/[^A-Za-z0-9]/g, ""), !an);
-    }
+    rahmenZeichnen();
     const teile2 = (/* @__PURE__ */ new Date()).toLocaleString("sv-SE", { timeZone: "Europe/Berlin" }).split(/[- :]/).map(Number);
     const monat = teile2[1], min = teile2[3] * 60 + teile2[4];
     const w = info.wetter;
@@ -1362,7 +1433,12 @@
     fx("fx-nacht", nacht);
     fx("fx-lichter", nacht);
     fx("fx-abend", abend);
-    for (const n of FEIERABEND_RAEUME) fx("fx-feierabend-" + n.normalize("NFD").replace(/[^A-Za-z0-9]/g, ""), (min >= 18 * 60 || nacht) && aktuellerBereich !== n && !(info.belegt || []).includes(n));
+    const dunkelZeit = nacht || abend;
+    for (const o of ((karte && karte.layers || []).find((l) => l.name === "floorLayer") || { objects: [] }).objects) {
+      if (!RAHMEN_RAUM.test(o.name)) continue;
+      fx("fx-dunkel-" + o.name.normalize("NFD").replace(/[^A-Za-z0-9]/g, ""), dunkelZeit && !raumBelegt(o.name));
+    }
+    for (const n of FEIERABEND_RAEUME) fx("fx-feierabend-" + n.normalize("NFD").replace(/[^A-Za-z0-9]/g, ""), dunkelZeit && !raumBelegt(n));
     if (w) {
       regenAn = !!w.regen;
       fx("fx-pfuetzen", !!w.regen);
