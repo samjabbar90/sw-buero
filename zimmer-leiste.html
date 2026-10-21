@@ -63,7 +63,8 @@ function malen() {
   if (!G) return;
   const ich = String(window.__waName || "").split(/\s+/)[0].toLowerCase();
   const andere = (G.teilnehmer || []).map(t => String(t.name).split(/\s+/)[0]).filter(n => n.toLowerCase() !== ich);
-  $("t").innerHTML = "💬 <b>" + esc(andere.join(", ") || "Gespräch") + "</b>" + ((G.felder || {}).thema ? " · " + esc(G.felder.thema) : "") + (G.mandant ? " <span>· " + esc(G.mandant.name) + "</span>" : "");
+  const thema = (G.felder || {}).thema || (G.artDef && !G.artDef.zeit ? G.artDef.name : ""); // Besprechungsraum (21.10.): Gesprächsart statt Thema
+  $("t").innerHTML = "💬 <b>" + esc(andere.join(", ") || "Gespräch") + "</b>" + (thema ? " · " + esc(thema) : "") + (G.mandant ? " <span>· " + esc(G.mandant.name) + "</span>" : "");
   mitMalen();
 }
 function tick() { if (!G || !G.start) return; const ende = G.zeitEnde ? Date.parse(G.zeitEnde) : Date.now() + versatz; $("z").textContent = mmss(ende - Date.parse(G.start)); $("z").classList.toggle("stop", !!G.zeitEnde); }

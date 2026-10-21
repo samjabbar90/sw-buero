@@ -22,6 +22,7 @@
 <script>
 const q = new URLSearchParams(location.search);
 document.getElementById("t").textContent = q.get("text") || "";
+if (q.get("los")) document.getElementById("k").textContent = q.get("los"); // am PC (21.10.2026): „Starten“ statt „Tippen“
 if (q.get("knopf") !== "1") document.getElementById("k").remove();
 document.getElementById("h").onclick = () => { if (q.get("knopf") !== "1") return;
   try { WA.player.state.saveVariable("swAktion", { was: "hinweisTipp", nr: Number(q.get("nr")) || 0, t: Date.now() }, { public: false, persist: false }); } catch (e) { console.warn(e); } };

@@ -175,7 +175,13 @@ function zeichnen() {
   h += '<div class="fehler" id="fe"></div><div class="hin" id="stand"></div>';
   $("inhalt").innerHTML = h; verdrahten(darf); kiVerdrahten(); zeigtStand = g.version || 0;
   if (g.jetzt) uhrVersatz = Date.parse(g.jetzt) - Date.now();
-  uhrStellen();
+  uhrStellen(); leisteDazu();
+}
+// Besprechungsraum (21.10.2026, Sam): läuft das Gespräch, öffnet das Büro unten die Leiste mit 🎙 Mitschreiben (wie beim Kurzgespräch)
+let leisteFuer = "";
+function leisteDazu() {
+  const g = G; if (IM_DASHBOARD || ABSCHLUSS || typeof WA === "undefined" || !g || g.status !== "laeuft" || g.nachgetragen || !g.raum || (g.artDef && g.artDef.zeit) || leisteFuer === g.id) return;
+  leisteFuer = g.id; buero({ was: "gespraechLeiste", id: g.id, raum: g.raum });
 }
 // ---------- Mitschrift + Zusammenfassung (12.10.2026, Sam: Layout A) ----------
 // Ist eine Mitschrift da: am Ende fasst Claude zusammen (Zusammenfassung, Beschlüsse, erkannte Aufgaben). „Übernehmen“ schreibt es ins

@@ -1887,11 +1887,11 @@
   function hinweisText(t) {
     return String(t || "").replace(/\s*[·–-]?\s*Leertaste\s*=\s*/gi, " \u2192 ").replace(/\s*[·–-]?\s*Leertaste\s*(zum Sprechen|zum|:)?\s*/gi, " ").replace(/\s+/g, " ").replace(/\s*[·:–-]\s*$/, "").trim();
   }
-  function handyHinweis(o) {
+  function handyHinweis(o, pc = false) {
     const nr = ++hinweisNr, cb = o && o.callback || (() => {
     }), knopf = String(cb).replace(/\s/g, "") !== "()=>{}";
     hinweisAkt = { nr, cb };
-    if (grundriss) {
+    if (grundriss && !pc) {
       try {
         WA.player.state.saveVariable("swAppHinweis", { text: hinweisText(o && o.message), knopf, nr, t: Date.now() }, { public: false, persist: false });
       } catch {
@@ -1906,7 +1906,7 @@
         }
       } };
     }
-    const url = SEITEN + "hinweis.html?nr=" + nr + (knopf ? "&knopf=1" : "") + "&text=" + encodeURIComponent(hinweisText(o && o.message));
+    const url = SEITEN + "hinweis.html?nr=" + nr + (knopf ? "&knopf=1" : "") + (pc ? "&los=Starten" : "") + "&text=" + encodeURIComponent(hinweisText(o && o.message));
     const alt = hinweisWeb;
     hinweisWeb = null;
     WA.ui.website.open({
@@ -1914,8 +1914,8 @@
       allowApi: true,
       visible: true,
       position: { vertical: "bottom", horizontal: "middle" },
-      size: { width: Math.round((screen.width || 390) - 28) + "px", height: "56px" },
-      margin: { bottom: "232px" }
+      size: { width: pc ? "420px" : Math.round((screen.width || 390) - 28) + "px", height: "56px" },
+      margin: { bottom: pc ? "70px" : "232px" }
     }).then((h) => {
       try {
         alt && alt.close();
@@ -1944,6 +1944,9 @@
         hinweisWeb = null;
       }
     } };
+  }
+  function klickHinweis(o) {
+    return HANDY ? WA.ui.displayActionMessage(o) : handyHinweis(o, true);
   }
   function hinweisGetippt(nr) {
     if (hinweisAkt && hinweisAkt.nr === nr) {
@@ -2039,21 +2042,53 @@
     { raum: "Besprechung 11", x: MI(25 + DX), y: 39 + DY, w: 7, h: 5 },
     true ? { raum: "Besprechung Glas", x: 45, y: 34, w: 12, h: 16 } : { raum: "Besprechung Glas", x: MI(45 + DX), y: 6 + DY, w: 8, h: 8 }
   ];
+  var gespHinweis = null;
+  var gespRaum = "";
+  var gespFenster = null;
+  function gespHinweisPruefen() {
+    if (!gespRaum || zimmerId || gesperrt) {
+      try {
+        gespHinweis && gespHinweis.remove();
+      } catch {
+      }
+      gespHinweis = null;
+      return;
+    }
+    if (gespHinweis) return;
+    const raum = gespRaum;
+    try {
+      gespHinweis = klickHinweis({ message: "\u{1F4AC} Gespr\xE4ch / Notizen", callback: async () => {
+        gespHinweis = null;
+        try {
+          gespFenster = await glasFenster(SEITEN + "gespraech.html?raum=" + encodeURIComponent(raum) + "&t=" + Date.now());
+        } catch {
+        }
+        setTimeout(gespHinweisPruefen, 1500);
+      } });
+    } catch {
+    }
+  }
   function gespraechsRaeume() {
     for (const r of GESPRAECHS_RAEUME) {
-      let fenster = null;
-      leertasteBereich("gesp-" + r.raum.replace(/\s+/g, "-"), r, "\u{1F4AC} Leertaste: Gespr\xE4ch / Notizen", async () => {
-        try {
-          fenster = await glasFenster(SEITEN + "gespraech.html?raum=" + encodeURIComponent(r.raum) + "&t=" + Date.now());
-        } catch {
-        }
-      }, () => {
-        try {
-          fenster && fenster.close();
-        } catch {
-        }
-        fenster = null;
-      });
+      const name = "gesp-" + r.raum.replace(/\s+/g, "-");
+      try {
+        WA.room.area.create({ name, x: r.x * 32, y: r.y * 32, width: r.w * 32, height: r.h * 32 });
+        WA.room.area.onEnter(name).subscribe(() => {
+          gespRaum = r.raum;
+          gespHinweisPruefen();
+        });
+        WA.room.area.onLeave(name).subscribe(() => {
+          if (gespRaum !== r.raum) return;
+          gespRaum = "";
+          gespHinweisPruefen();
+          try {
+            gespFenster && gespFenster.close();
+          } catch {
+          }
+          gespFenster = null;
+        });
+      } catch {
+      }
     }
   }
   var zimmerLeiste = null;
@@ -2082,7 +2117,7 @@
     if (zimmerHinweis) return;
     const mit = [...zimmerAndere].map((n) => n.split(/\s+/)[0]).join(", ");
     try {
-      zimmerHinweis = WA.ui.displayActionMessage({ message: `\u{1F4AC} Leertaste: Gespr\xE4ch mit ${mit} f\xFChren`, callback: () => {
+      zimmerHinweis = klickHinweis({ message: `\u{1F4AC} Gespr\xE4ch mit ${mit} f\xFChren`, callback: () => {
         zimmerHinweis = null;
         glasFenster(SEITEN + "gespraech.html?zimmer=1&raum=" + encodeURIComponent(String(raum)) + "&t=" + Date.now());
         setTimeout(zimmerHinweisPruefen, 1500);
@@ -2100,6 +2135,7 @@
     zimmerId = id;
     zimmerRaum = raum;
     zimmerHinweisWeg();
+    gespHinweisPruefen();
     try {
       zimmerLeiste = await WA.ui.website.open({
         url: SEITEN + "zimmer-leiste.html?id=" + encodeURIComponent(id) + "&raum=" + encodeURIComponent(raum) + (weiter ? "&weiter=1" : "") + (hoch ? "&hoch=1" : "") + "&t=" + Date.now(),
@@ -2124,6 +2160,7 @@
     zimmerId = "";
     zimmerRaum = "";
     zimmerHinweisPruefen();
+    gespHinweisPruefen();
   }
   function zimmerAbschluss(id) {
     glasFenster(SEITEN + "gespraech.html?id=" + encodeURIComponent(id) + "&abschluss=1&t=" + Date.now());
@@ -2146,7 +2183,10 @@
     }
   }
   function zimmerVerlassen(raum) {
-    if (!istBueroRaum(raum)) return;
+    if (!istBueroRaum(raum)) {
+      if (zimmerId && zimmerRaum === raum) zimmerLeisteZu();
+      return;
+    }
     zimmerSagen("raus", raum);
     zimmerAndere.clear();
     zimmerHinweisWeg();
@@ -2176,6 +2216,14 @@
       const raum = String(v.raum || aktuellerBereich || "");
       zimmerLeisteAuf(String(v.id), raum);
       zimmerSagen("start", raum, String(v.id));
+    },
+    // Besprechungsraum (21.10.2026, Sam: „dort kann man nicht mitschreiben lassen“): läuft ein Gespräch, kommt unten dieselbe Leiste mit 🎙
+    // dazu, das große Fenster bleibt offen. Die anderen im Raum bekommen sie über „start“ ebenfalls.
+    gespraechLeiste: (v) => {
+      const id = String(v.id || ""), raum = String(v.raum || aktuellerBereich || "");
+      if (!id || zimmerId === id) return;
+      zimmerLeisteAuf(id, raum);
+      zimmerSagen("start", raum, id);
     },
     zimmerLeisteZu: () => zimmerLeisteZu(),
     zimmerLeisteGroesse: (v) => {
@@ -2226,7 +2274,7 @@
         if (d.was === "start" && d.id && !zimmerId) {
           zimmerAndere.add(wer);
           zimmerLeisteAuf(String(d.id), raum);
-          kurzMeldung(`\u{1F4AC} ${wer.split(/\s+/)[0]} hat ein Gespr\xE4ch gestartet \u2013 die Zeit l\xE4uft`, 5e3);
+          kurzMeldung(`\u{1F4AC} ${wer.split(/\s+/)[0]} hat ein Gespr\xE4ch gestartet` + (istBueroRaum(raum) ? " \u2013 die Zeit l\xE4uft" : " \u2013 \u{1F399} Mitschreiben unten in der Leiste"), 5e3);
         }
         if (d.was === "ende" && d.id && zimmerId === String(d.id)) {
           const id = zimmerId;
