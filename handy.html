@@ -65,7 +65,7 @@ let ICH = "", leute = [], weg = [], meldungen = [], termine = [], offen = "", se
 const PERSON = { "Zimmer 1": "Tanja R.", "Zimmer 2": "Christiane S.", "Zimmer 3": "Jana J.", "Zimmer 4": "Kubilay A.", "Zimmer 5": "Bin W.", "Zimmer 6": "Onur K.", "Zimmer 7": "Dilber A.", "Zimmer 8": "Fatih K.",
   "Zimmer 9": "Kerstin C.", "Zimmer 10": "Angelika T.", "Zimmer 13": "Ilona S.", "Zimmer 14": "Julien M.", "Zimmer 15": "Bahjat D.", "Büro Leutrim": "Leutrim S.", "Büro Katharina": "Katharina K.",
   "Büro Ferhat": "Ferhat F.", "Büro Angelina": "Angelina M.", "Büro Sam": "Sam J.", "Büro Noura": "Noura A.", "Büro Emre": "Emre A.", "Büro Kadir": "Kadir K.", "Büro Attila": "Attila K." };
-const NAME = { "Besprechung Glas": "Besprechungszimmer 1", "Besprechung 11": "Besprechungszimmer 2", "Pause": "Pausenraum", "Lernzimmer": "Schulungsraum" };
+const NAME = { "Besprechung Glas": "Besprechungsraum – Team 1", "Besprechung 11": "Besprechungsraum – Team 2", "Besprechung 1": "Besprechungsraum – Haupt", "Besprechung 2": "Besprechungsraum – Klein", "Fibu-Besprechung": "Besprechungsraum – Team Fibu", "Pause": "Pausenraum", "Lernzimmer": "Schulungsraum" };
 const raumText = r => !r || r === "Flur" ? "im Flur" : r === HIER ? "📱 am Handy" : PERSON[r] ? PERSON[r] + " Büro" : NAME[r] || r;
 const hingehbar = r => r && r !== HIER && r !== "Flur";
 const initialen = n => String(n || "?").split(/\s+/).map(w => w[0] || "").join("").slice(0, 2).toUpperCase();

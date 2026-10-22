@@ -39,11 +39,12 @@ const aktion = (was, id, extra) => { try { WA.player.state.saveVariable("swAktio
 function zeichnen() {
   document.getElementById("l").innerHTML = liste.map(m => {
     const vn = String(m.von || "").split(/\s+/)[0], zeit = new Date(m.t).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
-    const titel = m.art === "klopfen" ? vn + " klopft an" : m.art === "nachricht" ? vn + " schreibt" : m.art === "termin" ? m.titel || "Termin" : m.art === "info" ? "Mitteilung" : (vn ? vn + " " : "") + (m.kurz || "");
+    const titel = m.art === "klopfen" ? vn + " klopft an" : m.art === "einladung" ? vn + " lädt dich ein" : m.art === "nachricht" ? vn + " schreibt" : m.art === "termin" ? m.titel || "Termin" : m.art === "info" ? "Mitteilung" : (vn ? vn + " " : "") + (m.kurz || "");
     let k = "";
     if (m.art === "klopfen") k = `<button class="voll" data-a="mtReinlassen" data-id="${m.id}">Reinlassen</button><button data-a="mtGleich" data-id="${m.id}">Komme gleich</button>`;
     if (m.art === "nachricht") k = antwortAuf === m.id ? `<input id="ant" placeholder="Antwort an ${esc(vn)} …" maxlength="300"><button class="voll" data-senden="${m.id}">Senden</button>`
       : `<button class="voll" data-antw="${m.id}">Antworten</button><button data-a="mtChat" data-id="${m.id}">Chat öffnen</button>`;
+    if (m.art === "einladung") k = `<button class="voll" data-a="mtEinladungJa" data-id="${m.id}">✓ Annehmen & hingehen</button><button data-a="mtEinladungNein" data-id="${m.id}">Später</button>`; // 22.10.2026
     if (m.art === "push") k = `<button class="voll" data-a="mtPush" data-id="${m.id}">🔔 Aktivieren</button><button data-a="mtWeg" data-id="${m.id}">Später</button>`; // 16.10.2026
     if (m.art === "termin") k = (m.raum ? `<button class="voll" data-a="mtHin" data-id="${m.id}">🚶 Hingehen</button>` : "") + `<button data-a="mtWeg" data-id="${m.id}">OK</button>`;
     return `<div class="m ${esc(m.art)}"><div class="kopf">${ICON[m.art] || "🔔"} <b>${esc(titel)}</b><span class="zeit">${zeit}</span><button class="zu" data-a="mtWeg" data-id="${m.id}" aria-label="Schließen">✕</button></div>

@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Töne</title>
+<!-- Lautstärke je Art (22.10.2026, Sam: „Glockenton beim Eintreten leiser, jeder stellt selbst ein“): Direktnachrichten, Gruppe/Termine,
+     Klingel am Eingang. Gespeichert in der dauerhaften Spieler-Variable „swLautstaerke“ { direkt, gruppe, eingang } (0–1), das Büro-Skript
+     liest sie bei jedem Ton. „▶“ spielt den Ton zur Probe (swAktion tonProbe). Die Töne von WorkAdventure selbst stellt WorkAdventure ein. -->
+<script src="https://play.workadventu.re/iframe_api.js"></script>
+<style>
+  * { box-sizing:border-box; }
+  body { margin:0; background:#f8fafc; color:#0f172a; font-family:system-ui,-apple-system,"Segoe UI",sans-serif; }
+  header { position:sticky; top:0; background:#0f766e; color:#fff; padding:14px 16px; } header h1 { margin:0; font-size:18px; }
+  main { padding:12px; display:flex; flex-direction:column; gap:10px; }
+  .z { background:#fff; border:1.5px solid #e2e8f0; border-radius:12px; padding:12px 14px; }
+  .z b { display:block; font-size:14.5px; } .z small { display:block; color:#64748b; font-size:12px; margin:2px 0 8px; }
+  .r { display:flex; align-items:center; gap:10px; } .r input { flex:1; accent-color:#0f766e; } .r span { width:42px; text-align:right; font-variant-numeric:tabular-nums; font-size:13px; }
+  .r button { font:inherit; font-size:13px; border:1.5px solid #0f766e; color:#0f766e; background:#fff; border-radius:8px; padding:4px 10px; cursor:pointer; }
+  .hin { font-size:12px; color:#64748b; }
+  html.glas .z { background:rgba(255,255,255,.07); border-color:rgba(255,255,255,.15); color:#f1f5f9; } html.glas .z small, html.glas .hin { color:rgba(255,255,255,.65); }
+  html.glas .r button { background:transparent; color:#5eead4; border-color:#5eead4; }
+</style>
+<script src="glas.js?v=1792088168"></script>
+</head>
+<body>
+<header><h1>🔊 Töne</h1></header>
+<main id="liste"></main>
+<script>
+const ARTEN = [["direkt", "💬 Direktnachrichten", "Nachricht an dich, Anklopfen, Einladung"], ["gruppe", "👥 Gruppe & Termine", "Termin-Erinnerung, Hinweise für alle"],
+  ["eingang", "🔔 Klingel am Eingang", "wenn jemand ins Büro kommt"]];
+const STANDARD = { direkt: 0.5, gruppe: 0.5, eingang: 0.15 };
+let wert = { ...STANDARD };
+function speichern() { try { WA.player.state.saveVariable("swLautstaerke", wert, { public: false, persist: true }); } catch (e) { console.warn(e); } }
+function probe(art) { try { WA.player.state.saveVariable("swAktion", { was: "tonProbe", art, t: Date.now() }, { public: false, persist: false }); } catch (e) { console.warn(e); } }
+function malen() {
+  document.getElementById("liste").innerHTML = ARTEN.map(([k, t, i]) => `<div class="z"><b>${t}</b><small>${i}</small><div class="r">
+    <input type="range" min="0" max="100" step="5" value="${Math.round(wert[k] * 100)}" data-k="${k}"><span id="w-${k}">${Math.round(wert[k] * 100)} %</span><button data-p="${k}">▶</button></div></div>`).join("")
+    + '<div class="hin">0 % = stumm. Die Töne des WorkAdventure-Chats selbst lassen sich hier nicht einstellen.</div>';
+  document.querySelectorAll("[data-k]").forEach(r => { r.oninput = () => { wert[r.dataset.k] = +r.value / 100; document.getElementById("w-" + r.dataset.k).textContent = r.value + " %"; };
+    r.onchange = () => { speichern(); probe(r.dataset.k); }; });
+  document.querySelectorAll("[data-p]").forEach(b => b.onclick = () => probe(b.dataset.p));
+}
+(async () => {
+  for (let i = 0; i < 30 && typeof WA === "undefined"; i++) await new Promise(r => setTimeout(r, 100));
+  try { await Promise.race([WA.onInit(), new Promise(r => setTimeout(r, 2500))]); const v = WA.player.state.swLautstaerke; if (v && typeof v === "object") wert = { ...STANDARD, ...v }; } catch {}
+  malen();
+})();
+</script>
+</body>
+</html>

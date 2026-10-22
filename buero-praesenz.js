@@ -38,8 +38,9 @@
   function mitteilung(m, autoWegMs = 0) {
     const id = Math.random().toString(36).slice(2, 9);
     mitteilungen = [{ ...m, id, t: Date.now() }, ...mitteilungen].slice(0, 5);
-    if (m.art === "klopfen") ton("klopfen");
-    else if (m.art === "termin" || m.art === "nachricht") ton("klingel");
+    if (m.art === "klopfen" || m.art === "einladung") ton("klopfen", "direkt");
+    else if (m.art === "nachricht") ton("klingel", "direkt");
+    else if (m.art === "termin") ton("klingel", "gruppe");
     mtZeigen();
     if (autoWegMs) setTimeout(() => mtWeg(id), autoWegMs);
     return id;
@@ -49,7 +50,12 @@
     mitteilungen = mitteilungen.filter((x) => x.id !== id);
     if (mitteilungen.length !== n) mtZeigen();
   }
-  async function mtZeigen() {
+  var mtKette = Promise.resolve();
+  function mtZeigen() {
+    mtKette = mtKette.then(mtZeigenJetzt, mtZeigenJetzt);
+    return mtKette;
+  }
+  async function mtZeigenJetzt() {
     try {
       await WA.player.state.saveVariable("swMitteilungen", mitteilungen, { public: false, persist: false });
     } catch {
@@ -70,7 +76,7 @@
     mtFenster = null;
     if (mitteilungen.length) try {
       mtFenster = await WA.ui.website.open({
-        url: SEITEN + "mitteilungen.html?v=4",
+        url: SEITEN + "mitteilungen.html?v=5",
         allowApi: true,
         visible: true,
         position: { vertical: "top", horizontal: HANDY ? "middle" : "right" },
@@ -88,6 +94,13 @@
     }
     try {
       alt && alt.close();
+    } catch {
+    }
+    try {
+      const meins = mtFenster;
+      const alle = await WA.ui.website.getAll();
+      for (const w of alle) if (/mitteilungen\.html/.test(String(w.url || "")) && w !== meins && (!meins || w.id !== meins.id)) w.close().catch(() => {
+      });
     } catch {
     }
     void mtAnzahl;
@@ -110,6 +123,22 @@
     },
     mtHin: (m) => {
       if (m.raum) zuRaum(m.raum);
+      mtWeg(m.id);
+    },
+    // Einladung (22.10.2026): annehmen = Einladenden informieren und hinlaufen; „Später“ sagt es ihm auch
+    mtEinladungJa: (m) => {
+      try {
+        WA.event.broadcast("sw-einladung-antwort", { an: m.von, von: WA.player.name, ja: true, raum: m.raum });
+      } catch {
+      }
+      if (m.raum) zuRaum(m.raum);
+      mtWeg(m.id);
+    },
+    mtEinladungNein: (m) => {
+      try {
+        WA.event.broadcast("sw-einladung-antwort", { an: m.von, von: WA.player.name, ja: false });
+      } catch {
+      }
       mtWeg(m.id);
     },
     mtChat: (m) => {
@@ -184,7 +213,7 @@
       if (d && Array.isArray(d.glocke)) for (const g of d.glocke) mitteilung({ art: "info", kurz: String(g.text || "").slice(0, 200) }, 6e4);
       if (d && d.pushAktiv === false && !pushHinweisGezeigt) {
         pushHinweisGezeigt = true;
-        setTimeout(() => mitteilung({ art: "push", kurz: "Benachrichtigungen aktivieren", text: "Damit du Nachrichten und Anklopfen auch siehst, wenn das B\xFCro im Hintergrund ist." }), 15e3);
+        setTimeout(() => mitteilung({ art: "push", kurz: "Benachrichtigungen aktivieren", text: "Damit Nachrichten, Anklopfen und Einladungen als Windows-Meldung auch \xFCber DATEV erscheinen." }), 15e3);
       }
       if (d && d.inaktiv) return wegVomRechner();
       if (d && d.abgeloest) beenden();
@@ -1267,9 +1296,20 @@
   var fxStand = {};
   var FEIERABEND_RAEUME = ["Besprechung 11", "Besprechung Glas", "Pause", "Lernzimmer", "Helpcenter", "Fitnessraum", "Fibu Backoffice"];
   var toene = {};
-  function ton(name) {
+  var LAUT_STANDARD = { direkt: 0.5, gruppe: 0.5, eingang: 0.15 };
+  function lautstaerke(art) {
     try {
-      (toene[name] || (toene[name] = WA.sound.loadSound(SEITEN + "toene/" + name + ".wav"))).play({ volume: 0.5 });
+      const v = WA.player.state.swLautstaerke;
+      if (v && typeof v[art] === "number") return Math.max(0, Math.min(1, v[art]));
+    } catch {
+    }
+    return LAUT_STANDARD[art] ?? 0.5;
+  }
+  function ton(name, art = "gruppe") {
+    const volume = lautstaerke(art);
+    if (!volume) return;
+    try {
+      (toene[name] || (toene[name] = WA.sound.loadSound(SEITEN + "toene/" + name + ".wav"))).play({ volume });
     } catch {
     }
   }
@@ -2040,7 +2080,9 @@
   var GESPRAECHS_RAEUME = [
     // 14.10.2026: Besprechung 10 ist jetzt das Lernzimmer
     { raum: "Besprechung 11", x: MI(25 + DX), y: 39 + DY, w: 7, h: 5 },
-    true ? { raum: "Besprechung Glas", x: 45, y: 34, w: 12, h: 16 } : { raum: "Besprechung Glas", x: MI(45 + DX), y: 6 + DY, w: 8, h: 8 }
+    true ? { raum: "Besprechung Glas", x: 45, y: 34, w: 12, h: 16 } : { raum: "Besprechung Glas", x: MI(45 + DX), y: 6 + DY, w: 8, h: 8 },
+    // 22.10.2026 (Sam): alle Besprechungsräume – Haupt, Klein, Team Fibu (Lage wie die Karten-Bereiche)
+    ...true ? [{ raum: "Besprechung 1", x: 75, y: 39, w: 11, h: 5 }, { raum: "Besprechung 2", x: 75, y: 45, w: 11, h: 5 }, { raum: "Fibu-Besprechung", x: 4, y: 44, w: 7, h: 4 }] : []
   ];
   var gespHinweis = null;
   var gespRaum = "";
@@ -2390,7 +2432,7 @@
   function klingel() {
     let zuletzt = 0, aus = null;
     const laeuten = (wer, ich) => {
-      ton("klingel");
+      ton("klingel", "eingang");
       fx("fx-klingel", true);
       clearTimeout(aus);
       aus = setTimeout(() => fx("fx-klingel", false), 3500);
@@ -2468,8 +2510,54 @@
       WA.ui.onRemotePlayerClicked.subscribe((p) => {
         try {
           p.addAction("\u{1F464} Profil ansehen", () => profilOeffnen(String(p.name || "")));
+          const name = String(p.name || ""), vn = name.split(/\s+/)[0], raum = aktuellerBereich;
+          if (raum) p.addAction(`\u{1F4E8} In \u201E${raum}\u201C einladen`, () => einladen(name, raum));
+          p.addAction(`\u{1F6B6} Ich komme zu ${vn}`, () => unterwegsZu(name));
         } catch {
         }
+      });
+    } catch {
+    }
+    einladungenHoeren();
+  }
+  function einladen(an, raum) {
+    try {
+      WA.event.broadcast("sw-einladung", { an, von: WA.player.name, raum });
+    } catch {
+    }
+    mitteilung({ art: "info", von: an, kurz: "ist eingeladen", text: `Einladung in \u201E${raum}\u201C an ${an.split(/\s+/)[0]} gesendet.` }, 1e4);
+  }
+  function unterwegsZu(an) {
+    try {
+      WA.event.broadcast("sw-unterwegs", { an, von: WA.player.name, raum: aktuellerBereich || "" });
+    } catch {
+    }
+    mitteilung({ art: "info", von: an, kurz: "wei\xDF Bescheid", text: `${an.split(/\s+/)[0]} sieht, dass du unterwegs bist.` }, 8e3);
+    zuPerson(an);
+  }
+  function auchAlsPush(von, text) {
+    fetch(ENDPOINT.replace(/melden$/, "chat-eingang"), { method: "POST", headers: { "Content-Type": "application/json", "X-Buero-Key": BUERO_KEY }, body: JSON.stringify({ name: WA.player.name, von, text: text.slice(0, 300) }) }).catch(() => {
+    });
+  }
+  function einladungenHoeren() {
+    const fuerMich = (d) => d && String(d.an || "").toLowerCase() === String(WA.player.name || "").toLowerCase();
+    try {
+      WA.event.on("sw-einladung").subscribe((ev) => {
+        const d = ev.data || {};
+        if (!fuerMich(d)) return;
+        mitteilung({ art: "einladung", von: d.von, raum: d.raum, text: `in \u201E${d.raum}\u201C` }, 5 * 6e4);
+        auchAlsPush(d.von, `\u{1F4E8} l\xE4dt dich ein in \u201E${d.raum}\u201C`);
+      });
+      WA.event.on("sw-einladung-antwort").subscribe((ev) => {
+        const d = ev.data || {};
+        if (!fuerMich(d)) return;
+        mitteilung({ art: "info", von: d.von, kurz: d.ja ? "hat angenommen \u2013 ist unterwegs" : "kommt sp\xE4ter", text: d.ja ? `${String(d.von).split(/\s+/)[0]} kommt zu dir${d.raum ? " in \u201E" + d.raum + "\u201C" : ""}.` : "" }, 3e4);
+      });
+      WA.event.on("sw-unterwegs").subscribe((ev) => {
+        const d = ev.data || {};
+        if (!fuerMich(d)) return;
+        mitteilung({ art: "info", von: d.von, kurz: "ist unterwegs zu dir", text: `${String(d.von).split(/\s+/)[0]} m\xF6chte mit dir sprechen und kommt gerade zu dir.` }, 6e4);
+        auchAlsPush(d.von, "\u{1F6B6} ist unterwegs zu dir");
       });
     } catch {
     }
@@ -3430,6 +3518,8 @@
           ["sw-mein-profil", "Profil", "profil", () => glasFenster(SEITEN + "profil.html?ich=1&tore=" + toreVon(WA.player.name || "") + "&t=" + Date.now())],
           ...tcAktiv ? [["sw-tagescheck", "Tages-Check", "tagescheck", () => glasFenster(SEITEN + "tagescheck.html?t=" + Date.now())]] : [],
           ...kzAktiv ? [["sw-arbeitszeit", "Arbeitszeit", "arbeitszeit", () => glasFenster(SEITEN + "kernzeit.html?t=" + Date.now())], ["sw-feierabend", "Feierabend", "feierabend", feierabendOeffnen]] : [],
+          ["sw-toene", "T\xF6ne", "toene", () => glasFenster(SEITEN + "toene.html?t=" + Date.now())],
+          // 22.10.2026: Lautstärke je Art
           ["sw-alles-zu", "Alles zu", "alleszu", allesZu]
           // 20.10.2026 (Sam): ein Klick schließt jedes offene Fenster
         ];
@@ -3539,7 +3629,7 @@
     try {
       WA.chat.onChatMessage((text, ev) => {
         const von = ev && ev.author && ev.author.name;
-        if (!von || von === WA.player.name || !document.hidden) return;
+        if (!von || von === WA.player.name) return;
         fetch(ENDPOINT.replace(/melden$/, "chat-eingang"), { method: "POST", headers: { "Content-Type": "application/json", "X-Buero-Key": BUERO_KEY }, body: JSON.stringify({ name: WA.player.name, von, text: String(text || "").slice(0, 300) }) }).catch(() => {
         });
       }, { scope: "bubble" });
@@ -3554,6 +3644,12 @@
         if (!v || !v.t || v.t === letzteAktion) return;
         letzteAktion = v.t;
         if (v.was === "chat") return chatUmschalten();
+        if (v.was === "tonProbe") return ton(v.art === "direkt" ? "klopfen" : "klingel", String(v.art || "gruppe"));
+        if (v.was === "toene") {
+          menueZu();
+          handyMenueZu();
+          return glasFenster(SEITEN + "toene.html?t=" + Date.now());
+        }
         if (HANDY && v.was !== "hinweisTipp") chatZu();
         if (v.was === "menue") return menueUmschalten(String(v.m || ""));
         if (v.was === "handyMenue") return handyMenueUmschalten();

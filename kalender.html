@@ -200,7 +200,7 @@ function zeichnen() {
   if ($("dHin")) $("dHin").onclick = () => { try { WA.player.state.saveVariable("swAktion", { was: "zuRaum", name: t.ort, t: Date.now() }, { public: false, persist: false }); } catch {} };
   formAktivieren();
 }
-const RAUM_NAME = { "Besprechung Glas": "Besprechungszimmer 1", "Besprechung 11": "Besprechungszimmer 2", Paris: "Paris (Mandanten-Etage)", Berlin: "Berlin (Mandanten-Etage)", Lissabon: "Lissabon (Mandanten-Etage)", "New York": "New York (Mandanten-Etage)", Amsterdam: "Amsterdam (Mandanten-Etage)", Moskau: "Moskau (Mandanten-Etage)" };
+const RAUM_NAME = { "Besprechung Glas": "Besprechungsraum – Team 1", "Besprechung 11": "Besprechungsraum – Team 2", "Besprechung 1": "Besprechungsraum – Haupt", "Besprechung 2": "Besprechungsraum – Klein", "Fibu-Besprechung": "Besprechungsraum – Team Fibu", Paris: "Paris (Mandanten-Etage)", Berlin: "Berlin (Mandanten-Etage)", Lissabon: "Lissabon (Mandanten-Etage)", "New York": "New York (Mandanten-Etage)", Amsterdam: "Amsterdam (Mandanten-Etage)", Moskau: "Moskau (Mandanten-Etage)" };
 function formHtml() {
   const f = S.form;
   if (f.art === "raum") return `<div class="box"><b>🚪 Raum buchen</b>
