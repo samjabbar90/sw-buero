@@ -2,7 +2,6 @@
   // main.ts
   var ENDPOINT = "https://swdigitaltest.de/buero-praesenz/melden";
   var BUERO_KEY = "a21b2aa2a42fe6189b05773c07bbc9ad78e38b34ba3bb6fe";
-  var DASHBOARD = "https://swdigitaltest.de";
   var SITZUNG = Math.random().toString(36).slice(2) + Date.now().toString(36);
   var DY = 26;
   var MI = (x) => x >= 48 ? x + 8 : x;
@@ -15,14 +14,23 @@
   var position = null;
   var gespraech = /* @__PURE__ */ new Set();
   var zuletztGemeldet = 0;
+  var pauseHinweis = null;
   function beenden() {
     if (beendet) return;
     beendet = true;
-    WA.ui.displayActionMessage({
-      message: "Du bist an einem anderen Ort ins B\xFCro gegangen \u2013 diese Sitzung wird beendet.",
-      callback: () => rausZu(DASHBOARD)
-    });
-    setTimeout(() => rausZu(DASHBOARD), 4e3);
+    try {
+      pauseHinweis && pauseHinweis.remove();
+    } catch {
+    }
+    try {
+      pauseHinweis = klickHinweis({ message: "\u{1F4F1}\u{1F4BB} Du bist gerade auf einem anderen Ger\xE4t im B\xFCro \u2013 hier weitermachen", callback: () => {
+        pauseHinweis = null;
+        beendet = false;
+        letzteAktivitaet = Date.now();
+        bereit = melden("betreten", true);
+      } });
+    } catch {
+    }
   }
   function rausZu(url) {
     try {
@@ -3206,6 +3214,10 @@
   }
   function chatUmschalten() {
     if (chatOffen) return chatZu();
+    if (HANDY) {
+      chatZu();
+      return handyBlattUmschalten("team", SEITEN + "wer.html?sheet=1&t=" + Date.now(), "78vh");
+    }
     try {
       WA.chat.open();
       chatOffen = true;
