@@ -25,7 +25,7 @@ const STANDARD = ["karte", "arbeiten", "team", "reise"]; // 15.10.2026: „Arbei
 function aktion(was) { try { WA.player.state.saveVariable("swAktion", { was, t: Date.now() }, { public: false, persist: false }); } catch (e) { console.warn(e); } }
 function malen(liste) {
   const k = (Array.isArray(liste) && liste.length ? liste : STANDARD).filter(x => ALLE[x]).slice(0, 4);
-  document.getElementById("l").innerHTML = k.map(x => `<button data-w="${x}"><span>${ALLE[x][0]}</span>${ALLE[x][1]}</button>`).join("") + '<button data-w="handyMenue"><span>☰</span>Mehr</button>';
+  document.getElementById("l").innerHTML = k.map(x => `<button data-w="${x}"><span>${ALLE[x][0]}</span>${ALLE[x][1]}</button>`).join("") + '<button data-w="chat"><span>💬</span>Chat</button><button data-w="handyMenue"><span>☰</span>Mehr</button>'; // 22.10.2026: Chat auf/zu
   document.querySelectorAll("[data-w]").forEach(b => b.onclick = () => { aktion(b.dataset.w); b.classList.add("an"); setTimeout(() => b.classList.remove("an"), 250); });
 }
 malen(STANDARD);

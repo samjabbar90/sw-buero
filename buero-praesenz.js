@@ -3030,6 +3030,22 @@
       zimmerRaus(name);
     });
   }
+  var chatOffen = false;
+  function chatZu() {
+    try {
+      WA.chat.close();
+    } catch {
+    }
+    chatOffen = false;
+  }
+  function chatUmschalten() {
+    if (chatOffen) return chatZu();
+    try {
+      WA.chat.open();
+      chatOffen = true;
+    } catch {
+    }
+  }
   function feierabendOeffnen() {
     glasFenster(SEITEN + "kernzeit.html?feierabend=1&t=" + Date.now());
   }
@@ -3060,8 +3076,10 @@
   var SCHLOSS_PAUSE_MS = 30 * 60 * 1e3;
   var gesperrt = false;
   var letzteAktivitaet = Date.now();
+  var HANDY_OFFEN_MS = 12 * 3600 * 1e3;
   var schlossOffen = () => {
     try {
+      if (HANDY && Date.now() - Number(localStorage.getItem("swHandyOffen") || 0) < HANDY_OFFEN_MS) return true;
       return Date.now() - Number(sessionStorage.getItem("swSchlossOffen") || 0) < SCHLOSS_PAUSE_MS;
     } catch {
       return false;
@@ -3070,6 +3088,11 @@
   var schlossMerken = (an) => {
     try {
       an ? sessionStorage.setItem("swSchlossOffen", String(Date.now())) : sessionStorage.removeItem("swSchlossOffen");
+    } catch {
+    }
+    try {
+      if (an && HANDY) localStorage.setItem("swHandyOffen", String(Date.now()));
+      else if (!an) localStorage.removeItem("swHandyOffen");
     } catch {
     }
     try {
@@ -3156,6 +3179,7 @@
   }
   function schlossWache() {
     setInterval(async () => {
+      if (HANDY && !gesperrt && !beendet) schlossMerken(true);
       if (gesperrt || HANDY) return;
       if (gespraech.size) {
         letzteAktivitaet = Date.now();
@@ -3432,7 +3456,7 @@
           }
           if (!klassikOffen) return;
           try {
-            leiste = await WA.ui.website.open({ url: SEITEN + "handy-leiste.html?v=3", allowApi: true, visible: true, ...opt });
+            leiste = await WA.ui.website.open({ url: SEITEN + "handy-leiste.html?v=4", allowApi: true, visible: true, ...opt });
             klassik.push(leiste);
           } catch {
           }
@@ -3529,6 +3553,8 @@
       WA.player.state.onVariableChange("swAktion").subscribe((v) => {
         if (!v || !v.t || v.t === letzteAktion) return;
         letzteAktion = v.t;
+        if (v.was === "chat") return chatUmschalten();
+        if (HANDY && v.was !== "hinweisTipp") chatZu();
         if (v.was === "menue") return menueUmschalten(String(v.m || ""));
         if (v.was === "handyMenue") return handyMenueUmschalten();
         if (v.was === "hinweisTipp") return hinweisGetippt(Number(v.nr) || 0);
@@ -3574,6 +3600,7 @@
           rausZu(SEITEN + "handy.html?von=karte");
         });
         if (v.was === "abmelden") {
+          schlossMerken(false);
           return melden("verlassen").then(() => {
             beendet = true;
             rausZu(SEITEN + "weg.html?grund=abgemeldet");
