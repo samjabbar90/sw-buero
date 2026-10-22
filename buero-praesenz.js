@@ -2,6 +2,7 @@
   // main.ts
   var ENDPOINT = "https://swdigitaltest.de/buero-praesenz/melden";
   var BUERO_KEY = "a21b2aa2a42fe6189b05773c07bbc9ad78e38b34ba3bb6fe";
+  var DASHBOARD = "https://swdigitaltest.de";
   var SITZUNG = Math.random().toString(36).slice(2) + Date.now().toString(36);
   var DY = 26;
   var MI = (x) => x >= 48 ? x + 8 : x;
@@ -18,6 +19,11 @@
   function beenden() {
     if (beendet) return;
     beendet = true;
+    if (!HANDY) {
+      WA.ui.displayActionMessage({ message: "Du bist auf einem anderen Ger\xE4t ins B\xFCro gegangen \u2013 hier wirst du abgemeldet.", callback: () => rausZu(DASHBOARD) });
+      setTimeout(() => rausZu(DASHBOARD), 4e3);
+      return;
+    }
     try {
       pauseHinweis && pauseHinweis.remove();
     } catch {
