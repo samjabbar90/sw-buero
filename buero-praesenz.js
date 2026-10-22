@@ -2133,6 +2133,47 @@
       }
     }
   }
+  var GESPRAECH_RAUM = /^(Büro .+|Besprechung (Glas|11|1|2)|Fibu-Besprechung)$/;
+  async function raumGespraeche() {
+    let k;
+    try {
+      k = await ladeKarte();
+    } catch {
+      return;
+    }
+    const raeume = ((k.layers || []).find((l) => l.name === "floorLayer") || { objects: [] }).objects.filter((o) => GESPRAECH_RAUM.test(o.name || "") && o.width && o.height);
+    const kurz = (n) => n.normalize("NFD").replace(/[^A-Za-z0-9]+/g, "-").toLowerCase();
+    const flaechen = /* @__PURE__ */ new Map(), an = /* @__PURE__ */ new Map();
+    for (const o of raeume) {
+      try {
+        flaechen.set(o.name, WA.room.area.create({ name: "raumgespraech-" + kurz(o.name), x: o.x, y: o.y, width: o.width, height: o.height }));
+      } catch {
+      }
+    }
+    try {
+      await WA.players.configureTracking({ players: true, movement: true });
+    } catch {
+    }
+    const pruefen = () => {
+      let andere = [];
+      try {
+        andere = [...WA.players.list()];
+      } catch {
+      }
+      for (const o of raeume) {
+        const a = flaechen.get(o.name);
+        if (!a) continue;
+        const drin = aktuellerBereich === o.name && !gesperrt && andere.some((p) => p.position && p.position.x >= o.x && p.position.x < o.x + o.width && p.position.y >= o.y && p.position.y < o.y + o.height);
+        if (an.get(o.name) === drin) continue;
+        an.set(o.name, drin);
+        try {
+          a.setProperty("jitsiRoom", drin ? "sw-" + kurz(o.name) : void 0);
+        } catch {
+        }
+      }
+    };
+    setInterval(pruefen, 1500);
+  }
   var zimmerLeiste = null;
   var zimmerId = "";
   var zimmerRaum = "";
@@ -3420,6 +3461,7 @@
     schaufenster();
     dankeWand();
     gespraechsRaeume();
+    raumGespraeche();
     zimmerGespraeche();
     glaswandAgenten();
     fussball();
