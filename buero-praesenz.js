@@ -184,6 +184,42 @@
     } catch {
     }
   }
+  var pushFenster = null;
+  var pushErledigt = false;
+  async function pushPflicht() {
+    if (pushFenster || pushErledigt || gesperrt) return;
+    try {
+      WA.controls.disablePlayerControls();
+    } catch {
+    }
+    try {
+      pushFenster = await WA.ui.website.open({
+        url: SEITEN + "push-start.html?pflicht=1&t=" + Date.now(),
+        allowApi: true,
+        visible: true,
+        position: { vertical: "middle", horizontal: "middle" },
+        size: { width: "520px", height: "460px" }
+      });
+    } catch {
+      pushFenster = null;
+      try {
+        WA.controls.restorePlayerControls();
+      } catch {
+      }
+    }
+  }
+  function pushPflichtFertig() {
+    pushErledigt = true;
+    try {
+      pushFenster && pushFenster.close();
+    } catch {
+    }
+    pushFenster = null;
+    if (!gesperrt) try {
+      WA.controls.restorePlayerControls();
+    } catch {
+    }
+  }
   function melden(event, start = false) {
     if (beendet || gesperrt && event !== "verlassen") return Promise.resolve();
     zuletztGemeldet = Date.now();
@@ -211,7 +247,8 @@
       if (d && Array.isArray(d.nachrichten)) for (const m of d.nachrichten) nachrichtZeigen(m);
       if (d && Array.isArray(d.termine)) termineErinnern(d.termine);
       if (d && Array.isArray(d.glocke)) for (const g of d.glocke) mitteilung({ art: "info", kurz: String(g.text || "").slice(0, 200) }, 6e4);
-      if (d && d.pushAktiv === false && !pushHinweisGezeigt) {
+      if (d && d.pushAktiv === false && !HANDY) pushPflicht();
+      else if (d && d.pushAktiv === false && !pushHinweisGezeigt) {
         pushHinweisGezeigt = true;
         setTimeout(() => mitteilung({ art: "push", kurz: "Benachrichtigungen aktivieren", text: "Damit Nachrichten, Anklopfen und Einladungen als Windows-Meldung auch \xFCber DATEV erscheinen." }), 15e3);
       }
@@ -1661,7 +1698,7 @@
       }
     } };
   }
-  var BLEIBT_OFFEN = /info\.html|leiste\.html|schloss\.html|tagescheck\.html\?karte|oben\.html|handy-menue\.html|blick\.html|app\.html|ausweis-sync\.html|mitteilungen\.html/;
+  var BLEIBT_OFFEN = /push-start\.html\?pflicht|info\.html|leiste\.html|schloss\.html|tagescheck\.html\?karte|oben\.html|handy-menue\.html|blick\.html|app\.html|ausweis-sync\.html|mitteilungen\.html/;
   function allesZu() {
     try {
       WA.ui.modal.closeModal();
@@ -3247,7 +3284,7 @@
     } catch {
     }
     WA.ui.website.getAll().then((alle) => alle.forEach((w) => {
-      if (!/info\.html|leiste\.html|schloss\.html|tagescheck\.html\?karte|oben\.html\?v|oben\.html\?alle|handy-menue\.html\?knopf/.test(String(w.url || ""))) w.close().catch(() => {
+      if (!/push-start\.html\?pflicht|info\.html|leiste\.html|schloss\.html|tagescheck\.html\?karte|oben\.html\?v|oben\.html\?alle|handy-menue\.html\?knopf/.test(String(w.url || ""))) w.close().catch(() => {
       });
     })).catch(() => {
     });
@@ -3686,6 +3723,7 @@
         if (!v || !v.t || v.t === letzteAktion) return;
         letzteAktion = v.t;
         if (v.was === "chat") return chatUmschalten();
+        if (v.was === "pushFertig" || v.was === "pushSpaeter") return pushPflichtFertig();
         if (v.was === "tonProbe") return ton(v.art === "direkt" ? "klopfen" : "klingel", String(v.art || "gruppe"));
         if (v.was === "toene") {
           menueZu();

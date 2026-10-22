@@ -17,6 +17,7 @@
 <ul><li>💬 Nachrichten von Kollegen</li><li>✊ Anklopfen an deiner Tür</li><li>✅ Tages-Check: Frist beginnt / läuft ab</li><li>🚪 wenn du aus dem Büro abgemeldet wurdest</li></ul>
 <button id="los">Jetzt aktivieren</button>
 <div class="m" id="m"></div>
+<div id="pflicht" hidden style="margin-top:18px;font-size:13px;color:#64748b">Das Büro geht weiter, sobald ein Gerät angemeldet ist.<br><a href="#" id="gehtNicht" style="color:#64748b">Geht auf diesem Gerät nicht?</a><div id="gnBox" hidden style="margin-top:8px"><textarea id="gnGrund" rows="2" style="width:100%;font:inherit;font-size:13px;padding:6px;border:1px solid #cbd5e1;border-radius:8px" placeholder="Was passiert? (z. B. Browser fragt nicht, Fehlermeldung)"></textarea><button id="gnSenden" style="margin-top:6px;padding:8px 12px;font-size:13px;background:#475569">An Sam melden und weiter</button></div></div>
 <script src="https://play.workadventu.re/iframe_api.js"></script>
 <script>
 const KEY = "a21b2aa2a42fe6189b05773c07bbc9ad78e38b34ba3bb6fe", B = "https://swdigitaltest.de/buero-praesenz";
@@ -33,5 +34,18 @@ $("los").onclick = async () => {
   } catch (e) { $("m").textContent = e.message; $("m").className = "m fe"; }
   $("los").disabled = false;
 };
+// Pflicht im Büro (22.10.2026, Sam): ?pflicht=1 – Büro wartet, bis ein Gerät angemeldet ist (alle 4 s nachfragen); „Geht nicht“ meldet Sam
+const PFLICHT = new URLSearchParams(location.search).get("pflicht") === "1";
+const aktion = (was) => { try { WA.player.state.saveVariable("swAktion", { was, t: Date.now() }, { public: false, persist: false }); } catch (e) { console.warn(e); } };
+const H = () => ({ "X-Buero-Key": KEY, "X-Buero-Ausweis": aw(), "Content-Type": "application/json" });
+if (PFLICHT) {
+  document.querySelector("h2").textContent = "🔔 Bitte zuerst Benachrichtigungen aktivieren";
+  $("pflicht").hidden = false;
+  $("gehtNicht").onclick = (e) => { e.preventDefault(); $("gnBox").hidden = false; $("gnGrund").focus(); };
+  $("gnSenden").onclick = async () => { const grund = $("gnGrund").value.trim(); if (!grund) { $("gnGrund").style.borderColor = "#b91c1c"; return; }
+    try { await fetch(B + "/push-code/geht-nicht", { method: "POST", headers: H(), body: JSON.stringify({ grund }) }); } catch {} aktion("pushSpaeter"); };
+  setInterval(async () => { try { const d = await (await fetch(B + "/push-code/status", { headers: H() })).json();
+    if (d.aktiv) { $("m").textContent = "✓ Aktiv – danke!"; $("m").className = "m"; setTimeout(() => aktion("pushFertig"), 1200); } } catch {} }, 4000);
+}
 </script>
 </body></html>
