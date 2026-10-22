@@ -115,7 +115,7 @@ function zeichnen() {
     <div id="fe"></div></div>`;
   if (weg.length) h += `<div class="karte"><details><summary>Nicht im Büro (${weg.length})</summary>${weg.map(p => `<div class="p"><span class="gesicht" style="background:#cbd5e1">${esc(initialen(p.name))}</span><div><div class="n">${esc(p.name)}</div><div class="w">${p.zuletzt ? "zuletzt " + new Date(p.zuletzt).toLocaleString("de-DE", { weekday: "short", hour: "2-digit", minute: "2-digit" }) : "–"}</div></div>${p.durchwahl ? `<div class="akt"><a class="k" href="tel:${esc(p.durchwahl)}">📞</a></div>` : ""}</div>`).join("")}</details></div>`;
   $("inhalt").innerHTML = h;
-  $("karte").onclick = () => { if (IM) return buero("arbeitenZu"); melden("verlassen"); location.href = BUERO; };
+  $("karte").onclick = () => { if (IM) return buero("arbeitenZu"); melden("verlassen"); location.href = BUERO + "#karte=1"; }; // 22.10.2026: Karte ausdrücklich gewollt (sonst leitet das Büro-Skript am Handy hierher zurück)
   document.querySelectorAll("[data-k]").forEach(b => b.onclick = () => blatt(KACHELN[+b.dataset.k]));
   document.querySelectorAll("[data-weg]").forEach(b => b.onclick = () => { meldungen.splice(+b.dataset.weg, 1); offen = ""; zeichnen(); });
   document.querySelectorAll("[data-antw]").forEach(b => b.onclick = () => { offen = offen === "a" + b.dataset.antw ? "" : "a" + b.dataset.antw; zeichnen(); $("txt") && $("txt").focus(); });

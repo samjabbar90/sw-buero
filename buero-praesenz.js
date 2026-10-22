@@ -3383,6 +3383,15 @@
     } catch {
     }
     try {
+      const h = WA.room.hashParameters || {};
+      if (HANDY && !h.karte && !h.ziel) {
+        beendet = true;
+        rausZu(SEITEN + "handy.html?von=start");
+        return;
+      }
+    } catch {
+    }
+    try {
       const c = WA.controls;
       c.disableInviteButton?.();
       c.disableInviteUserButton?.();
