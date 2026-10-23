@@ -2222,8 +2222,9 @@
   var leisteSchmal = false;
   var LEISTE_BREIT = 232;
   var LEISTE_SCHMAL = 58;
+  var leisteR = 8;
   function leisteBreite() {
-    return leisteRechts ? leisteSchmal ? LEISTE_SCHMAL : LEISTE_BREIT : 0;
+    return leisteRechts && leisteR <= 40 ? leisteSchmal ? LEISTE_SCHMAL : LEISTE_BREIT : 0;
   }
   async function leisteRechtsAuf() {
     if (HANDY) return;
@@ -2231,6 +2232,14 @@
       leisteSchmal = !!WA.player.state.swLeisteSchmal;
     } catch {
     }
+    let lage = {};
+    try {
+      lage = WA.player.state.swLeisteLage || {};
+    } catch {
+    }
+    const breite = leisteSchmal ? LEISTE_SCHMAL : LEISTE_BREIT, zw = (v, a, z) => Math.min(z, Math.max(a, v));
+    const lr = Math.round(zw(Number(lage.r ?? 8) || 0, 0, Math.max(0, (window.outerWidth || 1600) - breite - 8))), lo = Math.round(zw(Number(lage.o ?? 72) || 0, 0, Math.max(0, (window.outerHeight || 900) * 0.45)));
+    leisteR = lr;
     const alt = leisteRechts;
     leisteRechts = null;
     try {
@@ -2240,7 +2249,7 @@
         visible: true,
         position: { vertical: "top", horizontal: "right" },
         size: { width: (leisteSchmal ? LEISTE_SCHMAL : LEISTE_BREIT) + "px", height: "48vh" },
-        margin: { top: "72px", right: "8px" }
+        margin: { top: lo + "px", right: lr + "px" }
       });
     } catch {
     }
@@ -3826,6 +3835,13 @@
         if (!v || !v.t || v.t === letzteAktion) return;
         letzteAktion = v.t;
         if (v.was === "chat") return chatUmschalten();
+        if (v.was === "leisteLage") {
+          try {
+            WA.player.state.saveVariable("swLeisteLage", { r: Number(v.r) || 0, o: Number(v.o) || 0 }, { public: false, persist: true });
+          } catch {
+          }
+          return leisteRechtsAuf();
+        }
         if (v.was === "leisteRechts") {
           leisteSchmal = !!v.schmal;
           try {

@@ -15,7 +15,7 @@
   html, body { margin:0; height:100%; background:transparent; color:#fff; font-family:system-ui,-apple-system,"Segoe UI",sans-serif; overflow:hidden; }
   #l { height:100%; background:rgba(22,24,29,.9); border:1px solid rgba(255,255,255,.14); border-radius:14px; display:flex; flex-direction:column; }
   .kopf { display:flex; align-items:center; gap:6px; padding:9px 10px 6px; font-size:12.5px; font-weight:700; }
-  .kopf span { flex:1; } .kopf button { border:0; background:rgba(255,255,255,.12); color:#fff; border-radius:8px; width:26px; height:24px; cursor:pointer; font-size:13px; }
+  .kopf span { flex:1; } .kopf { cursor:grab; touch-action:none; } body.zieht .kopf { cursor:grabbing; } body.zieht #l { outline:2px solid #5eead4; } .kopf button { border:0; background:rgba(255,255,255,.12); color:#fff; border-radius:8px; width:26px; height:24px; cursor:pointer; font-size:13px; }
   .inh { flex:1; overflow-y:auto; padding:0 8px 8px; }
   .gt { font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:rgba(255,255,255,.55); margin:9px 2px 3px; }
   .p { display:flex; gap:8px; align-items:center; padding:5px 4px; border-radius:9px; cursor:pointer; }
@@ -42,7 +42,7 @@
 </style>
 </head>
 <body>
-<div id="l"><div class="kopf"><span id="titel">Online</span><button id="klapp" title="Leiste schmal/breit">›</button></div><div class="inh" id="inh"><div class="leer">Lädt …</div></div></div>
+<div id="l"><div class="kopf"><span id="titel" title="Ziehen zum Verschieben">Online</span><button id="klapp" title="Leiste schmal/breit">›</button></div><div class="inh" id="inh"><div class="leer">Lädt …</div></div></div>
 <script>
 const KEY = "a21b2aa2a42fe6189b05773c07bbc9ad78e38b34ba3bb6fe", B = "https://swdigitaltest.de/buero-praesenz";
 const $ = id => document.getElementById(id), q = new URLSearchParams(location.search), SITZ = q.get("s") || "";
@@ -94,6 +94,23 @@ async function laden() {
   try { const r = await fetch(B + "/leiste", { headers: { "X-Buero-Key": KEY, "X-Buero-Sitzung": SITZ } }); if (!r.ok) throw new Error(r.status === 401 ? "Bitte das Büro neu laden." : "Gerade nicht erreichbar"); daten = await r.json(); malen(); }
   catch (e) { if (!daten) $("inh").innerHTML = '<div class="leer">' + esc(e.message) + "</div>"; }
 }
+// Frei verschieben (23.10.2026, Sam): Kopfzeile ziehen. Live über den Abstand des WorkAdventure-Fensters; beim Loslassen meldet die Seite
+// die Lage ans Büro-Skript (swAktion „leisteLage“), das sie dauerhaft merkt (swLeisteLage { r, o }) und die Leiste dort neu öffnet.
+const START = location.href.split("#")[0]; let ich = null;
+WA.onInit().then(async () => { try { ich = (await WA.ui.website.getAll()).find(w => String(w.url || "").split("#")[0] === START) || null; } catch { /* alt */ } });
+document.querySelector(".kopf").addEventListener("pointerdown", e => {
+  if (e.button !== 0 || e.target.closest("button")) return; e.preventDefault(); const k = e.currentTarget; k.setPointerCapture(e.pointerId);
+  let lage = {}; try { lage = WA.player.state.swLeisteLage || {}; } catch { /* neu */ }
+  const r0 = Number(lage.r ?? 8), o0 = Number(lage.o ?? 72), x0 = e.screenX, y0 = e.screenY, zw = (v, a, z) => Math.min(z, Math.max(a, v));
+  const SW = window.outerWidth || screen.availWidth || 1600, SH = window.outerHeight || screen.availHeight || 900;
+  let r = r0, o = o0, bewegt = false; document.body.classList.add("zieht");
+  const weiter = m => { const dx = m.screenX - x0, dy = m.screenY - y0; if (Math.abs(dx) + Math.abs(dy) > 3) bewegt = true;
+    r = Math.round(zw(r0 - dx, 0, SW - window.innerWidth - 8)); o = Math.round(zw(o0 + dy, 0, SH - window.innerHeight - 120));
+    try { if (ich && ich.margin) { ich.margin.right = r + "px"; ich.margin.top = o + "px"; } } catch { /* nicht live */ } };
+  const los = () => { k.removeEventListener("pointermove", weiter); k.removeEventListener("pointerup", los); k.removeEventListener("pointercancel", los);
+    document.body.classList.remove("zieht"); if (bewegt) aktion("leisteLage", { r, o }); };
+  k.addEventListener("pointermove", weiter); k.addEventListener("pointerup", los); k.addEventListener("pointercancel", los);
+});
 $("klapp").onclick = () => { schmal = !schmal; offen = ""; malen(); aktion("leisteRechts", { schmal }); };
 WA.onInit().then(() => { laden(); setInterval(laden, 8000); }).catch(() => { laden(); setInterval(laden, 8000); });
 </script>
