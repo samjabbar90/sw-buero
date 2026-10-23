@@ -59,6 +59,9 @@ const SITZUNG = Math.random().toString(36).slice(2) + Date.now().toString(36), H
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const ausweis = () => { try { return localStorage.getItem("swBueroAusweis") || ""; } catch { return ""; } };
+// 23.10.2026 (Sam: „zweimal anmelden“): vor dem Wechsel auf die Karte dem Server sagen, dass ich hier angemeldet bin → die Karte sperrt nicht nochmal
+async function zurKarte(url) { try { await fetch(B + "/ausweis/zur-karte", { method: "POST", headers: H() }); } catch {} melden("verlassen"); location.href = url; }
+document.addEventListener("click", e => { const a = e.target.closest && e.target.closest('a[href^="' + BUERO + '"]'); if (!a || IM || e.defaultPrevented) return; e.preventDefault(); zurKarte(a.href); });
 const H = () => ({ "X-Buero-Key": KEY, "X-Buero-Ausweis": ausweis(), "Content-Type": "application/json" });
 let ICH = "", leute = [], weg = [], meldungen = [], termine = [], offen = "", seit = "", gestartet = false, takt = null;
 // Anzeige-Namen der Räume wie in der Schnellreise
@@ -115,7 +118,7 @@ function zeichnen() {
     <div id="fe"></div></div>`;
   if (weg.length) h += `<div class="karte"><details><summary>Nicht im Büro (${weg.length})</summary>${weg.map(p => `<div class="p"><span class="gesicht" style="background:#cbd5e1">${esc(initialen(p.name))}</span><div><div class="n">${esc(p.name)}</div><div class="w">${p.zuletzt ? "zuletzt " + new Date(p.zuletzt).toLocaleString("de-DE", { weekday: "short", hour: "2-digit", minute: "2-digit" }) : "–"}</div></div>${p.durchwahl ? `<div class="akt"><a class="k" href="tel:${esc(p.durchwahl)}">📞</a></div>` : ""}</div>`).join("")}</details></div>`;
   $("inhalt").innerHTML = h;
-  $("karte").onclick = () => { if (IM) return buero("arbeitenZu"); melden("verlassen"); location.href = BUERO + "#karte=1"; }; // 22.10.2026: Karte ausdrücklich gewollt (sonst leitet das Büro-Skript am Handy hierher zurück)
+  $("karte").onclick = () => { if (IM) return buero("arbeitenZu"); zurKarte(BUERO + "#karte=1"); }; // 22.10.2026: Karte ausdrücklich gewollt (sonst leitet das Büro-Skript am Handy hierher zurück)
   document.querySelectorAll("[data-k]").forEach(b => b.onclick = () => blatt(KACHELN[+b.dataset.k]));
   document.querySelectorAll("[data-weg]").forEach(b => b.onclick = () => { meldungen.splice(+b.dataset.weg, 1); offen = ""; zeichnen(); });
   document.querySelectorAll("[data-antw]").forEach(b => b.onclick = () => { offen = offen === "a" + b.dataset.antw ? "" : "a" + b.dataset.antw; zeichnen(); $("txt") && $("txt").focus(); });
