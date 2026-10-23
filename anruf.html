@@ -55,7 +55,19 @@ async function schliessen() { gespraechEnde(); freiton(false); clearInterval(tak
 // Im VBüro spielt ihn das Büro-Skript (swAktion „freiton“, wie die Klingel beim Angerufenen), im Handy-Büro diese Seite selbst.
 let freiAudio = null;
 function freiEinmal() { if (imBuero) { try { WA.player.state.saveVariable("swAktion", { was: "freiton", t: Date.now() }, { public: false, persist: false }); } catch (e) {} return; }
-  try { freiAudio = freiAudio || new Audio("toene/freiton.wav"); freiAudio.currentTime = 0; freiAudio.play().catch(() => {}); } catch (e) {} }
+  // 23.10.2026 (Sam: „klingelt bei mir nicht, wenn ich anrufe“): erst die Ton-Datei, blockiert das Gerät sie → selbst erzeugter Ton (Web Audio).
+  // Was geklappt hat, geht als Diagnose ins Server-Log (die ersten 3 Töne).
+  try { freiAudio = freiAudio || new Audio("toene/freiton.wav"); freiAudio.currentTime = 0;
+    freiAudio.play().then(() => freiDiag("datei")).catch(e => { const w = piep(); freiDiag("datei-blockiert:" + (e && e.name) + " · webaudio:" + w); }); } catch (e) { freiDiag("fehler:" + piep()); } }
+let tonCtx = null, freiN = 0;
+function piep() {
+  try { tonCtx = tonCtx || new (window.AudioContext || window.webkitAudioContext)(); if (tonCtx.state !== "running") tonCtx.resume().catch(() => {});
+    const o = tonCtx.createOscillator(), g = tonCtx.createGain(), t = tonCtx.currentTime; o.frequency.value = 425; g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.3, t + 0.02); g.gain.setValueAtTime(0.3, t + 0.98); g.gain.linearRampToValueAtTime(0, t + 1); o.connect(g); g.connect(tonCtx.destination); o.start(t); o.stop(t + 1.05);
+    return tonCtx.state; } catch (e) { return "fehlt"; } }
+function freiDiag(was) { if (++freiN > 3) return; fetch(B + "/" + encodeURIComponent(ID) + "/diag", { method: "POST", headers: H(), body: JSON.stringify({ freiton: was, mikro: mikro ? "ok" : "noch nicht", handy: /iPhone|Android|Mobile/i.test(navigator.userAgent) }) }).catch(() => {}); }
+// jede Berührung schaltet die Ton-Ausgabe frei (iPhone)
+["touchstart", "click"].forEach(ev => document.addEventListener(ev, () => { try { if (tonCtx && tonCtx.state !== "running") tonCtx.resume(); if (freiAudio && freiTakt) freiAudio.play().catch(() => {}); } catch (e) {} }, { passive: true }));
 function freiton(an) { if (an && !freiTakt) { freiEinmal(); freiTakt = setInterval(freiEinmal, 5000); } else if (!an && freiTakt) { clearInterval(freiTakt); freiTakt = null; try { freiAudio && freiAudio.pause(); } catch (e) {} } }
 async function api(pfad, opt = {}) { const r = await fetch(B + pfad, { ...opt, headers: H() }); const d = await r.json().catch(() => ({})); if (r.status === 401) throw new Error("Bitte zuerst im Handy-Büro anmelden."); if (!r.ok) throw new Error(d.error || "Fehler"); return d; }
 function ziel(a) { return a.raum + "&zurueck=" + (imBuero ? "buero" : "handy"); }
