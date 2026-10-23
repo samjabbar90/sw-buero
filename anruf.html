@@ -145,7 +145,9 @@ function gespraechEnde() { if (diagTakt) { diag(); clearInterval(diagTakt); diag
   try { mikro && mikro.getTracks().forEach(t => t.stop()); } catch (e) {} mikro = null;
   try { sperre && sperre.release(); } catch (e) {} sperre = null;
 }
+let letzterStatus = "";
 function malen(a) {
+  letzterStatus = a.status;
   if (a.modus === "web" && a.status === "laeuft") { freiton(false); if (!pc) { gespraechUI(a); gespraechStarten(a); } return; }
   if (pc) gespraechEnde();
   // Mikrofon-Frage schon beim Klingeln – danach darf das iPhone auch den Freiton spielen (vorher blockiert es Töne)
@@ -176,6 +178,9 @@ function malenKlein(a) {
   clearInterval(takt); $("zu").onclick = schliessen; setTimeout(schliessen, 3000);
 }
 async function laden() { try { malen(await api("/" + encodeURIComponent(ID))); } catch (e) { clearInterval(takt); $("inhalt").innerHTML = `<div class="gs">📵</div><h1>${esc(e.message)}</h1><p></p><div class="knoepfe"><div><button class="nein" id="zu" style="background:rgba(255,255,255,.2)">✓</button><small>Schließen</small></div></div>`; $("zu").onclick = zurueck; } }
+// Seite weg (zurück, ✕, Fenster zu) während es klingelt oder läuft → Anruf beenden, sonst klingelt es beim anderen weiter (23.10.2026, Sam)
+window.addEventListener("pagehide", () => { if (!["klingelt", "laeuft"].includes(letzterStatus)) return; letzterStatus = "beendet";
+  try { fetch(B + "/" + encodeURIComponent(ID) + "/ende", { method: "POST", headers: H(), body: "{}", keepalive: true }); } catch (e) { /* egal */ } });
 laden(); takt = setInterval(laden, 2000);
 </script>
 </body>
