@@ -39,7 +39,7 @@ const aktion = (was, id, extra) => { try { WA.player.state.saveVariable("swAktio
 function zeichnen() {
   document.getElementById("l").innerHTML = liste.map(m => {
     const vn = String(m.von || "").split(/\s+/)[0], zeit = new Date(m.t).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
-    const titel = m.art === "klopfen" ? vn + " klopft an" : m.art === "einladung" ? vn + " lädt dich ein" : m.art === "anruf" ? "📞 " + vn + " ruft an" : m.art === "nachricht" ? vn + " schreibt" : m.art === "termin" ? m.titel || "Termin" : m.art === "info" ? "Mitteilung" : (vn ? vn + " " : "") + (m.kurz || "");
+    const titel = m.art === "klopfen" ? vn + " klopft an" : m.art === "einladung" ? vn + " lädt dich ein" : m.art === "anruf" ? "📞 " + vn + " ruft an" : m.art === "nachricht" ? (m.konv && m.konv.startsWith("g:") ? m.von : vn) + " schreibt" : m.art === "termin" ? m.titel || "Termin" : m.art === "info" ? "Mitteilung" : (vn ? vn + " " : "") + (m.kurz || "");
     let k = "";
     if (m.art === "klopfen") k = `<button class="voll" data-a="mtReinlassen" data-id="${m.id}">Reinlassen</button><button data-a="mtGleich" data-id="${m.id}">Komme gleich</button>`;
     if (m.art === "nachricht") k = antwortAuf === m.id ? `<input id="ant" placeholder="Antwort an ${esc(vn)} …" maxlength="300"><button class="voll" data-senden="${m.id}">Senden</button>`
@@ -60,7 +60,7 @@ async function senden(id) {
   const m = liste.find(x => x.id === id), i = document.getElementById("ant"), t = i ? i.value.trim() : ""; if (!m || !t) return;
   let aw = ""; try { aw = localStorage.getItem("swBueroAusweis") || ""; } catch {}
   // 23.10.2026: Nachricht aus dem Chat → Antwort landet im Chat-Verlauf
-  const ziel = m.vonId ? { url: "https://swdigitaltest.de/buero-praesenz/chat/senden", body: { an: m.vonId, text: t } } : { url: "https://swdigitaltest.de/buero-praesenz/wer/nachricht", body: { an: m.von, text: t } };
+  const ziel = m.vonId ? { url: "https://swdigitaltest.de/buero-praesenz/chat/senden", body: m.konv ? { k: m.konv, text: t } : { an: m.vonId, text: t } } : { url: "https://swdigitaltest.de/buero-praesenz/wer/nachricht", body: { an: m.von, text: t } };
   try { const r = await fetch(ziel.url, { method: "POST", headers: { "X-Buero-Key": KEY, "X-Buero-Ausweis": aw, "X-Buero-Name": encodeURIComponent(WA.player.name || ""), "Content-Type": "application/json" }, body: JSON.stringify(ziel.body)});
     const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || "Fehler");
     antwortAuf = ""; aktion("mtWeg", id); }

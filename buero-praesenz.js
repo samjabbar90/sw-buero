@@ -91,7 +91,7 @@
     mtFenster = null;
     if (mitteilungen.length) try {
       mtFenster = await WA.ui.website.open({
-        url: SEITEN + "mitteilungen.html?v=6",
+        url: SEITEN + "mitteilungen.html?v=7",
         allowApi: true,
         visible: true,
         position: { vertical: "top", horizontal: HANDY ? "middle" : "right" },
@@ -162,7 +162,7 @@
       mtWeg(m.id);
     },
     mtChat: (m) => {
-      glasFenster(m.vonId ? SEITEN + "chat.html?mit=" + encodeURIComponent(m.vonId) + "&s=" + SITZUNG + "&t=" + Date.now() : SEITEN + "wer.html?an=" + encodeURIComponent(m.von || "") + "&t=" + Date.now());
+      glasFenster(m.vonId ? SEITEN + "chat.html?" + (m.konv ? "k=" + encodeURIComponent(m.konv) : "mit=" + encodeURIComponent(m.vonId)) + "&s=" + SITZUNG + "&t=" + Date.now() : SEITEN + "wer.html?an=" + encodeURIComponent(m.von || "") + "&t=" + Date.now());
       mtWeg(m.id);
     },
     mtPush: (m) => {
@@ -184,7 +184,7 @@
       return;
     }
     {
-      mitteilung({ art: "nachricht", von: m.von, vonId: m.vonId, text: String(m.text || "").slice(0, 300) });
+      mitteilung({ art: "nachricht", von: m.von, vonId: m.vonId, konv: m.konv, text: String(m.text || "").slice(0, 300) });
       return;
     }
     try {
@@ -1696,7 +1696,7 @@
     return { position: { vertical: "top", horizontal: "right" }, size: { width: b + "px", height: hv + "vh" }, margin: { top: Math.round(Number(e.o) || 70) + "px", right: Math.round(Number(e.r ?? 14)) + "px" } };
   }
   async function glasOeffnen(u) {
-    return await WA.ui.website.open({ url: u, allowApi: true, visible: true, ...glasLage() });
+    return await WA.ui.website.open({ url: u, allowApi: true, allowPolicy: "microphone", visible: true, ...glasLage() });
   }
   async function glasFenster(url) {
     const u = url + (url.includes("?") ? "&" : "?") + "glas=1";
@@ -3680,7 +3680,7 @@
           ...tcAktiv ? [["sw-tagescheck", "Tages-Check", "tagescheck", () => glasFenster(SEITEN + "tagescheck.html?t=" + Date.now())]] : [],
           ...kzAktiv ? [["sw-arbeitszeit", "Arbeitszeit", "arbeitszeit", () => glasFenster(SEITEN + "kernzeit.html?t=" + Date.now())], ["sw-feierabend", "Feierabend", "feierabend", feierabendOeffnen]] : [],
           ...chatDarf ? [["sw-chat", "Chats", "chat", () => glasFenster(SEITEN + "chat.html?s=" + SITZUNG + "&t=" + Date.now())]] : [],
-          // 23.10.2026 Chat (Test)
+          // 23.10.2026 Chat (seit abends für alle)
           ["sw-toene", "T\xF6ne", "toene", () => glasFenster(SEITEN + "toene.html?t=" + Date.now())],
           // 22.10.2026: Lautstärke je Art
           ["sw-alles-zu", "Alles zu", "alleszu", allesZu]

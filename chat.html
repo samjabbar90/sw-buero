@@ -6,54 +6,109 @@
 <meta name="theme-color" content="#0f766e">
 <title>Chats</title>
 <!-- Chat im VBüro (23.10.2026, Sam: „das ist ja kein Chat“ → Layout wie WhatsApp: ① Chats im Handy-Büro ② Liste ③ Verlauf).
-     Dieselbe Seite im Handy-Büro (Blatt) und im VBüro am PC (Glas-Fenster); Push-Meldung öffnet chat.html?mit=<id> direkt.
-     Server: /buero-praesenz/chat/liste | verlauf | senden (Büro-Ausweis). Noch Test: nur Sam + Leutrim (CHAT_TEST in routes/buero.js). -->
+     Dieselbe Seite im Handy-Büro (Blatt) und im VBüro am PC (Glas-Fenster); Push-Meldung öffnet chat.html?k=<Gespräch> direkt.
+     Ausbau 23.10.2026 abends (Sam: „alles“): Gruppen, Bilder/Dateien (📎, Einfügen, Ziehen), 🎙 Sprachnachricht, Antworten, Reaktionen,
+     Bearbeiten, Löschen, „schreibt …“, Suche. Admin sieht Gelöschtes/Bearbeitetes immer (im Verlauf + 🛡 Protokoll).
+     Server: /buero-praesenz/chat/* in routes/buero.js (Büro-Sitzung ?s= oder Büro-Ausweis). Gespräch k = „dm:<id>-<id>“ oder „g:<id>“. -->
 <style>
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
   html, body { height:100%; }
   body { margin:0; background:#fff; color:#111827; font-family:system-ui,-apple-system,"Segoe UI",sans-serif; font-size:15px; display:flex; flex-direction:column; }
-  header { background:#0f766e; color:#fff; padding:calc(10px + env(safe-area-inset-top)) 12px 10px; display:flex; align-items:center; gap:10px; flex:none; }
-  header h1 { margin:0; font-size:17px; flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; } header small { display:block; font-size:12px; font-weight:400; opacity:.85; }
-  header button { background:rgba(255,255,255,.18); color:#fff; border:0; border-radius:10px; padding:7px 11px; font:inherit; font-size:15px; cursor:pointer; }
-  main { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; }
+  header { background:#0f766e; color:#fff; padding:calc(10px + env(safe-area-inset-top)) 12px 10px; display:flex; align-items:center; gap:8px; flex:none; }
+  header h1 { margin:0; font-size:17px; flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; } header small { display:block; font-size:12px; font-weight:400; opacity:.85; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  header button { background:rgba(255,255,255,.18); color:#fff; border:0; border-radius:10px; padding:7px 10px; font:inherit; font-size:15px; cursor:pointer; flex:none; }
+  .suche { flex:none; padding:8px 10px; border-bottom:1px solid #eef0f2; } .suche input { width:100%; font:inherit; font-size:15px; padding:8px 12px; border:1px solid #d1d5db; border-radius:18px; }
+  main { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; position:relative; }
   .z { display:flex; align-items:center; gap:11px; padding:11px 14px; border-bottom:1px solid #eef0f2; cursor:pointer; }
   .z:active { background:#f3f4f6; }
   .gs { position:relative; width:42px; height:42px; border-radius:50%; background:#9FE1CB; color:#04342C; display:flex; align-items:center; justify-content:center; font-weight:600; font-size:14px; flex:none; }
+  .gs.gr { background:#c7d2fe; color:#1e1b4b; font-size:19px; }
   .gs i { position:absolute; right:0; bottom:0; width:11px; height:11px; border-radius:50%; background:#22c55e; border:2px solid #fff; }
   .z .n { font-weight:600; } .z .l { font-size:13px; color:#6b7280; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .z .r { margin-left:auto; text-align:right; flex:none; font-size:11.5px; color:#9ca3af; }
   .rot { display:inline-block; background:#E24B4A; color:#fff; border-radius:10px; padding:1px 7px; font-size:12px; font-weight:600; margin-top:3px; }
   .leer { color:#6b7280; padding:22px 16px; font-size:14px; line-height:1.5; }
+  .ue { font-size:12px; font-weight:700; color:#6b7280; padding:10px 14px 4px; text-transform:uppercase; letter-spacing:.04em; }
   #verlauf { padding:10px 12px 6px; display:flex; flex-direction:column; }
-  .sb { max-width:80%; padding:8px 11px; border-radius:14px; margin:3px 0; line-height:1.4; white-space:pre-wrap; word-wrap:break-word; font-size:15px; }
+  .w { display:flex; flex-direction:column; }
+  .sb { position:relative; max-width:80%; padding:7px 11px; border-radius:14px; margin:3px 0; line-height:1.4; white-space:pre-wrap; word-wrap:break-word; font-size:15px; cursor:pointer; }
   .sb small { display:block; font-size:10.5px; opacity:.7; margin-top:2px; text-align:right; }
+  .sb .wer { display:block; font-size:12px; font-weight:700; color:#0f766e; margin-bottom:1px; }
   .meins { background:#0f766e; color:#fff; align-self:flex-end; border-bottom-right-radius:4px; }
   .seins { background:#f1f5f9; align-self:flex-start; border-bottom-left-radius:4px; }
+  .sys { align-self:center; font-size:12.5px; color:#6b7280; background:#f3f4f6; border-radius:10px; padding:4px 10px; margin:6px 0; text-align:center; }
+  .sb.weg { font-style:italic; opacity:.75; } .sb.weg.admin { opacity:1; outline:2px dashed #E24B4A; }
+  .alt { display:block; font-size:12.5px; text-decoration:line-through; opacity:.75; margin-top:3px; font-style:normal; }
+  .zit { display:block; border-left:3px solid #5eead4; background:rgba(0,0,0,.08); border-radius:6px; padding:3px 8px; margin:1px 0 5px; font-size:12.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .zit b { display:block; font-size:11.5px; }
+  .sb img.bild { display:block; max-width:240px; max-height:260px; border-radius:10px; margin:2px 0 3px; cursor:zoom-in; }
+  .sb audio { display:block; width:230px; max-width:100%; margin:2px 0; }
+  .datei { display:flex; gap:8px; align-items:center; background:rgba(0,0,0,.08); border-radius:8px; padding:7px 9px; margin:2px 0 3px; color:inherit; text-decoration:none; font-size:14px; }
+  .reak { display:flex; flex-wrap:wrap; gap:3px; margin:-2px 0 4px; } .meins + .reak { align-self:flex-end; } .seins + .reak { align-self:flex-start; }
+  .reak span { background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:0 6px; font-size:13px; cursor:pointer; } .reak span.ich { border-color:#0f766e; background:#ccfbf1; }
   .tag { align-self:center; font-size:11.5px; color:#6b7280; background:#f3f4f6; border-radius:8px; padding:2px 9px; margin:8px 0 4px; }
-  footer { flex:none; display:flex; gap:8px; align-items:flex-end; padding:8px 10px calc(8px + env(safe-area-inset-bottom)); border-top:1px solid #eef0f2; background:#fff; }
-  footer textarea { flex:1; resize:none; font:inherit; font-size:16px; padding:9px 12px; border:1px solid #d1d5db; border-radius:20px; max-height:120px; line-height:1.35; }
-  footer button { width:42px; height:42px; border-radius:50%; border:0; background:#0f766e; color:#fff; font-size:18px; cursor:pointer; flex:none; }
+  .blitz { animation:blitz 1.4s; } @keyframes blitz { 0%,60% { box-shadow:0 0 0 3px #fbbf24; } 100% { box-shadow:none; } }
+  #tippt { font-size:12.5px; color:#0f766e; padding:0 14px 4px; min-height:0; font-style:italic; }
+  #leiste { flex:none; display:none; align-items:center; gap:8px; padding:6px 12px; background:#f0fdfa; border-top:1px solid #ccfbf1; font-size:13px; }
+  #leiste div { flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; } #leiste button { border:0; background:none; font-size:16px; cursor:pointer; color:inherit; }
+  footer { flex:none; display:flex; gap:6px; align-items:flex-end; padding:8px 8px calc(8px + env(safe-area-inset-bottom)); border-top:1px solid #eef0f2; background:#fff; }
+  footer textarea { flex:1; min-width:0; resize:none; font:inherit; font-size:16px; padding:9px 12px; border:1px solid #d1d5db; border-radius:20px; max-height:120px; line-height:1.35; }
+  footer button { width:40px; height:40px; border-radius:50%; border:0; background:#0f766e; color:#fff; font-size:18px; cursor:pointer; flex:none; }
+  footer button.k { background:transparent; color:#0f766e; font-size:21px; width:34px; }
+  #aufnahme { flex:1; display:none; align-items:center; gap:8px; font-size:15px; color:#b91c1c; padding:0 6px; height:40px; }
   .fehler { color:#b91c1c; font-size:13px; padding:6px 14px; }
+  /* Menüs, Fenster, Bild groß */
+  .huelle { position:fixed; inset:0; background:rgba(0,0,0,.45); display:flex; align-items:center; justify-content:center; z-index:20; padding:16px; }
+  .karte { background:#fff; color:#111827; border-radius:14px; padding:12px; width:100%; max-width:340px; max-height:85vh; overflow-y:auto; box-shadow:0 10px 30px rgba(0,0,0,.35); }
+  .karte h3 { margin:2px 0 10px; font-size:16px; }
+  .karte .emo { display:flex; justify-content:space-between; font-size:24px; padding:2px 2px 8px; border-bottom:1px solid #eef0f2; margin-bottom:6px; } .karte .emo span { cursor:pointer; padding:2px 4px; border-radius:8px; } .karte .emo span.ich { background:#ccfbf1; }
+  .karte .pkt { display:block; width:100%; text-align:left; border:0; background:none; font:inherit; font-size:15px; padding:10px 6px; border-radius:8px; cursor:pointer; color:inherit; } .karte .pkt:hover { background:#f3f4f6; }
+  .karte .pkt.rot2 { color:#b91c1c; }
+  .karte input[type=text] { width:100%; font:inherit; font-size:15px; padding:8px 10px; border:1px solid #d1d5db; border-radius:8px; margin-bottom:8px; }
+  .karte label { display:flex; align-items:center; gap:8px; padding:6px 2px; font-size:14.5px; }
+  .karte .knopf { border:0; border-radius:10px; background:#0f766e; color:#fff; font:inherit; font-weight:700; padding:10px 14px; cursor:pointer; margin-top:8px; }
+  .karte .knopf.hell { background:#f1f5f9; color:#111827; }
+  .klein { font-size:12.5px; color:#6b7280; line-height:1.45; }
+  .verl { border-left:3px solid #fbbf24; padding:3px 8px; margin:5px 0; font-size:13.5px; }
+  #gross { position:fixed; inset:0; background:rgba(0,0,0,.9); display:none; align-items:center; justify-content:center; z-index:30; } #gross img { max-width:96vw; max-height:92vh; }
+  .emojis { display:grid; grid-template-columns:repeat(8,1fr); gap:2px; font-size:23px; text-align:center; } .emojis span { cursor:pointer; padding:3px 0; border-radius:6px; } .emojis span:hover { background:#f3f4f6; }
+  .prot { border-bottom:1px solid #eef0f2; padding:10px 14px; font-size:14px; } .prot .k2 { font-size:12px; color:#6b7280; } .prot .jetzt { margin:4px 0; }
   /* VBüro-Fenster (dunkles Glas, weiße Schrift) – 23.10.2026 (Leutrim: „Schrift zu hell“): alles dunkel statt weißer Flächen */
-  html.glas main, html.glas footer { background:transparent !important; } html.glas footer { border-top-color:rgba(255,255,255,.15); }
-  html.glas .z { border-bottom-color:rgba(255,255,255,.12); } html.glas .z:active { background:rgba(255,255,255,.08); }
-  html.glas .z .n { color:#fff !important; } html.glas .z .l, html.glas .z .r, html.glas .leer { color:rgba(255,255,255,.75) !important; }
-  html.glas .seins { background:rgba(255,255,255,.16); color:#fff; } html.glas .tag { background:rgba(255,255,255,.12); color:rgba(255,255,255,.8); }
-  html.glas footer textarea { background:rgba(0,0,0,.35); color:#fff; border-color:rgba(255,255,255,.25); } html.glas footer textarea::placeholder { color:rgba(255,255,255,.55); }
-  html.glas .gs i { border-color:#1f2937; }
+  html.glas main, html.glas footer, html.glas .suche { background:transparent !important; } html.glas footer, html.glas .suche { border-color:rgba(255,255,255,.15); }
+  html.glas .z, html.glas .prot { border-bottom-color:rgba(255,255,255,.12); } html.glas .z:active { background:rgba(255,255,255,.08); }
+  html.glas .z .n { color:#fff !important; } html.glas .z .l, html.glas .z .r, html.glas .leer, html.glas .ue, html.glas .prot .k2 { color:rgba(255,255,255,.75) !important; }
+  html.glas .seins { background:rgba(255,255,255,.16); color:#fff; } html.glas .tag, html.glas .sys { background:rgba(255,255,255,.12); color:rgba(255,255,255,.8); }
+  html.glas .seins .wer { color:#5eead4; } html.glas #tippt { color:#5eead4; }
+  html.glas footer textarea, html.glas .suche input { background:rgba(0,0,0,.35); color:#fff; border-color:rgba(255,255,255,.25); } html.glas footer textarea::placeholder, html.glas .suche input::placeholder { color:rgba(255,255,255,.55); }
+  html.glas footer button.k { color:#5eead4; } html.glas #leiste { background:rgba(94,234,212,.12); border-color:rgba(255,255,255,.15); color:#fff; }
+  html.glas .gs i { border-color:#1f2937; } html.glas .reak span { background:rgba(255,255,255,.12); border-color:rgba(255,255,255,.2); color:#fff; } html.glas .reak span.ich { background:rgba(94,234,212,.3); border-color:#5eead4; }
+  html.glas .karte { background:#1f2937; color:#f1f5f9; } html.glas .karte .pkt:hover, html.glas .emojis span:hover { background:rgba(255,255,255,.1); } html.glas .karte input[type=text] { background:rgba(0,0,0,.35); color:#fff; border-color:rgba(255,255,255,.25); }
+  html.glas .karte .knopf.hell { background:rgba(255,255,255,.12); color:#fff; } html.glas .klein { color:rgba(255,255,255,.7); } html.glas .karte .pkt.rot2 { color:#fca5a5; }
 </style>
 <script src="glas.js?v=1792766713"></script>
 </head>
 <body>
 <header id="kopf"><h1>💬 Chats</h1></header>
+<div class="suche" id="sucheBox"><input id="suche" type="search" placeholder="🔍 Suchen (Namen und Nachrichten)" autocomplete="off"></div>
 <main id="inhalt"><div class="leer">Lädt …</div></main>
-<footer id="fuss" style="display:none"><textarea id="txt" rows="1" placeholder="Nachricht schreiben …"></textarea><button id="los" aria-label="Senden">➤</button></footer>
+<div id="tippt"></div>
+<div id="leiste"><div id="leisteText"></div><button id="leisteZu" aria-label="Abbrechen">✕</button></div>
+<footer id="fuss" style="display:none">
+  <button class="k" id="anhang" aria-label="Datei anhängen" title="Bild oder Datei">📎</button>
+  <button class="k" id="emoBtn" aria-label="Emoji" title="Emoji">😊</button>
+  <textarea id="txt" rows="1" placeholder="Nachricht schreiben …"></textarea>
+  <div id="aufnahme">● <span id="aufZeit">0:00</span> Aufnahme … <button class="k" id="aufWeg" aria-label="Verwerfen" style="margin-left:auto">🗑</button></div>
+  <button id="los" aria-label="Senden">🎙</button>
+  <input type="file" id="datei" hidden>
+</footer>
+<div id="gross"><img id="grossBild" alt=""></div>
 <script src="https://play.workadventu.re/iframe_api.js"></script>
 <script>
 const KEY = "a21b2aa2a42fe6189b05773c07bbc9ad78e38b34ba3bb6fe", B = "https://swdigitaltest.de/buero-praesenz/chat";
 const $ = id => document.getElementById(id), q = new URLSearchParams(location.search);
 const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const ausweis = () => { try { return localStorage.getItem("swBueroAusweis") || ""; } catch { return ""; } };
+const HANDY = /Mobi|iPhone|Android/i.test(navigator.userAgent);
 // im VBüro reicht die Büro-Sitzung (?s=…), sonst Büro-Ausweis (Handy-Büro) – 23.10.2026
 const SITZ = q.get("s") || "";
 const H = () => SITZ && !ausweis() ? { "X-Buero-Key": KEY, "X-Buero-Sitzung": SITZ, "Content-Type": "application/json" } : { "X-Buero-Key": KEY, "X-Buero-Ausweis": ausweis(), "X-Buero-Sitzung": SITZ, "Content-Type": "application/json" };
@@ -63,77 +118,262 @@ const uhr = iso => new Date(iso).toLocaleTimeString("de-DE", { hour: "2-digit", 
 const tagText = iso => { const d = new Date(iso), h = new Date(); const g = new Date(h); g.setDate(h.getDate() - 1);
   return d.toDateString() === h.toDateString() ? "Heute" : d.toDateString() === g.toDateString() ? "Gestern" : d.toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit" }); };
 const kurzZeit = iso => { const d = new Date(iso); return d.toDateString() === new Date().toDateString() ? uhr(iso) : d.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" }); };
+const langZeit = iso => new Date(iso).toLocaleString("de-DE", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+const groesseText = b => b > 1048576 ? (b / 1048576).toFixed(1).replace(".", ",") + " MB" : Math.max(1, Math.round(b / 1024)) + " KB";
 async function api(pfad, opt = {}) {
-  const r = await fetch(B + pfad, { ...opt, headers: H() }); const d = await r.json().catch(() => ({}));
+  const r = await fetch(B + pfad, { ...opt, headers: { ...H(), ...(opt.headers || {}) } }); const d = await r.json().catch(() => ({}));
   if (r.status === 401) throw Object.assign(new Error("anmelden"), { anmelden: true });
   if (!r.ok) throw new Error(d.error || "Fehler " + r.status); return d;
 }
-let mit = q.get("mit") || "", takt = null, letzteAnzahl = -1;
+const post = (pfad, body) => api(pfad, { method: "POST", body: JSON.stringify(body) });
+// k = Gespräch; alte Links (?mit=<Personen-ID>) gehen weiter
+let konv = q.get("k") || q.get("mit") || "", takt = null, daten = null, ich = null, antwort = null, bearbeiten = null, html = new Map();
+const verlaufPfad = () => "/verlauf?" + (/^(dm|g):/.test(konv) ? "k=" : "mit=") + encodeURIComponent(konv);
 function fehler(e) {
   if (e.anmelden) { $("inhalt").innerHTML = SITZ ? '<div class="leer">Die Büro-Anmeldung ist abgelaufen – bitte das Büro einmal neu laden.</div>' : '<div class="leer">Bitte zuerst im Handy-Büro anmelden.<br><br><a href="handy.html" style="color:#0f766e;font-weight:600">→ Zum Handy-Büro</a></div>'; $("fuss").style.display = "none"; return; }
   $("inhalt").innerHTML = '<div class="leer">' + esc(e.message) + "</div>";
 }
-// ---- ② Liste ----
+function hinweis(t) { const f = document.createElement("div"); f.className = "fehler"; f.textContent = t; ($("verlauf") || $("inhalt")).appendChild(f); $("inhalt").scrollTop = $("inhalt").scrollHeight; setTimeout(() => f.remove(), 6000); }
+function fenster(inhalt) { zu(); const h = document.createElement("div"); h.className = "huelle"; h.id = "huelle"; h.innerHTML = '<div class="karte">' + inhalt + "</div>";
+  h.onclick = e => { if (e.target === h) zu(); }; document.body.appendChild(h); return h; }
+const zu = () => { const h = $("huelle"); if (h) h.remove(); };
+document.addEventListener("keydown", e => { if (e.key === "Escape") { if ($("gross").style.display === "flex") $("gross").style.display = "none"; else if ($("huelle")) zu(); else if (antwort || bearbeiten) leisteZu(); } });
+
+// ---- ② Liste (mit Suche, Gruppe anlegen, 🛡 Protokoll für den Admin) ----
 async function liste() {
-  mit = ""; $("fuss").style.display = "none"; history.replaceState(null, "", location.pathname + "?" + mitS().slice(1));
-  $("kopf").innerHTML = "<h1>💬 Chats</h1>";
+  konv = ""; daten = null; leisteZu(); $("fuss").style.display = "none"; $("tippt").textContent = ""; $("sucheBox").style.display = "";
+  history.replaceState(null, "", location.pathname + "?" + mitS().slice(1));
+  $("kopf").innerHTML = '<h1>💬 Chats</h1><button id="neuGr" title="Neue Gruppe">👥 +</button>' + (ich && ich.admin ? '<button id="prot" title="Bearbeitete und gelöschte Nachrichten">🛡</button>' : "");
+  $("neuGr").onclick = () => gruppeFenster(null);
+  if ($("prot")) $("prot").onclick = protokoll;
   clearInterval(takt); await listeLaden(); takt = setInterval(listeLaden, 8000);
 }
+let suchText = "";
 async function listeLaden() {
+  if (konv) return;
   try {
-    const d = await api("/liste");
-    $("inhalt").innerHTML = d.chats.length ? d.chats.map(c => `<div class="z" data-id="${esc(c.id)}"><span class="gs">${esc(kuerzel(c.name))}${c.online ? "<i></i>" : ""}</span>
-      <div style="min-width:0;flex:1"><div class="n">${esc(c.name)}</div><div class="l">${c.imGespraech ? "📞 im Gespräch · " : ""}${c.letzte ? (c.letzte.vonMir ? "Du: " : "") + esc(c.letzte.text) : (c.online ? "im Büro" : "noch keine Nachricht")}</div></div>
-      <div class="r">${c.letzte ? kurzZeit(c.letzte.zeit) : ""}${c.ungelesen ? '<br><span class="rot">' + c.ungelesen + "</span>" : ""}</div></div>`).join("")
-      : '<div class="leer">Hier gibt es noch niemanden zum Schreiben. (Der Chat ist im Test – nur für freigeschaltete Personen.)</div>';
-    document.querySelectorAll(".z").forEach(z => z.onclick = () => verlauf(z.dataset.id));
+    const d = await api("/liste"), warAdmin = ich && ich.admin; ich = d.ich;
+    if (ich.admin && !warAdmin && !$("prot")) { const b = document.createElement("button"); b.id = "prot"; b.title = "Bearbeitete und gelöschte Nachrichten"; b.textContent = "🛡"; b.onclick = protokoll; $("kopf").appendChild(b); }
+    const s = suchText.toLowerCase(), chats = s ? d.chats.filter(c => c.name.toLowerCase().includes(s)) : d.chats;
+    let h = chats.map(c => `<div class="z" data-k="${esc(c.k)}"><span class="gs ${c.typ === "gruppe" ? "gr" : ""}">${c.typ === "gruppe" ? "👥" : esc(kuerzel(c.name))}${c.online ? "<i></i>" : ""}</span>
+      <div style="min-width:0;flex:1"><div class="n">${esc(c.name)}</div><div class="l">${c.imGespraech ? "📞 im Gespräch · " : ""}${c.letzte ? (c.letzte.vonMir ? "Du: " : "") + esc(c.letzte.text) : c.typ === "gruppe" ? c.anzahl + " Mitglieder" : (c.online ? "im Büro" : "noch keine Nachricht")}</div></div>
+      <div class="r">${c.letzte ? kurzZeit(c.letzte.zeit) : ""}${c.ungelesen ? '<br><span class="rot">' + c.ungelesen + "</span>" : ""}</div></div>`).join("");
+    if (s.length >= 2) { const t = await api("/suche?q=" + encodeURIComponent(suchText)).catch(() => []);
+      if (t.length) h += '<div class="ue">Nachrichten</div>' + t.map(x => `<div class="z" data-k="${esc(x.k)}" data-n="${esc(x.id)}"><div style="min-width:0;flex:1"><div class="n">${esc(x.name)}</div><div class="l">${x.vonMir ? "Du: " : ""}${markiere(x.text, suchText)}</div></div><div class="r">${kurzZeit(x.zeit)}</div></div>`).join(""); }
+    if (konv) return; // inzwischen ein Gespräch geöffnet
+    $("inhalt").innerHTML = h || '<div class="leer">' + (s ? "Nichts gefunden." : "Hier gibt es noch niemanden zum Schreiben.") + "</div>";
+    document.querySelectorAll(".z").forEach(z => z.onclick = () => verlauf(z.dataset.k, z.dataset.n));
   } catch (e) { fehler(e); }
 }
+const markiere = (t, s) => { const i = t.toLowerCase().indexOf(s.toLowerCase()); if (i < 0) return esc(t); const a = Math.max(0, i - 30);
+  return (a ? "…" : "") + esc(t.slice(a, i)) + "<b>" + esc(t.slice(i, i + s.length)) + "</b>" + esc(t.slice(i + s.length, i + s.length + 60)); };
+let suchUhr = null;
+$("suche").oninput = () => { clearTimeout(suchUhr); suchUhr = setTimeout(() => { suchText = $("suche").value.trim(); listeLaden(); }, 300); };
+$("suche").onkeydown = e => e.stopPropagation();
+
+// ---- Gruppe anlegen / ändern ----
+async function gruppeFenster(g) {
+  let personen = []; try { personen = await api("/personen"); } catch (e) { return hinweis(e.message); }
+  const drin = new Set(g ? g.mitglieder.map(m => m.id) : []);
+  const h = fenster(`<h3>${g ? "👥 Gruppe ändern" : "👥 Neue Gruppe"}</h3><input type="text" id="grName" maxlength="60" placeholder="Name der Gruppe" value="${esc(g ? g.name : "")}">
+    <div class="klein">Wer ist dabei?</div>${personen.map(p => `<label><input type="checkbox" value="${esc(p.id)}" ${drin.has(p.id) ? "checked" : ""}> ${esc(p.name)}</label>`).join("")}
+    <button class="knopf" id="grOk">${g ? "Speichern" : "Gruppe anlegen"}</button> <button class="knopf hell" id="grAb">Abbrechen</button><div class="fehler" id="grF"></div>`);
+  h.querySelector("#grName").onkeydown = e => e.stopPropagation();
+  h.querySelector("#grAb").onclick = zu;
+  h.querySelector("#grOk").onclick = async () => {
+    try { const d = await post("/gruppe", { id: g ? konv.slice(2) : undefined, name: h.querySelector("#grName").value, mitglieder: [...h.querySelectorAll("input[type=checkbox]:checked")].map(c => c.value) });
+      zu(); verlauf(d.k); } catch (e) { h.querySelector("#grF").textContent = e.message; }
+  };
+}
+function gruppeMenue() {
+  const d = daten; if (!d) return;
+  const h = fenster(`<h3>👥 ${esc(d.name)}</h3><div class="klein">${d.mitglieder.length} Mitglieder: ${d.mitglieder.map(m => esc(m.name)).join(", ")}</div>
+    ${d.darfVerwalten ? '<button class="pkt" id="gmAend">✏️ Name / Mitglieder ändern</button>' : ""}${d.mitglieder.some(m => m.id === d.ich) ? '<button class="pkt rot2" id="gmRaus">🚪 Gruppe verlassen</button>' : ""}<button class="pkt" id="gmZu">Schließen</button>`);
+  if (h.querySelector("#gmAend")) h.querySelector("#gmAend").onclick = () => gruppeFenster(d);
+  if (h.querySelector("#gmRaus")) h.querySelector("#gmRaus").onclick = async () => { if (!confirm("Gruppe „" + d.name + "“ verlassen?")) return; try { await post("/gruppe/verlassen", { id: konv.slice(2) }); zu(); liste(); } catch (e) { hinweis(e.message); } };
+  h.querySelector("#gmZu").onclick = zu;
+}
+
+// ---- 🛡 Protokoll (nur Admin): alle bearbeiteten und gelöschten Nachrichten mit Original ----
+async function protokoll() {
+  clearInterval(takt); konv = ""; $("sucheBox").style.display = "none";
+  $("kopf").innerHTML = '<button id="zurueck" aria-label="Zurück">←</button><h1>🛡 Bearbeitet & gelöscht<small>nur für dich als Admin sichtbar</small></h1>';
+  $("zurueck").onclick = liste; $("inhalt").innerHTML = '<div class="leer">Lädt …</div>';
+  try { const l = await api("/protokoll");
+    $("inhalt").innerHTML = l.length ? l.map(n => `<div class="prot"><div class="k2">${esc(n.gespraech)} · ${esc(n.von)} · ${langZeit(n.zeit)}</div>
+      <div class="jetzt">${n.geloescht ? "🗑 <b>gelöscht</b> von " + esc(n.geloescht.von) + " am " + langZeit(n.geloescht.zeit) + "<br>" : ""}${n.bearbeitet.length ? "<b>Jetzt:</b> " : ""}${esc(n.text)}${n.datei ? " 📎 " + esc(n.datei) : ""}</div>
+      ${n.bearbeitet.map(b => `<div class="verl">vorher (geändert ${langZeit(b.zeit)}): ${esc(b.alt)}</div>`).join("")}</div>`).join("")
+      : '<div class="leer">Bisher wurde nichts bearbeitet oder gelöscht.</div>'; }
+  catch (e) { fehler(e); }
+}
+
 // ---- ③ Verlauf ----
-async function verlauf(id) {
-  mit = id; letzteAnzahl = -1; clearInterval(takt);
-  history.replaceState(null, "", location.pathname + "?mit=" + encodeURIComponent(id) + mitS());
-  $("kopf").innerHTML = '<button id="zurueck" aria-label="Zurück">←</button><h1 id="mitName">…</h1><button id="anrufen" aria-label="Anrufen" title="Anrufen">📞</button>';
-  $("zurueck").onclick = liste; $("anrufen").onclick = anrufen;
+async function verlauf(k, springen) {
+  konv = k; daten = null; html = new Map(); leisteZu(); clearInterval(takt); $("sucheBox").style.display = "none";
+  history.replaceState(null, "", location.pathname + "?k=" + encodeURIComponent(k) + mitS());
+  $("kopf").innerHTML = '<button id="zurueck" aria-label="Zurück">←</button><h1 id="mitName">…</h1><span id="kopfKnoepfe"></span>';
+  $("zurueck").onclick = liste;
   $("inhalt").innerHTML = '<div id="verlauf"><div class="leer">Lädt …</div></div>'; $("fuss").style.display = "flex";
   await verlaufLaden(true); takt = setInterval(() => verlaufLaden(false), 3000);
-  if (!/Mobi|iPhone|Android/i.test(navigator.userAgent)) $("txt").focus();
+  if (springen) zeigeNachricht(springen);
+  if (!HANDY) $("txt").focus();
 }
 async function verlaufLaden(erstes) {
-  if (!mit) return;
+  if (!konv) return;
   try {
-    const d = await api("/verlauf?mit=" + encodeURIComponent(mit));
-    $("mitName").innerHTML = esc(d.mit.name) + "<small>" + (d.mit.online ? "im Büro" : "nicht im Büro") + "</small>";
-    if (!erstes && d.nachrichten.length === letzteAnzahl) { lesestand(d); return; }
-    letzteAnzahl = d.nachrichten.length;
-    const m = $("inhalt"), unten = erstes || m.scrollHeight - m.scrollTop - m.clientHeight < 80;
-    let h = "", tag = "";
-    for (const n of d.nachrichten) { const t = tagText(n.zeit); if (t !== tag) { tag = t; h += `<div class="tag">${t}</div>`; }
-      h += `<div class="sb ${n.vonMir ? "meins" : "seins"}" data-id="${esc(n.id)}">${esc(n.text)}<small>${uhr(n.zeit)}${n.vonMir ? " " + (n.gelesen ? "✓✓" : "✓") : ""}</small></div>`; }
-    $("verlauf").innerHTML = h || '<div class="leer">Noch keine Nachricht – schreib die erste.</div>';
-    if (unten) m.scrollTop = m.scrollHeight;
+    const d = await api(verlaufPfad()); if (!konv) return;
+    konv = d.k; daten = d; ich = ich || { id: d.ich, admin: d.admin };
+    $("mitName").innerHTML = (d.typ === "gruppe" ? "👥 " : "") + esc(d.name) + "<small>" + (d.typ === "gruppe" ? esc(d.mitglieder.map(m => m.name).join(", ")) : d.mit.imGespraech ? "📞 im Gespräch" : d.mit.online ? "im Büro" : "nicht im Büro") + "</small>";
+    const kk = d.typ === "gruppe" ? "gr" : "dm"; if ($("kopfKnoepfe").dataset.t !== kk) { $("kopfKnoepfe").dataset.t = kk;
+      $("kopfKnoepfe").innerHTML = d.typ === "gruppe" ? '<button id="grMenue" title="Gruppe">⚙</button>' : '<button id="anrufen" aria-label="Anrufen" title="Anrufen">📞</button>';
+      if ($("anrufen")) $("anrufen").onclick = anrufen; if ($("grMenue")) $("grMenue").onclick = gruppeMenue; }
+    $("tippt").textContent = d.tippt.length ? d.tippt.join(", ") + (d.tippt.length > 1 ? " schreiben …" : " schreibt …") : "";
+    zeichnen(d, erstes);
   } catch (e) { clearInterval(takt); fehler(e); }
 }
-function lesestand(d) { for (const n of d.nachrichten) if (n.vonMir && n.gelesen) { const el = document.querySelector(`.sb[data-id="${CSS.escape(n.id)}"] small`); if (el && !/✓✓/.test(el.textContent)) el.textContent = uhr(n.zeit) + " ✓✓"; } }
+// nur geänderte Nachrichten neu zeichnen – sonst bricht eine laufende Sprachnachricht ab
+function zeichnen(d, erstes) {
+  const v = $("verlauf"); if (!v) return;
+  const m = $("inhalt"), unten = erstes || m.scrollHeight - m.scrollTop - m.clientHeight < 80;
+  if (!d.nachrichten.length) { v.innerHTML = '<div class="leer">Noch keine Nachricht – schreib die erste.</div>'; html = new Map(); return; }
+  if (v.querySelector(".leer")) v.innerHTML = "";
+  const neu = new Map(); let tag = "", vorher = null;
+  for (const n of d.nachrichten) {
+    const t = tagText(n.zeit), h = (t !== tag ? `<div class="tag">${t}</div>` : "") + blase(n, d); tag = t;
+    neu.set(n.id, h);
+    let el = v.querySelector(`.w[data-id="${CSS.escape(n.id)}"]`);
+    if (!el) { el = document.createElement("div"); el.className = "w"; el.dataset.id = n.id; el.innerHTML = h; vorher ? vorher.after(el) : v.prepend(el); }
+    else if (html.get(n.id) !== h) el.innerHTML = h;
+    vorher = el;
+  }
+  v.querySelectorAll(".w").forEach(el => { if (!neu.has(el.dataset.id)) el.remove(); });
+  html = neu;
+  if (unten) m.scrollTop = m.scrollHeight;
+}
+function blase(n, d) {
+  if (n.system) return `<div class="sys">${esc(n.vonName)} ${esc(n.text.replace(/^👥 /, ""))}</div>`;
+  const wer = d.typ === "gruppe" && !n.vonMir ? `<span class="wer">${esc(n.vonName)}</span>` : "";
+  const fuss = `<small>${n.bearbeitet ? "bearbeitet · " : ""}${uhr(n.zeit)}${n.vonMir && !n.geloescht ? " " + (d.typ === "dm" ? (n.gelesen ? "✓✓" : "✓") : n.gelesen ? "✓✓ " + n.gelesen : "✓") : ""}</small>`;
+  if (n.geloescht && !d.admin) return `<div class="sb ${n.vonMir ? "meins" : "seins"} weg">${wer}🗑 Diese Nachricht wurde gelöscht${fuss}</div>`;
+  let inhalt = "";
+  if (n.antwort) inhalt += `<span class="zit" data-spring="${esc(n.antwort.id)}"><b>${esc(n.antwort.vonName)}</b>${esc(n.antwort.text)}</span>`;
+  if (n.datei) inhalt += dateiHtml(n.datei);
+  if (n.text) inhalt += esc(n.text);
+  if (n.geloescht) inhalt = `<b>🗑 gelöscht von ${esc(n.geloescht.von)} · ${langZeit(n.geloescht.zeit)}</b> <span class="klein">(nur du siehst das)</span><br>` + inhalt;
+  if (d.admin && Array.isArray(n.bearbeitet)) inhalt += n.bearbeitet.map(b => `<span class="alt">vorher: ${esc(b.alt)}</span>`).join("");
+  const reak = n.reaktionen.length ? `<div class="reak">${n.reaktionen.map(r => `<span class="${r.ich ? "ich" : ""}" data-r="${esc(r.e)}" title="${esc(r.namen.join(", "))}">${r.e}${r.anzahl > 1 ? " " + r.anzahl : ""}</span>`).join("")}</div>` : "";
+  return `<div class="sb ${n.vonMir ? "meins" : "seins"}${n.geloescht ? " weg admin" : ""}" data-m="${esc(n.id)}">${wer}${inhalt}${fuss}</div>${reak}`;
+}
+function dateiHtml(f) {
+  if (f.weg || !f.url) return `<span class="datei">📎 ${esc(f.name)} – nicht mehr vorhanden (nach 90 Tagen gelöscht)</span>`;
+  if (/^image\//.test(f.typ)) return `<img class="bild" src="${esc(f.url)}" alt="${esc(f.name)}" loading="lazy">`;
+  if (/^audio\//.test(f.typ)) return `<audio controls preload="none" src="${esc(f.url)}"></audio>`;
+  return `<a class="datei" href="${esc(f.url)}" target="_blank" rel="noopener">📄 <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(f.name)}</span><span style="opacity:.7;font-size:12px">${groesseText(f.groesse)}</span></a>`;
+}
+function zeigeNachricht(id) { const el = document.querySelector(`.sb[data-m="${CSS.escape(id)}"]`); if (!el) return; el.scrollIntoView({ block: "center", behavior: "smooth" }); el.classList.remove("blitz"); void el.offsetWidth; el.classList.add("blitz"); }
+// Klicks im Verlauf: Bild groß, Zitat → hinspringen, Reaktion umschalten, Nachricht → Menü
+$("inhalt").addEventListener("click", e => {
+  const t = e.target;
+  if (t.closest("audio, a")) return;
+  if (t.matches("img.bild")) { $("grossBild").src = t.src; $("gross").style.display = "flex"; return; }
+  const z = t.closest("[data-spring]"); if (z) { zeigeNachricht(z.dataset.spring); return; }
+  const r = t.closest("[data-r]"); if (r) { const id = r.closest(".w").dataset.id; reagieren(id, r.dataset.r); return; }
+  const b = t.closest(".sb[data-m]"); if (b) menue(b.dataset.m);
+});
+$("gross").onclick = () => { $("gross").style.display = "none"; };
+function menue(id) {
+  const n = daten && daten.nachrichten.find(x => x.id === id); if (!n) return;
+  const darfLoeschen = !n.geloescht && (n.vonMir || daten.admin), darfAendern = n.vonMir && !n.geloescht && !!n.text;
+  const h = fenster((n.geloescht ? "" : `<div class="emo">${daten.reaktionenErlaubt.map(e => `<span data-e="${e}" class="${n.reaktionen.some(r => r.e === e && r.ich) ? "ich" : ""}">${e}</span>`).join("")}</div>`)
+    + (n.geloescht ? "" : '<button class="pkt" data-a="antw">↩️ Antworten</button>') + (n.text ? '<button class="pkt" data-a="kopie">📋 Text kopieren</button>' : "")
+    + (darfAendern ? '<button class="pkt" data-a="aend">✏️ Bearbeiten</button>' : "") + (darfLoeschen ? `<button class="pkt rot2" data-a="weg">🗑 Löschen${n.vonMir ? "" : " (als Admin)"}</button>` : "")
+    + `<div class="klein" style="padding:6px">${esc(n.vonName)} · ${langZeit(n.zeit)}${n.reaktionen.length ? "<br>" + n.reaktionen.map(r => r.e + " " + esc(r.namen.join(", "))).join("<br>") : ""}</div>`);
+  h.querySelectorAll("[data-e]").forEach(s => s.onclick = () => { zu(); reagieren(id, s.dataset.e); });
+  h.querySelectorAll("[data-a]").forEach(b => b.onclick = async () => { zu();
+    if (b.dataset.a === "antw") { antwort = n; bearbeiten = null; leisteZeigen("↩️ <b>" + esc(n.vonName) + "</b>: " + esc(n.text || (n.datei ? "📎 " + n.datei.name : ""))); $("txt").focus(); }
+    if (b.dataset.a === "kopie") { try { await navigator.clipboard.writeText(n.text); } catch { /* kein Zugriff */ } }
+    if (b.dataset.a === "aend") { bearbeiten = n; antwort = null; leisteZeigen("✏️ Nachricht bearbeiten"); $("txt").value = n.text; groesse(); knopf(); $("txt").focus(); }
+    if (b.dataset.a === "weg") { if (!confirm("Nachricht für alle löschen?")) return; try { await post("/loeschen", { id }); verlaufLaden(false); } catch (e) { hinweis(e.message); } }
+  });
+}
+async function reagieren(id, emoji) { try { await post("/reaktion", { id, emoji }); verlaufLaden(false); } catch (e) { hinweis(e.message); } }
+function leisteZeigen(h) { $("leisteText").innerHTML = h; $("leiste").style.display = "flex"; }
+function leisteZu() { if (bearbeiten) { $("txt").value = ""; groesse(); } antwort = null; bearbeiten = null; $("leiste").style.display = "none"; knopf(); }
+$("leisteZu").onclick = leisteZu;
+
 // 📞 Anrufen (23.10.2026): Anruf starten → Klingel-Bildschirm (anruf.html), der leitet nach dem Annehmen in den Gesprächsraum
 async function anrufen() {
-  try { const r = await fetch("https://swdigitaltest.de/buero-praesenz/anruf/start", { method: "POST", headers: H(), body: JSON.stringify({ an: mit }) }); const d = await r.json().catch(() => ({}));
+  if (!daten || !daten.mit) return;
+  try { const r = await fetch("https://swdigitaltest.de/buero-praesenz/anruf/start", { method: "POST", headers: H(), body: JSON.stringify({ an: daten.mit.id }) }); const d = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(d.error || "Anruf geht gerade nicht"); clearInterval(takt); location.href = "anruf.html?id=" + encodeURIComponent(d.id) + mitS(); }
-  catch (e) { const f = document.createElement("div"); f.className = "fehler"; f.textContent = "📞 " + e.message; $("verlauf").appendChild(f); $("inhalt").scrollTop = $("inhalt").scrollHeight; }
+  catch (e) { hinweis("📞 " + e.message); }
 }
+
+// ---- Senden: Text, Antwort, Bearbeiten ----
 async function senden() {
-  const t = $("txt").value.trim(); if (!t || !mit) return;
+  const t = $("txt").value.trim(); if (!konv) return;
+  if (!t && !bearbeiten) return aufnahme();
   $("los").disabled = true;
-  try { await api("/senden", { method: "POST", body: JSON.stringify({ an: mit, text: t }) }); $("txt").value = ""; groesse(); await verlaufLaden(false); $("inhalt").scrollTop = $("inhalt").scrollHeight; }
-  catch (e) { const f = document.createElement("div"); f.className = "fehler"; f.textContent = e.message; $("verlauf").appendChild(f); }
-  $("los").disabled = false;
+  try {
+    if (bearbeiten) await post("/bearbeiten", { id: bearbeiten.id, text: t });
+    else await post("/senden", { k: konv, text: t, antwortAuf: antwort ? antwort.id : undefined });
+    $("txt").value = ""; groesse(); leisteZu(); await verlaufLaden(false); $("inhalt").scrollTop = $("inhalt").scrollHeight;
+  } catch (e) { hinweis(e.message); }
+  $("los").disabled = false; knopf();
 }
+// ➤ wenn Text da ist, sonst 🎙 (wie WhatsApp)
+function knopf() { if (rec) return; $("los").textContent = $("txt").value.trim() || bearbeiten ? "➤" : "🎙"; $("los").setAttribute("aria-label", $("los").textContent === "➤" ? "Senden" : "Sprachnachricht aufnehmen"); }
 function groesse() { const t = $("txt"); t.style.height = "auto"; t.style.height = Math.min(120, t.scrollHeight) + "px"; }
-$("los").onclick = senden;
-$("txt").oninput = groesse;
-$("txt").onkeydown = e => { if (e.key === "Enter" && !e.shiftKey && !/Mobi|iPhone|Android/i.test(navigator.userAgent)) { e.preventDefault(); senden(); } e.stopPropagation(); };
-document.addEventListener("visibilitychange", () => { if (!document.hidden) mit ? verlaufLaden(false) : listeLaden(); });
-mit ? verlauf(mit) : liste();
+let tipptGemeldet = 0;
+$("los").onclick = () => rec ? aufnahmeSenden() : senden();
+$("txt").oninput = () => { groesse(); knopf(); if ($("txt").value && Date.now() - tipptGemeldet > 3500 && konv) { tipptGemeldet = Date.now(); post("/tippt", { k: konv }).catch(() => {}); } };
+$("txt").onkeydown = e => { if (e.key === "Enter" && !e.shiftKey && !HANDY) { e.preventDefault(); if ($("txt").value.trim()) senden(); } if (e.key === "Escape") leisteZu(); e.stopPropagation(); };
+
+// ---- 📎 Bilder und Dateien (Knopf, Einfügen mit Strg+V, Hineinziehen) – max. 10 MB ----
+$("anhang").onclick = () => $("datei").click();
+$("datei").onchange = () => { const f = $("datei").files[0]; $("datei").value = ""; if (f) hochladen(f, f.name); };
+$("txt").addEventListener("paste", e => { const f = [...(e.clipboardData || {}).files || []][0]; if (f) { e.preventDefault(); hochladen(f, f.name || "Bild.png"); } });
+document.addEventListener("dragover", e => { if (konv) e.preventDefault(); });
+document.addEventListener("drop", e => { if (!konv) return; e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) hochladen(f, f.name); });
+async function hochladen(blob, name) {
+  if (!konv) return; if (blob.size > 9.5 * 1048576) return hinweis("Die Datei ist zu groß (höchstens 9,5 MB).");
+  const typ = blob.type || "application/octet-stream", info = document.createElement("div"); info.className = "sys"; info.style.alignSelf = "flex-end"; info.textContent = "⏳ " + name + " wird gesendet …"; $("verlauf").appendChild(info); $("inhalt").scrollTop = $("inhalt").scrollHeight;
+  try {
+    const d = await api("/datei", { method: "POST", body: blob, headers: { "Content-Type": "application/octet-stream", "X-Dateiname": encodeURIComponent(name), "X-Dateityp": typ } });
+    const t = $("txt").value.trim();
+    await post("/senden", { k: konv, datei: d.id, text: t, antwortAuf: antwort ? antwort.id : undefined });
+    if (t) { $("txt").value = ""; groesse(); } leisteZu(); info.remove(); await verlaufLaden(false); $("inhalt").scrollTop = $("inhalt").scrollHeight;
+  } catch (e) { info.remove(); hinweis("📎 " + e.message); }
+}
+
+// ---- 🎙 Sprachnachricht: tippen = Aufnahme startet, ➤ = senden, 🗑 = verwerfen (max. 5 Min.) ----
+let rec = null, recTeile = [], recStart = 0, recUhr = null, recWeg = false;
+async function aufnahme() {
+  if (!window.MediaRecorder || !navigator.mediaDevices) return hinweis("🎙 Aufnehmen geht in diesem Browser nicht.");
+  let strom; try { strom = await navigator.mediaDevices.getUserMedia({ audio: true }); } catch (e) { return hinweis("🎙 Kein Zugriff aufs Mikrofon – bitte im Browser erlauben."); }
+  const typ = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg"].find(t => MediaRecorder.isTypeSupported(t)) || "";
+  rec = new MediaRecorder(strom, typ ? { mimeType: typ } : undefined); recTeile = []; recWeg = false;
+  rec.ondataavailable = e => { if (e.data.size) recTeile.push(e.data); };
+  rec.onstop = () => { strom.getTracks().forEach(t => t.stop()); clearInterval(recUhr); const r = rec; rec = null;
+    $("aufnahme").style.display = "none"; $("txt").style.display = ""; $("anhang").style.display = ""; $("emoBtn").style.display = ""; knopf();
+    if (recWeg || !recTeile.length || Date.now() - recStart < 700) return;
+    const t = (r.mimeType || "audio/webm").split(";")[0], blob = new Blob(recTeile, { type: t });
+    hochladen(blob, "Sprachnachricht " + new Date().toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" }) + (t.includes("mp4") ? ".m4a" : t.includes("ogg") ? ".ogg" : ".webm")); };
+  rec.start(); recStart = Date.now();
+  $("txt").style.display = "none"; $("anhang").style.display = "none"; $("emoBtn").style.display = "none"; $("aufnahme").style.display = "flex"; $("los").textContent = "➤";
+  recUhr = setInterval(() => { const s = Math.floor((Date.now() - recStart) / 1000); $("aufZeit").textContent = Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); if (s >= 300) aufnahmeSenden(); }, 250);
+  if (konv) post("/tippt", { k: konv }).catch(() => {});
+}
+function aufnahmeSenden() { if (rec && rec.state !== "inactive") rec.stop(); }
+$("aufWeg").onclick = () => { recWeg = true; aufnahmeSenden(); };
+
+// ---- 😊 Emojis in den Text ----
+const EMOJIS = "😀 😂 😊 😍 🥰 😎 🤔 😅 😉 🙂 😢 😭 😡 😴 🤯 🥳 👍 👎 👏 🙏 💪 👌 ✌️ 🤝 ❤️ 💚 🔥 ⭐ ✅ ❌ ⚠️ ❓ 📎 📄 📅 ⏰ ☕ 🍕 🎉 💶".split(" ");
+$("emoBtn").onclick = () => { const h = fenster('<div class="emojis">' + EMOJIS.map(e => `<span>${e}</span>`).join("") + "</div>");
+  h.querySelectorAll(".emojis span").forEach(s => s.onclick = () => { const t = $("txt"), a = t.selectionStart ?? t.value.length; t.value = t.value.slice(0, a) + s.textContent + t.value.slice(t.selectionEnd ?? a); zu(); groesse(); knopf(); t.focus(); }); };
+
+document.addEventListener("visibilitychange", () => { if (!document.hidden) konv ? verlaufLaden(false) : listeLaden(); });
+konv ? verlauf(konv) : liste();
 </script>
 </body>
 </html>
