@@ -3490,7 +3490,8 @@
     }
     try {
       const h = WA.room.hashParameters || {};
-      if (HANDY && !h.karte && !h.ziel) {
+      if (HANDY) {
+        void h;
         beendet = true;
         rausZu(SEITEN + "handy.html?von=start");
         return;

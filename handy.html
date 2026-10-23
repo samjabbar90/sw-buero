@@ -76,7 +76,8 @@ const PERSON = { "Zimmer 1": "Tanja R.", "Zimmer 2": "Christiane S.", "Zimmer 3"
   "Büro Ferhat": "Ferhat F.", "Büro Angelina": "Angelina M.", "Büro Sam": "Sam J.", "Büro Noura": "Noura A.", "Büro Emre": "Emre A.", "Büro Kadir": "Kadir K.", "Büro Attila": "Attila K." };
 const NAME = { "Besprechung Glas": "Besprechungsraum – Team 1", "Besprechung 11": "Besprechungsraum – Team 2", "Besprechung 1": "Besprechungsraum – Haupt", "Besprechung 2": "Besprechungsraum – Klein", "Fibu-Besprechung": "Besprechungsraum – Team Fibu", "Pause": "Pausenraum", "Lernzimmer": "Schulungsraum" };
 const raumText = r => !r || r === "Flur" ? "im Flur" : r === HIER ? "📱 am Handy" : PERSON[r] ? PERSON[r] + " Büro" : NAME[r] || r;
-const hingehbar = r => r && r !== HIER && r !== "Flur";
+// 23.10.2026 (Sam): am Handy keine Karte mehr → „Hingehen“ nur noch im Büro-Blatt auf der Karte (IM)
+const hingehbar = r => IM && r && r !== HIER && r !== "Flur";
 const initialen = n => String(n || "?").split(/\s+/).map(w => w[0] || "").join("").slice(0, 2).toUpperCase();
 
 // ---------- Präsenz: alle 30 s melden (so sehen die Kollegen „📱 am Handy“) ----------
@@ -110,12 +111,12 @@ function zeichnen() {
   $("unter").textContent = ICH.split(" ")[0] + (IM ? " · im Büro · Arbeiten" : " · am Handy") + (seit ? " · online seit " + seit : "");
   $("ab").style.display = IM ? "none" : "";
   const jetzt = new Date().toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
-  let h = IM ? `<button class="gross" id="karte">⬅ Zurück zum Grundriss</button>` : `<button class="gross" id="karte">🗺 Ins Büro gehen (Karte)</button>`;
+  let h = IM ? `<button class="gross" id="karte">⬅ Zurück zum Grundriss</button>` : ""; // 23.10.2026: kein „Ins Büro gehen (Karte)“ mehr am Handy
   h += meldungen.map((m, i) => `<div class="meldung${m.klopfen ? " klopfen" : ""}"><div><b>${esc(String(m.von).split(" ")[0])}</b> ${esc(m.text)}</div><div class="zeile">
-    ${m.anruf ? `<a class="k voll" href="anruf.html?id=${encodeURIComponent(m.anruf)}">📞 Abheben</a>` : ""}${m.klopfen && m.raum ? `<a class="k voll" href="${BUERO}#ziel=${encodeURIComponent(m.raum)}">🚶 Hingehen</a>` : ""}${m.von !== "System" ? `<button class="k" data-antw="${i}">💬 Antworten</button>` : ""}<button class="k" data-weg="${i}">OK</button></div>
+    ${m.anruf ? `<a class="k voll" href="anruf.html?id=${encodeURIComponent(m.anruf)}">📞 Abheben</a>` : ""}${IM && m.klopfen && m.raum ? `<a class="k voll" href="${BUERO}#ziel=${encodeURIComponent(m.raum)}">🚶 Hingehen</a>` : ""}${m.von !== "System" ? `<button class="k" data-antw="${i}">💬 Antworten</button>` : ""}<button class="k" data-weg="${i}">OK</button></div>
     ${offen === "a" + i ? `<div class="eingabe"><input id="txt" placeholder="Antwort an ${esc(String(m.von).split(" ")[0])} …" maxlength="300"><button class="k voll" data-senden="${esc(m.von)}">Senden</button></div>` : ""}</div>`).join("");
   h += termine.map(t => `<div class="meldung termin"><div>📅 <b>${esc(t.von)}${t.ende ? "–" + esc(t.ende) : ""}</b> ${esc(t.titel)}${t.ort ? " · " + esc(t.ort) : ""}${t.von <= jetzt ? " · <b>läuft</b>" : ""}</div>
-    ${t.ort ? `<div class="zeile"><a class="k voll" href="${BUERO}#ziel=${encodeURIComponent(t.ort)}">🚶 Hingehen</a></div>` : ""}</div>`).join("");
+    ${IM && t.ort ? `<div class="zeile"><a class="k voll" href="${BUERO}#ziel=${encodeURIComponent(t.ort)}">🚶 Hingehen</a></div>` : ""}</div>`).join("");
   h += `<div class="kacheln">${chatDarf ? `<button id="chatKachel" style="border:2px solid #0f766e;color:#0f766e;font-weight:700"><span>💬</span>Chats${chatUngelesen ? ` <b style="background:#E24B4A;color:#fff;border-radius:9px;padding:0 6px;font-size:11px">${chatUngelesen}</b>` : ""}</button>` : ""}${KACHELN.map((k, i) => `<button data-k="${i}"><span>${k[0]}</span>${k[1]}</button>`).join("")}</div>`;
   h += `<div class="karte"><h2>Im Büro <span>${leute.length}</span></h2>${leute.length ? leute.map((p, i) => {
     const f = p.foto ? `<span class="gesicht" style="background-image:url(&quot;${esc(p.foto)}&quot;)"><i class="an"></i></span>` : `<span class="gesicht">${esc(initialen(p.name))}<i class="an"></i></span>`;
@@ -125,7 +126,7 @@ function zeichnen() {
     <div id="fe"></div></div>`;
   if (weg.length) h += `<div class="karte"><details><summary>Nicht im Büro (${weg.length})</summary>${weg.map(p => `<div class="p">${p.foto ? `<span class="gesicht aus" style="background-image:url(&quot;${esc(p.foto)}&quot;)"></span>` : `<span class="gesicht aus" style="background-color:#94a3b8">${esc(initialen(p.name))}</span>`}<div><div class="n">${esc(p.name)}</div><div class="w">${p.zuletzt ? "zuletzt " + new Date(p.zuletzt).toLocaleString("de-DE", { weekday: "short", hour: "2-digit", minute: "2-digit" }) : "–"}</div></div>${p.durchwahl ? `<div class="akt"><a class="k" href="tel:${esc(p.durchwahl)}">📞</a></div>` : ""}</div>`).join("")}</details></div>`;
   $("inhalt").innerHTML = h;
-  $("karte").onclick = () => { if (IM) return buero("arbeitenZu"); zurKarte(BUERO + "#karte=1"); }; // 22.10.2026: Karte ausdrücklich gewollt (sonst leitet das Büro-Skript am Handy hierher zurück)
+  if ($("karte")) $("karte").onclick = () => { if (IM) return buero("arbeitenZu"); zurKarte(BUERO + "#karte=1"); }; // 22.10.2026: Karte ausdrücklich gewollt (sonst leitet das Büro-Skript am Handy hierher zurück)
   document.querySelectorAll("[data-k]").forEach(b => b.onclick = () => blatt(KACHELN[+b.dataset.k]));
   if ($("chatKachel")) $("chatKachel").onclick = () => blatt(["💬", "Chats", "chat.html"]); // 23.10.2026: Chat wie WhatsApp
   document.querySelectorAll("[data-weg]").forEach(b => b.onclick = () => { meldungen.splice(+b.dataset.weg, 1); offen = ""; zeichnen(); });
