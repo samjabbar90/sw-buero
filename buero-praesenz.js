@@ -4137,6 +4137,7 @@
         if (!r.ok) return;
         const d = await r.json();
         if (d && d.id) nachrichtZeigen({ von: d.von, vonId: d.vonId, anruf: d.id, text: "\u{1F4DE} ruft an" });
+        if (d && Array.isArray(d.nachrichten)) for (const n of d.nachrichten) nachrichtZeigen(n);
         for (const x of mitteilungen.filter((x2) => x2.anruf && x2.anruf !== (d && d.id))) mtWeg(x.id);
       } catch {
       }

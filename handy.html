@@ -178,8 +178,8 @@ async function start() {
   try { const r = await fetch(B + "/ausweis/pruefen", { method: "POST", headers: H(), body: "{}" }); const d = await r.json().catch(() => ({}));
     if (!r.ok || !d.name) { try { localStorage.removeItem("swBueroAusweis"); } catch {} return anmelden(r.status === 401 ? "Bitte kurz neu anmelden." : ""); }
     ICH = d.name; } catch { $("inhalt").innerHTML = '<div class="leer">Keine Verbindung – bitte gleich nochmal versuchen.</div>'; return; }
-  gestartet = false; await melden("betreten"); await laden(); chatPruefen(); setInterval(chatPruefen, 30000);
-  clearInterval(takt); takt = setInterval(() => { melden("heartbeat").then(zeichnen); }, 30000);
+  gestartet = false; await melden("betreten"); await laden(); chatPruefen(); setInterval(chatPruefen, 10000); // 23.10.2026: 10 s statt 30 s (Nachrichten schneller)
+  clearInterval(takt); takt = setInterval(() => { melden("heartbeat").then(zeichnen); }, 10000); // 23.10.2026: 10 s – Nachrichten und Anklopfen kommen schneller an
   setInterval(laden, 60000);
 }
 // App im Hintergrund und wieder vorne: gleich melden (iOS hält die Seite im Hintergrund an)
