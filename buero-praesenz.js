@@ -1360,7 +1360,26 @@
     }
   }
   var fxStand = {};
-  var FEIERABEND_RAEUME = ["Besprechung 11", "Besprechung Glas", "Pause", "Lernzimmer", "Helpcenter", "Fitnessraum", "Fibu Backoffice"];
+  var FEIERABEND_RAEUME = [
+    "Besprechung 11",
+    "Besprechung Glas",
+    "Pause",
+    "Lernzimmer",
+    "Helpcenter",
+    "Fitnessraum",
+    "Fibu Backoffice",
+    // 23.10.2026 (Sam: „jedes Büro oder Besprechungszimmer dunkler, wenn keiner drin ist“; Flächen aus kartenbau/dunkel-weitere-raeume.js)
+    "Besprechung 1",
+    "Besprechung 2",
+    "Fibu-Besprechung",
+    "Jahresabschlussersteller",
+    "Social Media",
+    "IT-Abteilung",
+    "Onboarding",
+    "Payroll-Lounge",
+    "Termine mit Donna"
+  ];
+  var RAUM_PLAETZE = { "Social Media": ["Mina"], "Jahresabschlussersteller": ["JA-Abschluss"], "IT-Abteilung": ["IT-Rengid", "IT-Olga"], "Onboarding": ["Onboarding-Ron"] };
   var toene = {};
   var LAUT_STANDARD = { direkt: 0.5, gruppe: 0.5, eingang: 0.15 };
   function lautstaerke(art) {
@@ -1549,7 +1568,7 @@
       if (!RAHMEN_RAUM.test(o.name)) continue;
       fx("fx-dunkel-" + o.name.normalize("NFD").replace(/[^A-Za-z0-9]/g, ""), dunkelZeit && !raumBelegt(o.name));
     }
-    for (const n of FEIERABEND_RAEUME) fx("fx-feierabend-" + n.normalize("NFD").replace(/[^A-Za-z0-9]/g, ""), dunkelZeit && !raumBelegt(n));
+    for (const n of FEIERABEND_RAEUME) fx("fx-feierabend-" + n.normalize("NFD").replace(/[^A-Za-z0-9]/g, ""), dunkelZeit && ![n, ...RAUM_PLAETZE[n] || []].some(raumBelegt));
     if (w) {
       regenAn = !!w.regen;
       fx("fx-pfuetzen", !!w.regen);
