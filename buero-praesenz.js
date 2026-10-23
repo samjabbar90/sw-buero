@@ -3255,7 +3255,45 @@
     }
   }
   var platzhalterAktiv = /* @__PURE__ */ new Map();
+  var platzhalterListe = [];
+  async function wokaSenden() {
+    if (HANDY) return;
+    try {
+      const bild = await WA.player.getWokaPicture();
+      if (!bild || !/^data:image\//.test(String(bild))) return;
+      await fetch(ENDPOINT.replace(/melden$/, "profil/woka"), { method: "POST", headers: { "Content-Type": "application/json", "X-Buero-Key": BUERO_KEY, "X-Buero-Sitzung": SITZUNG }, body: JSON.stringify({ bild }) });
+    } catch {
+    }
+  }
+  var platzhalterHinweis = null;
+  function platzhalterBetreten(raum) {
+    const p = platzhalterListe.find((x) => x.raum === raum && platzhalterAktiv.has(x.name));
+    if (!p || !p.id || HANDY) return;
+    try {
+      platzhalterHinweis && platzhalterHinweis.remove();
+    } catch {
+    }
+    platzhalterHinweis = klickHinweis({ message: "\u{1F4DE} Mit " + String(p.kurz || p.name).split(" ")[0] + " sprechen", callback: async () => {
+      try {
+        const r = await fetch(ENDPOINT.replace(/melden$/, "anruf/start"), { method: "POST", headers: { "Content-Type": "application/json", "X-Buero-Key": BUERO_KEY, "X-Buero-Sitzung": SITZUNG }, body: JSON.stringify({ an: p.id }) });
+        const d = await r.json().catch(() => ({}));
+        if (r.ok && d.id) anrufPille(d.id, false);
+        else mitteilung({ art: "info", kurz: "\u{1F4DE} " + (d.error || "Anruf geht gerade nicht"), text: "" }, 8e3);
+      } catch {
+      }
+    } });
+  }
+  function platzhalterVerlassen(raum) {
+    if (platzhalterListe.some((x) => x.raum === raum)) {
+      try {
+        platzhalterHinweis && platzhalterHinweis.remove();
+      } catch {
+      }
+      platzhalterHinweis = null;
+    }
+  }
   async function platzhalterZeigen(liste) {
+    platzhalterListe = liste || [];
     if (HANDY) return;
     let echte = [];
     try {
@@ -3287,7 +3325,7 @@
       try {
         await WA.room.website.create({
           name: "platzhalter-" + n.replace(/\W+/g, ""),
-          url: SEITEN + "platzhalter.html?name=" + encodeURIComponent(p.kurz || n) + "&foto=" + encodeURIComponent(p.foto || ""),
+          url: SEITEN + "platzhalter.html?v=2&name=" + encodeURIComponent(p.kurz || n) + "&foto=" + encodeURIComponent(p.foto || "") + "&woka=" + encodeURIComponent(p.woka || ""),
           visible: true,
           allowApi: false,
           origin: "map",
@@ -3346,6 +3384,7 @@
   function beobachten(name, api) {
     api.onEnter(name).subscribe(() => {
       aktuellerBereich = name;
+      platzhalterBetreten(name);
       const kind = (info.geburtstage || []).find((n) => "b\xFCro " + n.toLowerCase() === name.toLowerCase());
       if (kind) konfetti(kind);
       tuerWache(name);
@@ -3356,6 +3395,7 @@
       zimmerRein(name);
     });
     api.onLeave(name).subscribe(() => {
+      platzhalterVerlassen(name);
       if (aktuellerBereich === name) aktuellerBereich = null;
       bereit.then(() => melden("betreten"));
       effekte();
@@ -4087,6 +4127,7 @@
       });
     } catch {
     }
+    setTimeout(() => wokaSenden(), 8e3);
     setInterval(async () => {
       try {
         const r = await fetch(ENDPOINT.replace(/melden$/, "anruf/eingang"), { headers: { "X-Buero-Key": BUERO_KEY, "X-Buero-Sitzung": SITZUNG } });
