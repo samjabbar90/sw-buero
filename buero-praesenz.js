@@ -2254,6 +2254,7 @@
   var leisteR = 8;
   var leisteO = 72;
   var meinMenue = null;
+  var zuMirZuletzt = 0;
   function meinMenueZu() {
     try {
       meinMenue && meinMenue.close();
@@ -4094,7 +4095,14 @@
           ideen: () => ideenOeffnen(),
           uebersicht,
           karte: () => uebersichtAn ? zuMir() : uebersicht(),
-          zumir: zuMir,
+          zumir: () => {
+            if (Date.now() - zuMirZuletzt < 8e3) {
+              zuMirZuletzt = 0;
+              return zuRaum("B\xFCro " + vorname(WA.player.name || ""));
+            }
+            zuMirZuletzt = Date.now();
+            return zuMir();
+          },
           reise: schnellreise,
           pokedex: () => glasFenster(SEITEN + "pokedex.html?name=" + encodeURIComponent(WA.player.name || "") + "&t=" + Date.now()),
           news: () => newsOeffnen(),

@@ -54,7 +54,7 @@ const GRUPPE = { gespraech: "Im Gespräch", besprechung: "Besprechung", buero: "
 const SYM = { chat: '<path d="M3 20l1.3-3.9A9 8 0 1 1 7.7 19L3 20"/>', anruf: '<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/>',
   hin: '<circle cx="13" cy="4" r="1.5"/><path d="M7 21l3-4M16 21l-2-4-3-3 1-6M6 12l2-3 4-1 3 3 3 1"/>', profil: '<circle cx="12" cy="7" r="4"/><path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/>' };
 const knopf = (a, text, farbe) => `<button data-a="${a}"><span style="background:${farbe}"><svg viewBox="0 0 24 24">${SYM[a]}</svg></span>${text}</button>`;
-let daten = null, offen = "", schmal = q.get("schmal") === "1", wegZu = true;
+let zuMirBis = 0, daten = null, offen = "", schmal = q.get("schmal") === "1", wegZu = true;
 try { wegZu = localStorage.getItem("swLeisteWegZu") !== "0"; } catch { /* Standard: zu */ }
 function aktion(was, extra) { try { WA.player.state.saveVariable("swAktion", Object.assign({ was, t: Date.now() }, extra || {}), { public: false, persist: false }); } catch (e) { console.warn(e); } }
 const dauer = (seit, jetzt) => { const m = Math.max(0, Math.round((jetzt - seit) / 60000)); return m < 1 ? "" : m < 60 ? " · " + m + " Min" : " · " + Math.floor(m / 60) + " Std"; };
@@ -71,13 +71,15 @@ function malen() {
       else h += `<div class="gt">${GRUPPE[g] || ""} · ${anz}</div>`; }
     const zeit = (p.gruppe === "gespraech" || p.gruppe === "besprechung") && p.seit ? dauer(p.seit, daten.jetzt) : "";
     h += `<div class="p${p.gruppe === "weg" ? " weg" : ""}" data-id="${esc(p.id)}" title="${esc(p.name + " – " + p.text)}"><span class="av" style="${p.foto ? `background-image:url('${esc(p.foto)}')` : ""}">${p.foto ? "" : esc(p.vorname.slice(0, 2).toUpperCase())}${p.gruppe === "weg" ? "" : `<i style="background:${farbe(p)}"></i>`}</span>
-      <div style="min-width:0"><div class="n">${esc(p.vorname)}${p.ich ? " (du)" : ""}${p.ich ? '<button class="zumir" title="Blick auf mich">📍 Zu mir</button>' : ""}</div><div class="s">${esc(p.text)}${zeit}</div></div></div>`;
+      <div style="min-width:0"><div class="n">${esc(p.vorname)}${p.ich ? " (du)" : ""}${p.ich ? (zuMirBis > Date.now() ? '<button class="zumir" title="Nochmal klicken: ins eigene Büro">🚶 Mein Büro</button>' : '<button class="zumir" title="Blick auf mich – zweimal: ins eigene Büro">📍 Zu mir</button>') : ""}</div><div class="s">${esc(p.text)}${zeit}</div></div></div>`;
     if (offen === p.id && !p.ich) h += `<div class="menue">${daten.chat && p.chat ? knopf("chat", "Chat", "#0f766e") + (p.gruppe === "weg" ? "" : knopf("anruf", "Anrufen", "#16a34a")) : ""}${p.gruppe === "weg" ? "" : knopf("hin", "Hingehen", "#2563eb")}${knopf("profil", "Profil", "#475569")}</div>`; // nicht im Büro: nur Chat + Profil
   }
   $("inh").innerHTML = h || '<div class="leer">Gerade ist niemand online.</div>';
   const wk = () => { wegZu = !wegZu; try { localStorage.setItem("swLeisteWegZu", wegZu ? "1" : "0"); } catch { /* egal */ } malen(); };
   if ($("wegKlapp")) $("wegKlapp").onclick = wk; if ($("wegVorschau")) $("wegVorschau").onclick = wk;
-  document.querySelectorAll(".zumir").forEach(b => b.onclick = e => { e.stopPropagation(); aktion("zumir"); }); // 23.10.2026: früher oben in der Leiste
+  document.querySelectorAll(".zumir").forEach(b => b.onclick = e => { e.stopPropagation(); aktion("zumir");
+    // 1. Klick: Ansicht auf mich · 2. Klick (8 s): ins eigene Büro – der Knopf zeigt das an
+    if (zuMirBis > Date.now()) { zuMirBis = 0; malen(); } else { zuMirBis = Date.now() + 8000; malen(); setTimeout(malen, 8100); } }); // 23.10.2026: früher oben in der Leiste
   document.querySelectorAll(".p").forEach(el => el.onclick = () => { if (schmal) { schmal = false; aktion("leisteRechts", { schmal: false }); }
     // eigener Name (23.10.2026, Sam: Layout 3): Mini-Profilkarte links neben der Leiste – Kalender, Sammlungen, Zeit, Ideen, Profil, Feierabend
     const p = daten && daten.liste.find(x => x.id === el.dataset.id); if (p && p.ich) { aktion("meinMenue", { foto: p.foto || "", seit: p.online || 0 }); return; }
