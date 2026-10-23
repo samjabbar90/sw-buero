@@ -34,7 +34,13 @@
   footer textarea { flex:1; resize:none; font:inherit; font-size:16px; padding:9px 12px; border:1px solid #d1d5db; border-radius:20px; max-height:120px; line-height:1.35; }
   footer button { width:42px; height:42px; border-radius:50%; border:0; background:#0f766e; color:#fff; font-size:18px; cursor:pointer; flex:none; }
   .fehler { color:#b91c1c; font-size:13px; padding:6px 14px; }
-  html.glas body { background:transparent; } html.glas main, html.glas footer { background:#fff; }
+  /* VBüro-Fenster (dunkles Glas, weiße Schrift) – 23.10.2026 (Leutrim: „Schrift zu hell“): alles dunkel statt weißer Flächen */
+  html.glas main, html.glas footer { background:transparent !important; } html.glas footer { border-top-color:rgba(255,255,255,.15); }
+  html.glas .z { border-bottom-color:rgba(255,255,255,.12); } html.glas .z:active { background:rgba(255,255,255,.08); }
+  html.glas .z .n { color:#fff !important; } html.glas .z .l, html.glas .z .r, html.glas .leer { color:rgba(255,255,255,.75) !important; }
+  html.glas .seins { background:rgba(255,255,255,.16); color:#fff; } html.glas .tag { background:rgba(255,255,255,.12); color:rgba(255,255,255,.8); }
+  html.glas footer textarea { background:rgba(0,0,0,.35); color:#fff; border-color:rgba(255,255,255,.25); } html.glas footer textarea::placeholder { color:rgba(255,255,255,.55); }
+  html.glas .gs i { border-color:#1f2937; }
 </style>
 <script src="glas.js?v=1792088168"></script>
 </head>
