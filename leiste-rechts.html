@@ -23,12 +23,17 @@
   .av { position:relative; width:30px; height:30px; border-radius:50%; background:#5DCAA5 center/cover no-repeat; color:#04342C; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; flex:none; }
   .av i { position:absolute; right:-1px; bottom:-1px; width:10px; height:10px; border-radius:50%; border:2px solid #16181d; }
   .n { font-size:12.5px; font-weight:600; } .s { font-size:11px; color:rgba(255,255,255,.72); line-height:1.25; }
-  .menue { display:flex; gap:4px; flex-wrap:wrap; padding:2px 4px 7px 42px; }
-  .menue button { border:0; background:rgba(255,255,255,.14); color:#fff; border-radius:7px; padding:4px 7px; font-size:11px; cursor:pointer; }
-  .menue button:hover { background:rgba(255,255,255,.26); }
+  /* Knöpfe Layout A (23.10.2026, Sam): runde Symbole mit Beschriftung darunter, wie beim Handy-Kontakt */
+  .menue { display:flex; justify-content:space-around; padding:4px 2px 9px; }
+  .menue button { border:0; background:none; color:rgba(255,255,255,.85); font:inherit; font-size:10.5px; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:4px; padding:0; width:48px; }
+  .menue button span { width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; transition:filter .15s, transform .15s; }
+  .menue button:hover span { filter:brightness(1.18); transform:scale(1.06); }
+  .menue svg { width:18px; height:18px; fill:none; stroke:#fff; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+  .p.weg .n { color:rgba(255,255,255,.8); } .p.weg .av { filter:grayscale(.6); opacity:.75; }
   .leer { font-size:12px; color:rgba(255,255,255,.6); padding:8px 4px; }
   /* schmal (Layout C): nur Gesichter, Text als Tooltip */
   body.schmal .kopf span, body.schmal .gt, body.schmal .p > div, body.schmal .menue { display:none; }
+  body.schmal .p.weg { display:none; } /* schmal: nur wer im Büro ist */
   body.schmal .kopf { justify-content:center; padding:8px 0 4px; } body.schmal .inh { padding:0 0 8px; } body.schmal .p { justify-content:center; padding:5px 0; }
 </style>
 </head>
@@ -39,7 +44,10 @@ const KEY = "a21b2aa2a42fe6189b05773c07bbc9ad78e38b34ba3bb6fe", B = "https://swd
 const $ = id => document.getElementById(id), q = new URLSearchParams(location.search), SITZ = q.get("s") || "";
 const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const FARBE = { gespraech: "#7F77DD", besprechung: "#378ADD", buero: "#639922", pause: "#EF9F27" };
-const GRUPPE = { gespraech: "Im Gespräch", besprechung: "Besprechung", buero: "Im Büro", pause: "Pause" };
+const GRUPPE = { gespraech: "Im Gespräch", besprechung: "Besprechung", buero: "Im Büro", pause: "Pause", weg: "Nicht im Büro" };
+const SYM = { chat: '<path d="M3 20l1.3-3.9A9 8 0 1 1 7.7 19L3 20"/>', anruf: '<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/>',
+  hin: '<circle cx="13" cy="4" r="1.5"/><path d="M7 21l3-4M16 21l-2-4-3-3 1-6M6 12l2-3 4-1 3 3 3 1"/>', profil: '<circle cx="12" cy="7" r="4"/><path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/>' };
+const knopf = (a, text, farbe) => `<button data-a="${a}"><span style="background:${farbe}"><svg viewBox="0 0 24 24">${SYM[a]}</svg></span>${text}</button>`;
 let daten = null, offen = "", schmal = q.get("schmal") === "1";
 function aktion(was, extra) { try { WA.player.state.saveVariable("swAktion", Object.assign({ was, t: Date.now() }, extra || {}), { public: false, persist: false }); } catch (e) { console.warn(e); } }
 const dauer = (seit, jetzt) => { const m = Math.max(0, Math.round((jetzt - seit) / 60000)); return m < 1 ? "" : m < 60 ? " · " + m + " Min" : " · " + Math.floor(m / 60) + " Std"; };
@@ -47,14 +55,14 @@ function farbe(p) { return p.text.startsWith("☎") ? "#EF9F27" : p.text.startsW
 function malen() {
   document.body.classList.toggle("schmal", schmal); $("klapp").textContent = schmal ? "‹" : "›";
   if (!daten) return;
-  const l = daten.liste; $("titel").textContent = "Online · " + l.length;
+  const l = daten.liste; $("titel").textContent = "Online · " + (daten.online ?? l.length);
   let h = "", g = "";
   for (const p of l) {
     if (p.gruppe !== g) { g = p.gruppe; h += `<div class="gt">${GRUPPE[g] || ""} · ${l.filter(x => x.gruppe === g).length}</div>`; }
     const zeit = (p.gruppe === "gespraech" || p.gruppe === "besprechung") && p.seit ? dauer(p.seit, daten.jetzt) : "";
-    h += `<div class="p" data-id="${esc(p.id)}" title="${esc(p.name + " – " + p.text)}"><span class="av" style="${p.foto ? `background-image:url('${esc(p.foto)}')` : ""}">${p.foto ? "" : esc(p.vorname.slice(0, 2).toUpperCase())}<i style="background:${farbe(p)}"></i></span>
+    h += `<div class="p${p.gruppe === "weg" ? " weg" : ""}" data-id="${esc(p.id)}" title="${esc(p.name + " – " + p.text)}"><span class="av" style="${p.foto ? `background-image:url('${esc(p.foto)}')` : ""}">${p.foto ? "" : esc(p.vorname.slice(0, 2).toUpperCase())}${p.gruppe === "weg" ? "" : `<i style="background:${farbe(p)}"></i>`}</span>
       <div style="min-width:0"><div class="n">${esc(p.vorname)}${p.ich ? " (du)" : ""}</div><div class="s">${esc(p.text)}${zeit}</div></div></div>`;
-    if (offen === p.id && !p.ich) h += `<div class="menue">${daten.chat && p.chat ? `<button data-a="chat">💬 Chat</button><button data-a="anruf">📞 Anrufen</button>` : ""}<button data-a="hin">🚶 Hin</button><button data-a="profil">👤 Profil</button></div>`;
+    if (offen === p.id && !p.ich) h += `<div class="menue">${daten.chat && p.chat ? knopf("chat", "Chat", "#0f766e") + (p.gruppe === "weg" ? "" : knopf("anruf", "Anrufen", "#16a34a")) : ""}${p.gruppe === "weg" ? "" : knopf("hin", "Hingehen", "#2563eb")}${knopf("profil", "Profil", "#475569")}</div>`; // nicht im Büro: nur Chat + Profil
   }
   $("inh").innerHTML = h || '<div class="leer">Gerade ist niemand online.</div>';
   document.querySelectorAll(".p").forEach(el => el.onclick = () => { if (schmal) { schmal = false; aktion("leisteRechts", { schmal: false }); } offen = offen === el.dataset.id ? "" : el.dataset.id; malen(); });
