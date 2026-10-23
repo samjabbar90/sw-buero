@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Wer ist online</title>
+<!-- Leiste rechts im VBüro (23.10.2026, Sam: Layout A „Liste nach Status“): wer online ist und was gerade passiert –
+     📞 telefoniert mit … · ☎ telefoniert · 💬 bei … im Zimmer · 🗣 Besprechungsraum · ☕ Pause · 📱 am Handy · Raum.
+     Klick auf eine Person: 💬 Chat · 📞 Anrufen · 🚶 Hin · 👤 Profil. „›“ klappt auf die schmale Gesichter-Leiste (Layout C) zu.
+     Server: /buero-praesenz/leiste (Büro-Sitzung ?s=…), alle 8 s. Knöpfe melden über swAktion ans Büro-Skript. -->
+<script src="https://play.workadventu.re/iframe_api.js"></script>
+<style>
+  * { box-sizing:border-box; }
+  html, body { margin:0; height:100%; background:transparent; color:#fff; font-family:system-ui,-apple-system,"Segoe UI",sans-serif; overflow:hidden; }
+  #l { height:100%; background:rgba(22,24,29,.9); border:1px solid rgba(255,255,255,.14); border-radius:14px; display:flex; flex-direction:column; }
+  .kopf { display:flex; align-items:center; gap:6px; padding:9px 10px 6px; font-size:12.5px; font-weight:700; }
+  .kopf span { flex:1; } .kopf button { border:0; background:rgba(255,255,255,.12); color:#fff; border-radius:8px; width:26px; height:24px; cursor:pointer; font-size:13px; }
+  .inh { flex:1; overflow-y:auto; padding:0 8px 8px; }
+  .gt { font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:rgba(255,255,255,.55); margin:9px 2px 3px; }
+  .p { display:flex; gap:8px; align-items:center; padding:5px 4px; border-radius:9px; cursor:pointer; }
+  .p:hover { background:rgba(255,255,255,.08); }
+  .av { position:relative; width:30px; height:30px; border-radius:50%; background:#5DCAA5 center/cover no-repeat; color:#04342C; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; flex:none; }
+  .av i { position:absolute; right:-1px; bottom:-1px; width:10px; height:10px; border-radius:50%; border:2px solid #16181d; }
+  .n { font-size:12.5px; font-weight:600; } .s { font-size:11px; color:rgba(255,255,255,.72); line-height:1.25; }
+  .menue { display:flex; gap:4px; flex-wrap:wrap; padding:2px 4px 7px 42px; }
+  .menue button { border:0; background:rgba(255,255,255,.14); color:#fff; border-radius:7px; padding:4px 7px; font-size:11px; cursor:pointer; }
+  .menue button:hover { background:rgba(255,255,255,.26); }
+  .leer { font-size:12px; color:rgba(255,255,255,.6); padding:8px 4px; }
+  /* schmal (Layout C): nur Gesichter, Text als Tooltip */
+  body.schmal .kopf span, body.schmal .gt, body.schmal .p > div, body.schmal .menue { display:none; }
+  body.schmal .kopf { justify-content:center; padding:8px 0 4px; } body.schmal .inh { padding:0 0 8px; } body.schmal .p { justify-content:center; padding:5px 0; }
+</style>
+</head>
+<body>
+<div id="l"><div class="kopf"><span id="titel">Online</span><button id="klapp" title="Leiste schmal/breit">›</button></div><div class="inh" id="inh"><div class="leer">Lädt …</div></div></div>
+<script>
+const KEY = "a21b2aa2a42fe6189b05773c07bbc9ad78e38b34ba3bb6fe", B = "https://swdigitaltest.de/buero-praesenz";
+const $ = id => document.getElementById(id), q = new URLSearchParams(location.search), SITZ = q.get("s") || "";
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const FARBE = { gespraech: "#7F77DD", besprechung: "#378ADD", buero: "#639922", pause: "#EF9F27" };
+const GRUPPE = { gespraech: "Im Gespräch", besprechung: "Besprechung", buero: "Im Büro", pause: "Pause" };
+let daten = null, offen = "", schmal = q.get("schmal") === "1";
+function aktion(was, extra) { try { WA.player.state.saveVariable("swAktion", Object.assign({ was, t: Date.now() }, extra || {}), { public: false, persist: false }); } catch (e) { console.warn(e); } }
+const dauer = (seit, jetzt) => { const m = Math.max(0, Math.round((jetzt - seit) / 60000)); return m < 1 ? "" : m < 60 ? " · " + m + " Min" : " · " + Math.floor(m / 60) + " Std"; };
+function farbe(p) { return p.text.startsWith("☎") ? "#EF9F27" : p.text.startsWith("💬") ? "#1D9E75" : FARBE[p.gruppe] || "#639922"; }
+function malen() {
+  document.body.classList.toggle("schmal", schmal); $("klapp").textContent = schmal ? "‹" : "›";
+  if (!daten) return;
+  const l = daten.liste; $("titel").textContent = "Online · " + l.length;
+  let h = "", g = "";
+  for (const p of l) {
+    if (p.gruppe !== g) { g = p.gruppe; h += `<div class="gt">${GRUPPE[g] || ""} · ${l.filter(x => x.gruppe === g).length}</div>`; }
+    const zeit = (p.gruppe === "gespraech" || p.gruppe === "besprechung") && p.seit ? dauer(p.seit, daten.jetzt) : "";
+    h += `<div class="p" data-id="${esc(p.id)}" title="${esc(p.name + " – " + p.text)}"><span class="av" style="${p.foto ? `background-image:url('${esc(p.foto)}')` : ""}">${p.foto ? "" : esc(p.vorname.slice(0, 2).toUpperCase())}<i style="background:${farbe(p)}"></i></span>
+      <div style="min-width:0"><div class="n">${esc(p.vorname)}${p.ich ? " (du)" : ""}</div><div class="s">${esc(p.text)}${zeit}</div></div></div>`;
+    if (offen === p.id && !p.ich) h += `<div class="menue">${daten.chat ? `<button data-a="chat">💬 Chat</button><button data-a="anruf">📞 Anrufen</button>` : ""}<button data-a="hin">🚶 Hin</button><button data-a="profil">👤 Profil</button></div>`;
+  }
+  $("inh").innerHTML = h || '<div class="leer">Gerade ist niemand online.</div>';
+  document.querySelectorAll(".p").forEach(el => el.onclick = () => { if (schmal) { schmal = false; aktion("leisteRechts", { schmal: false }); } offen = offen === el.dataset.id ? "" : el.dataset.id; malen(); });
+  document.querySelectorAll(".menue button").forEach(b => b.onclick = e => { e.stopPropagation(); los(b.dataset.a); });
+}
+async function los(a) {
+  const p = daten.liste.find(x => x.id === offen); if (!p) return;
+  if (a === "chat") aktion("leisteChat", { id: p.id });
+  if (a === "hin") aktion("zuPerson", { name: p.name });
+  if (a === "profil") aktion("leisteProfil", { name: p.name });
+  if (a === "anruf") {
+    try { const r = await fetch(B + "/anruf/start", { method: "POST", headers: { "X-Buero-Key": KEY, "X-Buero-Sitzung": SITZ, "Content-Type": "application/json" }, body: JSON.stringify({ an: p.id }) });
+      const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || "Anruf geht gerade nicht"); aktion("anrufOeffnen", { id: d.id }); }
+    catch (e) { alert("📞 " + e.message); }
+  }
+  offen = ""; malen();
+}
+async function laden() {
+  try { const r = await fetch(B + "/leiste", { headers: { "X-Buero-Key": KEY, "X-Buero-Sitzung": SITZ } }); if (!r.ok) throw new Error(r.status === 401 ? "Bitte das Büro neu laden." : "Gerade nicht erreichbar"); daten = await r.json(); malen(); }
+  catch (e) { if (!daten) $("inh").innerHTML = '<div class="leer">' + esc(e.message) + "</div>"; }
+}
+$("klapp").onclick = () => { schmal = !schmal; offen = ""; malen(); aktion("leisteRechts", { schmal }); };
+WA.onInit().then(() => { laden(); setInterval(laden, 8000); }).catch(() => { laden(); setInterval(laden, 8000); });
+</script>
+</body>
+</html>

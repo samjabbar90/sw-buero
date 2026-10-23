@@ -76,7 +76,7 @@
     } catch {
     }
     if (HANDY && grundriss) return;
-    let rechts = 12;
+    let rechts = 12 + (leisteBreite() ? leisteBreite() + 8 : 0);
     if (glasOffen) {
       try {
         const g = glasLage();
@@ -1727,7 +1727,7 @@
       }
     } };
   }
-  var BLEIBT_OFFEN = /push-start\.html\?pflicht|info\.html|leiste\.html|schloss\.html|tagescheck\.html\?karte|oben\.html|handy-menue\.html|blick\.html|app\.html|ausweis-sync\.html|mitteilungen\.html/;
+  var BLEIBT_OFFEN = /leiste-rechts.html|push-start\.html\?pflicht|info\.html|leiste\.html|schloss\.html|tagescheck\.html\?karte|oben\.html|handy-menue\.html|blick\.html|app\.html|ausweis-sync\.html|mitteilungen\.html/;
   function allesZu() {
     try {
       WA.ui.modal.closeModal();
@@ -2198,6 +2198,39 @@
       } catch {
       }
     }
+  }
+  var leisteRechts = null;
+  var leisteSchmal = false;
+  var LEISTE_BREIT = 232;
+  var LEISTE_SCHMAL = 58;
+  function leisteBreite() {
+    return leisteRechts ? leisteSchmal ? LEISTE_SCHMAL : LEISTE_BREIT : 0;
+  }
+  async function leisteRechtsAuf() {
+    if (HANDY) return;
+    try {
+      leisteSchmal = !!WA.player.state.swLeisteSchmal;
+    } catch {
+    }
+    const alt = leisteRechts;
+    leisteRechts = null;
+    try {
+      leisteRechts = await WA.ui.website.open({
+        url: SEITEN + "leiste-rechts.html?s=" + SITZUNG + (leisteSchmal ? "&schmal=1" : "") + "&t=" + Date.now(),
+        allowApi: true,
+        visible: true,
+        position: { vertical: "middle", horizontal: "right" },
+        size: { width: (leisteSchmal ? LEISTE_SCHMAL : LEISTE_BREIT) + "px", height: "64vh" },
+        margin: { right: "8px" }
+      });
+    } catch {
+    }
+    try {
+      alt && alt.close();
+    } catch {
+    }
+    mtLage = "";
+    if (mitteilungen.length) mtZeigen();
   }
   var GESPRAECH_RAUM = /^(Büro .+|Besprechung (Glas|11|1|2)|Fibu-Besprechung)$/;
   async function raumGespraeche() {
@@ -3318,7 +3351,7 @@
     } catch {
     }
     WA.ui.website.getAll().then((alle) => alle.forEach((w) => {
-      if (!/push-start\.html\?pflicht|info\.html|leiste\.html|schloss\.html|tagescheck\.html\?karte|oben\.html\?v|oben\.html\?alle|handy-menue\.html\?knopf/.test(String(w.url || ""))) w.close().catch(() => {
+      if (!/leiste-rechts\.html|push-start\.html\?pflicht|info\.html|leiste\.html|schloss\.html|tagescheck\.html\?karte|oben\.html\?v|oben\.html\?alle|handy-menue\.html\?knopf/.test(String(w.url || ""))) w.close().catch(() => {
       });
     })).catch(() => {
     });
@@ -3547,6 +3580,7 @@
     dankeWand();
     gespraechsRaeume();
     raumGespraeche();
+    leisteRechtsAuf();
     zimmerGespraeche();
     glaswandAgenten();
     fussball();
@@ -3773,6 +3807,17 @@
         if (!v || !v.t || v.t === letzteAktion) return;
         letzteAktion = v.t;
         if (v.was === "chat") return chatUmschalten();
+        if (v.was === "leisteRechts") {
+          leisteSchmal = !!v.schmal;
+          try {
+            WA.player.state.saveVariable("swLeisteSchmal", leisteSchmal, { public: false, persist: true });
+          } catch {
+          }
+          return leisteRechtsAuf();
+        }
+        if (v.was === "leisteChat") return glasFenster(SEITEN + "chat.html?mit=" + encodeURIComponent(String(v.id || "")) + "&s=" + SITZUNG + "&t=" + Date.now());
+        if (v.was === "leisteProfil") return profilOeffnen(String(v.name || ""));
+        if (v.was === "anrufOeffnen") return glasFenster(SEITEN + "anruf.html?id=" + encodeURIComponent(String(v.id || "")) + "&s=" + SITZUNG + "&t=" + Date.now());
         if (v.was === "pushFertig" || v.was === "pushSpaeter") return pushPflichtFertig();
         if (v.was === "tonProbe") return ton(v.art === "direkt" ? "klopfen" : "klingel", String(v.art || "gruppe"));
         if (v.was === "toene") {
