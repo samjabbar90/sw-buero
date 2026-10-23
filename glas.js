@@ -62,7 +62,7 @@ if (/\/(info|blick)\.html$/.test(location.pathname)) window.addEventListener("be
       html.classList.add("glas-zieht");
       const bewegen = (m) => {
         const dx = m.screenX - x0, dy = m.screenY - y0;
-        const SW = screen.availWidth || 1600, SH = screen.availHeight || 900, zw = (v, a, z) => Math.min(z, Math.max(a, v)); // nie aus dem Bildschirm
+        const SW = window.outerWidth || screen.availWidth || 1600, SH = screen.availHeight || 900, zw = (v, a, z) => Math.min(z, Math.max(a, v)); // nie aus dem Browserfenster (23.10.2026: outerWidth)
         const hvMax = Math.max(30, Math.floor(100 - (ein.o + 40) * 100 / vp)); // unten nicht aus dem Büro-Fenster
         if (art === "kopf") { ein.r = zw(s.r - dx, 0, SW - ein.b - 20); ein.o = zw(s.o + dy, 0, Math.max(0, vp - hpx0 - 40)); zeigen("Verschieben … loslassen zum Übernehmen"); }
         else { ein.b = zw(Math.round(s.b - dx), 340, SW - ein.r - 20); if (art === "ecke") ein.hv = zw(Math.round((hpx0 + dy) * 100 / vp), 30, hvMax);

@@ -23,6 +23,8 @@
   .z:active { background:#f3f4f6; }
   .gs { position:relative; width:42px; height:42px; border-radius:50%; background:#9FE1CB; color:#04342C; display:flex; align-items:center; justify-content:center; font-weight:600; font-size:14px; flex:none; }
   .gs.gr { background:#c7d2fe; color:#1e1b4b; font-size:19px; }
+  .gs img { width:100%; height:100%; border-radius:50%; object-fit:cover; display:block; } .gs.klein { width:34px; height:34px; font-size:12px; } .gs.klein i { width:9px; height:9px; }
+  .wer img { width:18px; height:18px; border-radius:50%; object-fit:cover; vertical-align:-4px; margin-right:5px; }
   .gs i { position:absolute; right:0; bottom:0; width:11px; height:11px; border-radius:50%; background:#22c55e; border:2px solid #fff; }
   .z .n { font-weight:600; } .z .l { font-size:13px; color:#6b7280; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .z .r { margin-left:auto; text-align:right; flex:none; font-size:11.5px; color:#9ca3af; }
@@ -85,7 +87,7 @@
   html.glas .karte { background:#1f2937; color:#f1f5f9; } html.glas .karte .pkt:hover, html.glas .emojis span:hover { background:rgba(255,255,255,.1); } html.glas .karte input[type=text] { background:rgba(0,0,0,.35); color:#fff; border-color:rgba(255,255,255,.25); }
   html.glas .karte .knopf.hell { background:rgba(255,255,255,.12); color:#fff; } html.glas .klein { color:rgba(255,255,255,.7); } html.glas .karte .pkt.rot2 { color:#fca5a5; }
 </style>
-<script src="glas.js?v=1792766713"></script>
+<script src="glas.js?v=1792770000"></script>
 </head>
 <body>
 <header id="kopf"><h1>💬 Chats</h1></header>
@@ -114,6 +116,8 @@ const SITZ = q.get("s") || "";
 const H = () => SITZ && !ausweis() ? { "X-Buero-Key": KEY, "X-Buero-Sitzung": SITZ, "Content-Type": "application/json" } : { "X-Buero-Key": KEY, "X-Buero-Ausweis": ausweis(), "X-Buero-Sitzung": SITZ, "Content-Type": "application/json" };
 const mitS = () => (SITZ ? "&s=" + encodeURIComponent(SITZ) : "") + (q.get("glas") ? "&glas=1" : "");
 const kuerzel = n => String(n || "?").split(/\s+/).map(t => t[0] || "").join("").slice(0, 2).toUpperCase();
+// Bild der Person bzw. Gruppenbild, sonst Kürzel / 👥 (23.10.2026, Sam: „immer die Bilder zeigen“)
+const ava = (bild, name, gruppe, online, klein) => `<span class="gs ${gruppe && !bild ? "gr" : ""} ${klein ? "klein" : ""}">${bild ? `<img src="${esc(bild)}" alt="" onerror="this.replaceWith(document.createTextNode('${gruppe ? "👥" : esc(kuerzel(name))}'))">` : gruppe ? "👥" : esc(kuerzel(name))}${online ? "<i></i>" : ""}</span>`;
 const uhr = iso => new Date(iso).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
 const tagText = iso => { const d = new Date(iso), h = new Date(); const g = new Date(h); g.setDate(h.getDate() - 1);
   return d.toDateString() === h.toDateString() ? "Heute" : d.toDateString() === g.toDateString() ? "Gestern" : d.toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit" }); };
@@ -143,8 +147,8 @@ document.addEventListener("keydown", e => { if (e.key === "Escape") { if ($("gro
 async function liste() {
   konv = ""; daten = null; leisteZu(); $("fuss").style.display = "none"; $("tippt").textContent = ""; $("sucheBox").style.display = "";
   history.replaceState(null, "", location.pathname + "?" + mitS().slice(1));
-  $("kopf").innerHTML = '<h1>💬 Chats</h1><button id="neuGr" title="Neue Gruppe">👥 +</button>' + (ich && ich.admin ? '<button id="prot" title="Bearbeitete und gelöschte Nachrichten">🛡</button>' : "");
-  $("neuGr").onclick = () => gruppeFenster(null);
+  $("kopf").innerHTML = '<h1>💬 Chats</h1><button id="neuChat" title="Neuer Chat">✏️</button><button id="neuGr" title="Neue Gruppe">👥 +</button>' + (ich && ich.admin ? '<button id="prot" title="Bearbeitete und gelöschte Nachrichten">🛡</button>' : "");
+  $("neuGr").onclick = () => gruppeFenster(null); $("neuChat").onclick = neuerChat;
   if ($("prot")) $("prot").onclick = protokoll;
   clearInterval(takt); await listeLaden(); takt = setInterval(listeLaden, 8000);
 }
@@ -154,14 +158,15 @@ async function listeLaden() {
   try {
     const d = await api("/liste"), warAdmin = ich && ich.admin; ich = d.ich;
     if (ich.admin && !warAdmin && !$("prot")) { const b = document.createElement("button"); b.id = "prot"; b.title = "Bearbeitete und gelöschte Nachrichten"; b.textContent = "🛡"; b.onclick = protokoll; $("kopf").appendChild(b); }
-    const s = suchText.toLowerCase(), chats = s ? d.chats.filter(c => c.name.toLowerCase().includes(s)) : d.chats;
-    let h = chats.map(c => `<div class="z" data-k="${esc(c.k)}"><span class="gs ${c.typ === "gruppe" ? "gr" : ""}">${c.typ === "gruppe" ? "👥" : esc(kuerzel(c.name))}${c.online ? "<i></i>" : ""}</span>
+    // nur Gespräche mit Nachrichten (23.10.2026, Sam: „die raus nehmen, wo noch kein Chat war“); bei der Namenssuche auch alle anderen
+    const s = suchText.toLowerCase(), chats = s ? d.chats.filter(c => c.name.toLowerCase().includes(s)) : d.chats.filter(c => c.letzte || c.typ === "gruppe");
+    let h = chats.map(c => `<div class="z" data-k="${esc(c.k)}">${ava(c.typ === "gruppe" ? c.bild : c.foto, c.name, c.typ === "gruppe", c.online)}
       <div style="min-width:0;flex:1"><div class="n">${esc(c.name)}</div><div class="l">${c.imGespraech ? "📞 im Gespräch · " : ""}${c.letzte ? (c.letzte.vonMir ? "Du: " : "") + esc(c.letzte.text) : c.typ === "gruppe" ? c.anzahl + " Mitglieder" : (c.online ? "im Büro" : "noch keine Nachricht")}</div></div>
       <div class="r">${c.letzte ? kurzZeit(c.letzte.zeit) : ""}${c.ungelesen ? '<br><span class="rot">' + c.ungelesen + "</span>" : ""}</div></div>`).join("");
     if (s.length >= 2) { const t = await api("/suche?q=" + encodeURIComponent(suchText)).catch(() => []);
       if (t.length) h += '<div class="ue">Nachrichten</div>' + t.map(x => `<div class="z" data-k="${esc(x.k)}" data-n="${esc(x.id)}"><div style="min-width:0;flex:1"><div class="n">${esc(x.name)}</div><div class="l">${x.vonMir ? "Du: " : ""}${markiere(x.text, suchText)}</div></div><div class="r">${kurzZeit(x.zeit)}</div></div>`).join(""); }
     if (konv) return; // inzwischen ein Gespräch geöffnet
-    $("inhalt").innerHTML = h || '<div class="leer">' + (s ? "Nichts gefunden." : "Hier gibt es noch niemanden zum Schreiben.") + "</div>";
+    $("inhalt").innerHTML = h || '<div class="leer">' + (s ? "Nichts gefunden." : "Noch keine Chats.<br>Mit ✏️ oben einen neuen Chat beginnen oder mit 👥 + eine Gruppe anlegen.") + "</div>";
     document.querySelectorAll(".z").forEach(z => z.onclick = () => verlauf(z.dataset.k, z.dataset.n));
   } catch (e) { fehler(e); }
 }
@@ -170,6 +175,16 @@ const markiere = (t, s) => { const i = t.toLowerCase().indexOf(s.toLowerCase());
 let suchUhr = null;
 $("suche").oninput = () => { clearTimeout(suchUhr); suchUhr = setTimeout(() => { suchText = $("suche").value.trim(); listeLaden(); }, 300); };
 $("suche").onkeydown = e => e.stopPropagation();
+
+// ---- ✏️ Neuer Chat: Person wählen ----
+async function neuerChat() {
+  let personen = []; try { personen = await api("/personen"); } catch (e) { return hinweis(e.message); }
+  const h = fenster('<h3>✏️ Neuer Chat</h3><input type="text" id="ncSuche" placeholder="Name suchen …"><div id="ncListe"></div>');
+  const malen = () => { const t = h.querySelector("#ncSuche").value.trim().toLowerCase();
+    h.querySelector("#ncListe").innerHTML = personen.filter(p => !t || p.name.toLowerCase().includes(t)).map(p => `<div class="z" data-p="${esc(p.id)}" style="padding:8px 4px">${ava(p.foto, p.name, false, false, true)}<div class="n">${esc(p.name)}</div></div>`).join("") || '<div class="klein">Niemand gefunden.</div>';
+    h.querySelectorAll("[data-p]").forEach(z => z.onclick = () => { zu(); verlauf(z.dataset.p); }); };
+  h.querySelector("#ncSuche").oninput = malen; h.querySelector("#ncSuche").onkeydown = e => e.stopPropagation(); malen(); if (!HANDY) h.querySelector("#ncSuche").focus();
+}
 
 // ---- Gruppe anlegen / ändern ----
 async function gruppeFenster(g) {
@@ -188,8 +203,14 @@ async function gruppeFenster(g) {
 function gruppeMenue() {
   const d = daten; if (!d) return;
   const h = fenster(`<h3>👥 ${esc(d.name)}</h3><div class="klein">${d.mitglieder.length} Mitglieder: ${d.mitglieder.map(m => esc(m.name)).join(", ")}</div>
-    ${d.darfVerwalten ? '<button class="pkt" id="gmAend">✏️ Name / Mitglieder ändern</button>' : ""}${d.mitglieder.some(m => m.id === d.ich) ? '<button class="pkt rot2" id="gmRaus">🚪 Gruppe verlassen</button>' : ""}<button class="pkt" id="gmZu">Schließen</button>`);
+    <div style="text-align:center;margin:6px 0 4px">${ava(d.bild, d.name, true)}</div>${d.mitglieder.some(m => m.id === d.ich) ? '<button class="pkt" id="gmBild">🖼 Gruppenbild wählen</button>' + (d.bild ? '<button class="pkt" id="gmBildWeg">🖼 Gruppenbild entfernen</button>' : "") : ""}${d.darfVerwalten ? '<button class="pkt" id="gmAend">✏️ Name / Mitglieder ändern</button>' : ""}${d.mitglieder.some(m => m.id === d.ich) ? '<button class="pkt rot2" id="gmRaus">🚪 Gruppe verlassen</button>' : ""}<button class="pkt" id="gmZu">Schließen</button>`);
   if (h.querySelector("#gmAend")) h.querySelector("#gmAend").onclick = () => gruppeFenster(d);
+  if (h.querySelector("#gmBild")) h.querySelector("#gmBild").onclick = () => { const i = document.createElement("input"); i.type = "file"; i.accept = "image/*";
+    i.onchange = async () => { const f = i.files[0]; if (!f) return; zu(); if (f.size > 9.5 * 1048576) return hinweis("Das Bild ist zu groß.");
+      try { const up = await api("/datei", { method: "POST", body: f, headers: { "Content-Type": "application/octet-stream", "X-Dateiname": encodeURIComponent(f.name || "Gruppenbild"), "X-Dateityp": f.type || "image/jpeg" } });
+        await post("/gruppe/bild", { id: konv.slice(2), datei: up.id }); $("kopfBild").dataset.b = ""; verlaufLaden(false); } catch (e) { hinweis("🖼 " + e.message); } };
+    i.click(); };
+  if (h.querySelector("#gmBildWeg")) h.querySelector("#gmBildWeg").onclick = async () => { zu(); try { await post("/gruppe/bild", { id: konv.slice(2), datei: null }); $("kopfBild").dataset.b = ""; verlaufLaden(false); } catch (e) { hinweis(e.message); } };
   if (h.querySelector("#gmRaus")) h.querySelector("#gmRaus").onclick = async () => { if (!confirm("Gruppe „" + d.name + "“ verlassen?")) return; try { await post("/gruppe/verlassen", { id: konv.slice(2) }); zu(); liste(); } catch (e) { hinweis(e.message); } };
   h.querySelector("#gmZu").onclick = zu;
 }
@@ -211,7 +232,7 @@ async function protokoll() {
 async function verlauf(k, springen) {
   konv = k; daten = null; html = new Map(); leisteZu(); clearInterval(takt); $("sucheBox").style.display = "none";
   history.replaceState(null, "", location.pathname + "?k=" + encodeURIComponent(k) + mitS());
-  $("kopf").innerHTML = '<button id="zurueck" aria-label="Zurück">←</button><h1 id="mitName">…</h1><span id="kopfKnoepfe"></span>';
+  $("kopf").innerHTML = '<button id="zurueck" aria-label="Zurück">←</button><span id="kopfBild"></span><h1 id="mitName">…</h1><span id="kopfKnoepfe"></span>';
   $("zurueck").onclick = liste;
   $("inhalt").innerHTML = '<div id="verlauf"><div class="leer">Lädt …</div></div>'; $("fuss").style.display = "flex";
   await verlaufLaden(true); takt = setInterval(() => verlaufLaden(false), 3000);
@@ -223,7 +244,8 @@ async function verlaufLaden(erstes) {
   try {
     const d = await api(verlaufPfad()); if (!konv) return;
     konv = d.k; daten = d; ich = ich || { id: d.ich, admin: d.admin };
-    $("mitName").innerHTML = (d.typ === "gruppe" ? "👥 " : "") + esc(d.name) + "<small>" + (d.typ === "gruppe" ? esc(d.mitglieder.map(m => m.name).join(", ")) : d.mit.imGespraech ? "📞 im Gespräch" : d.mit.online ? "im Büro" : "nicht im Büro") + "</small>";
+    const kb = (d.bild || "") + d.typ + (d.mit && d.mit.online ? 1 : 0); if ($("kopfBild").dataset.b !== kb) { $("kopfBild").dataset.b = kb; $("kopfBild").innerHTML = ava(d.bild, d.name, d.typ === "gruppe", d.mit && d.mit.online, true); }
+    $("mitName").innerHTML = esc(d.name) + "<small>" + (d.typ === "gruppe" ? esc(d.mitglieder.map(m => m.name).join(", ")) : d.mit.imGespraech ? "📞 im Gespräch" : d.mit.online ? "im Büro" : "nicht im Büro") + "</small>";
     const kk = d.typ === "gruppe" ? "gr" : "dm"; if ($("kopfKnoepfe").dataset.t !== kk) { $("kopfKnoepfe").dataset.t = kk;
       $("kopfKnoepfe").innerHTML = d.typ === "gruppe" ? '<button id="grMenue" title="Gruppe">⚙</button>' : '<button id="anrufen" aria-label="Anrufen" title="Anrufen">📞</button>';
       if ($("anrufen")) $("anrufen").onclick = anrufen; if ($("grMenue")) $("grMenue").onclick = gruppeMenue; }
@@ -252,7 +274,7 @@ function zeichnen(d, erstes) {
 }
 function blase(n, d) {
   if (n.system) return `<div class="sys">${esc(n.vonName)} ${esc(n.text.replace(/^👥 /, ""))}</div>`;
-  const wer = d.typ === "gruppe" && !n.vonMir ? `<span class="wer">${esc(n.vonName)}</span>` : "";
+  const wer = d.typ === "gruppe" && !n.vonMir ? `<span class="wer">${n.vonFoto ? `<img src="${esc(n.vonFoto)}" alt="">` : ""}${esc(n.vonName)}</span>` : "";
   const fuss = `<small>${n.bearbeitet ? "bearbeitet · " : ""}${uhr(n.zeit)}${n.vonMir && !n.geloescht ? " " + (d.typ === "dm" ? (n.gelesen ? "✓✓" : "✓") : n.gelesen ? "✓✓ " + n.gelesen : "✓") : ""}</small>`;
   if (n.geloescht && !d.admin) return `<div class="sb ${n.vonMir ? "meins" : "seins"} weg">${wer}🗑 Diese Nachricht wurde gelöscht${fuss}</div>`;
   let inhalt = "";
