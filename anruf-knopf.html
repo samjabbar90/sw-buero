@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Gespräch</title>
+<!-- Leiste im Gesprächsraum (23.10.2026, Sam: „mit dem Handy telefonieren – nichts funktioniert“): der Auflegen-Knopf in der
+     WorkAdventure-Leiste war am Handy nicht zu sehen. Darum eine eigene Leiste oben: Name, Gesprächszeit, Hinweis aufs Mikrofon,
+     großer roter 📵-Knopf. ?id=<Anruf>&zurueck=<handy|buero> – geöffnet von anruf.js. -->
+<script src="https://play.workadventu.re/iframe_api.js"></script>
+<style>
+  html, body { margin:0; background:transparent; font-family:system-ui,-apple-system,"Segoe UI",sans-serif; overflow:hidden; }
+  .l { display:flex; align-items:center; gap:10px; background:rgba(15,118,110,.95); color:#fff; border-radius:16px; padding:8px 8px 8px 14px; }
+  .t { flex:1; min-width:0; } .t b { display:block; font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; } .t small { font-size:12px; opacity:.9; }
+  button { border:0; border-radius:12px; background:#ef4444; color:#fff; font:inherit; font-weight:700; font-size:15px; padding:11px 14px; cursor:pointer; white-space:nowrap; }
+</style>
+</head>
+<body>
+<div class="l"><div class="t"><b id="wer">📞 Gespräch</b><small id="info">🎙 Unten das Mikrofon antippen, falls es rot ist</small></div><button id="ende">📵 Auflegen</button></div>
+<script>
+const B = "https://swdigitaltest.de/buero-praesenz/anruf", KEY = "a21b2aa2a42fe6189b05773c07bbc9ad78e38b34ba3bb6fe", q = new URLSearchParams(location.search);
+const ID = q.get("id") || "", ZURUECK = { handy: "https://samjabbar90.github.io/sw-buero/handy.html", buero: "https://play.workadventu.re/@/swdigitaltax/sw-digital-tax/buero#karte=1" }[q.get("zurueck")] || "https://samjabbar90.github.io/sw-buero/handy.html";
+const H = { "X-Buero-Key": KEY, "Content-Type": "application/json" }, start = Date.now();
+const zurueck = () => { try { WA.nav.goToPage(ZURUECK); } catch (e) { try { window.top.location.href = ZURUECK; } catch (e2) { location.href = ZURUECK; } } };
+document.getElementById("ende").onclick = async () => { document.getElementById("ende").disabled = true;
+  try { await fetch(B + "/" + encodeURIComponent(ID) + "/ende", { method: "POST", headers: H, body: JSON.stringify({ name: (window.WA && WA.player && WA.player.name) || "" }) }); } catch (e) { /* egal */ } zurueck(); };
+setInterval(async () => {
+  const s = Math.floor((Date.now() - start) / 1000); document.getElementById("info").textContent = Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0") + " · 🎙 Mikrofon unten antippen, falls rot";
+  try { const r = await fetch(B + "/" + encodeURIComponent(ID) + "/status", { headers: H }); const d = await r.json(); if (d && d.mit) document.getElementById("wer").textContent = "📞 " + d.mit; } catch (e) { /* nächstes Mal */ }
+}, 2000);
+</script>
+</body>
+</html>

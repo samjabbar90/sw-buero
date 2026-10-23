@@ -17,6 +17,10 @@
     try { WA.controls.disablePlayerControls(); } catch (e) { /* alt */ } // in der Kabine bleiben – Laufen würde das Gespräch beenden
     const auflegen = async () => { try { await fetch(B + "/" + encodeURIComponent(id) + "/ende", { method: "POST", headers: H(), body: JSON.stringify({ name: WA.player.name }) }); } catch (e) { /* egal */ } raus("📵 Aufgelegt"); };
     try { WA.ui.actionBar.addButton({ id: "sw-auflegen", label: "📵 Auflegen", callback: auflegen }); } catch (e) { /* alt */ }
+    // 23.10.2026 (Sam: „mit dem Handy telefonieren – nichts funktioniert“): am Handy war der Knopf in der WA-Leiste nicht zu sehen → eigene Leiste oben
+    try { const handy = /Android|iPhone|iPod|Mobile/i.test(navigator.userAgent), bw = Math.min(460, Math.round((screen.width || 390) - 16));
+      await WA.ui.website.open({ url: "https://samjabbar90.github.io/sw-buero/anruf-knopf.html?id=" + encodeURIComponent(id) + "&zurueck=" + encodeURIComponent(h.zurueck || "handy") + "&t=" + Date.now(), allowApi: true, visible: true,
+        position: { vertical: "bottom", horizontal: "middle" }, size: { width: (handy ? bw : 460) + "px", height: "64px" }, margin: { bottom: handy ? "110px" : "90px" } }); /* unten: oben liegen die Video-Kacheln */ } catch (e) { /* ältere Version: Knopf in der Leiste */ }
     if (!id) return;
     // legt der andere auf oder endet der Anruf, geht es zurück
     setInterval(async () => {
