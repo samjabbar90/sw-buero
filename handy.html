@@ -24,7 +24,10 @@
   .kacheln button { background:#fff; border:1px solid rgba(17,24,39,.08); border-radius:14px; padding:12px 0 9px; display:flex; flex-direction:column; align-items:center; gap:5px; font:inherit; font-size:11.5px; color:#374151; }
   .kacheln button span { font-size:22px; line-height:1; }
   .p { display:flex; align-items:center; gap:10px; padding:8px 2px; border-top:1px solid #f1f5f9; } .p:first-of-type { border-top:0; }
-  .gesicht { width:36px; height:36px; border-radius:50%; flex:none; background:#475569 center/cover no-repeat; color:#fff; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:800; }
+  .gesicht { position:relative; width:36px; height:36px; border-radius:50%; flex:none; background:#475569 center/cover no-repeat; color:#fff; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:800; }
+  /* 23.10.2026 (Sam): im Büro grünes Licht, nicht im Büro Bild abgedunkelt */
+  .gesicht i.an { position:absolute; right:-1px; bottom:-1px; width:11px; height:11px; border-radius:50%; background:#22c55e; border:2px solid #fff; }
+  .gesicht.aus { filter:grayscale(1) brightness(.6); opacity:.85; }
   .p .n { font-weight:600; } .p .w { font-size:12.5px; color:#4b5563; }
   .p .akt { margin-left:auto; display:flex; gap:6px; }
   .k { border:1px solid rgba(17,24,39,.15); background:#fff; border-radius:10px; padding:7px 9px; font:inherit; font-size:13px; color:#0f766e; font-weight:600; text-decoration:none; }
@@ -115,12 +118,12 @@ function zeichnen() {
     ${t.ort ? `<div class="zeile"><a class="k voll" href="${BUERO}#ziel=${encodeURIComponent(t.ort)}">🚶 Hingehen</a></div>` : ""}</div>`).join("");
   h += `<div class="kacheln">${chatDarf ? `<button id="chatKachel" style="border:2px solid #0f766e;color:#0f766e;font-weight:700"><span>💬</span>Chats${chatUngelesen ? ` <b style="background:#E24B4A;color:#fff;border-radius:9px;padding:0 6px;font-size:11px">${chatUngelesen}</b>` : ""}</button>` : ""}${KACHELN.map((k, i) => `<button data-k="${i}"><span>${k[0]}</span>${k[1]}</button>`).join("")}</div>`;
   h += `<div class="karte"><h2>Im Büro <span>${leute.length}</span></h2>${leute.length ? leute.map((p, i) => {
-    const f = p.foto ? `<span class="gesicht" style="background-image:url(&quot;${esc(p.foto)}&quot;)"></span>` : `<span class="gesicht">${esc(initialen(p.name))}</span>`;
+    const f = p.foto ? `<span class="gesicht" style="background-image:url(&quot;${esc(p.foto)}&quot;)"><i class="an"></i></span>` : `<span class="gesicht">${esc(initialen(p.name))}<i class="an"></i></span>`;
     return `<div class="p" data-p="${i}">${f}<div><div class="n">${esc(p.name)}</div><div class="w">${esc(raumText(p.bereich))}${p.telefoniert ? " · 📞 telefoniert" : ""}</div></div>
       <div class="akt"><button class="k" data-nachricht="${i}" aria-label="Nachricht">💬</button>${chatDarf && p.id ? `<button class="k" data-anruf="${i}" aria-label="Anrufen">📞</button>` : ""}${hingehbar(p.bereich) ? `<a class="k voll" href="${BUERO}#ziel=${encodeURIComponent(p.bereich)}">🚶 Hin</a>` : ""}</div></div>
       ${offen === "n" + i ? `<div class="eingabe"><input id="txt" placeholder="Nachricht an ${esc(String(p.name).split(" ")[0])} …" maxlength="300"><button class="k voll" data-senden="${esc(p.name)}">Senden</button></div>` : ""}`; }).join("") : '<div class="leer">Gerade ist niemand außer dir im Büro.</div>'}
     <div id="fe"></div></div>`;
-  if (weg.length) h += `<div class="karte"><details><summary>Nicht im Büro (${weg.length})</summary>${weg.map(p => `<div class="p"><span class="gesicht" style="background:#cbd5e1">${esc(initialen(p.name))}</span><div><div class="n">${esc(p.name)}</div><div class="w">${p.zuletzt ? "zuletzt " + new Date(p.zuletzt).toLocaleString("de-DE", { weekday: "short", hour: "2-digit", minute: "2-digit" }) : "–"}</div></div>${p.durchwahl ? `<div class="akt"><a class="k" href="tel:${esc(p.durchwahl)}">📞</a></div>` : ""}</div>`).join("")}</details></div>`;
+  if (weg.length) h += `<div class="karte"><details><summary>Nicht im Büro (${weg.length})</summary>${weg.map(p => `<div class="p">${p.foto ? `<span class="gesicht aus" style="background-image:url(&quot;${esc(p.foto)}&quot;)"></span>` : `<span class="gesicht aus" style="background-color:#94a3b8">${esc(initialen(p.name))}</span>`}<div><div class="n">${esc(p.name)}</div><div class="w">${p.zuletzt ? "zuletzt " + new Date(p.zuletzt).toLocaleString("de-DE", { weekday: "short", hour: "2-digit", minute: "2-digit" }) : "–"}</div></div>${p.durchwahl ? `<div class="akt"><a class="k" href="tel:${esc(p.durchwahl)}">📞</a></div>` : ""}</div>`).join("")}</details></div>`;
   $("inhalt").innerHTML = h;
   $("karte").onclick = () => { if (IM) return buero("arbeitenZu"); zurKarte(BUERO + "#karte=1"); }; // 22.10.2026: Karte ausdrücklich gewollt (sonst leitet das Büro-Skript am Handy hierher zurück)
   document.querySelectorAll("[data-k]").forEach(b => b.onclick = () => blatt(KACHELN[+b.dataset.k]));
