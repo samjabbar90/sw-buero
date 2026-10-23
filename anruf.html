@@ -74,7 +74,7 @@ function ziel(a) { return a.raum + "&zurueck=" + (imBuero ? "buero" : "handy"); 
 function gehe(url) { if (weg) return; weg = true; clearInterval(takt); freiton(false);
   try { if (imBuero && typeof WA !== "undefined" && WA.nav) return WA.nav.goToPage(url); } catch (e) { /* weiter unten */ }
   try { window.top.location.href = url; } catch (e) { location.href = url; } }
-function zurueck() { if (KLEIN) return schliessen(); freiton(false); if (imBuero) { try { WA.player.state.saveVariable("swAktion", { was: "allesZu", t: Date.now() }, { public: false, persist: false }); } catch (e) {} } else location.href = "handy.html"; }
+function zurueck() { if (KLEIN) return schliessen(); freiton(false); if (imBuero) { try { WA.player.state.saveVariable("swAktion", { was: /iPhone|Android|Mobile/i.test(navigator.userAgent) ? "handyListe" : "allesZu" /* 23.10.2026: am Handy nach dem Anruf zurück zur Übersicht */, t: Date.now() }, { public: false, persist: false }); } catch (e) {} } else location.href = "handy.html"; }
 // ---- Variante A (23.10.2026, Sam): Gespräch direkt hier, ohne Karte – Ton per WebRTC von Gerät zu Gerät (verschlüsselt).
 // Unser Server reicht nur die Verbindungsdaten weiter (/anruf/:id/signal). STUN (Cloudflare/Google) sieht nur die IP-Adressen, keinen Ton.
 // Nur wenn der Server modus „web“ meldet (Test Sam + Leutrim), sonst wie bisher der WorkAdventure-Gesprächsraum.
@@ -163,7 +163,7 @@ function malen(a) {
   if (a.modus === "web" && a.status === "laeuft") { freiton(false); if (!pc) { gespraechUI(a); gespraechStarten(a); } return; }
   if (pc) gespraechEnde();
   // Mikrofon-Frage schon beim Klingeln – danach darf das iPhone auch den Freiton spielen (vorher blockiert es Töne)
-  if (a.modus === "web" && a.status === "klingelt" && a.rolle === "von" && !mikro) mikroHolen().then(() => { if (freiTakt && !imBuero) freiEinmal(); }).catch(() => {});
+  if (a.modus === "web" && a.status === "klingelt" && a.rolle === "von" && !mikro) mikroHolen().then(() => { if (freiTakt && !imBuero) { try { tonCtx && tonCtx.resume(); } catch (e) {} freiEinmal(); } }).catch(() => {});
   if (KLEIN) return malenKlein(a);
   document.body.className = a.status === "klingelt" ? "klingelt" : "";
   freiton(a.status === "klingelt" && a.rolle !== "an" && !weg);
