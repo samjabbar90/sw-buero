@@ -48,7 +48,62 @@ function gehe(url) { if (weg) return; weg = true; clearInterval(takt); freiton(f
   try { if (imBuero && typeof WA !== "undefined" && WA.nav) return WA.nav.goToPage(url); } catch (e) { /* weiter unten */ }
   try { window.top.location.href = url; } catch (e) { location.href = url; } }
 function zurueck() { freiton(false); if (imBuero) { try { WA.player.state.saveVariable("swAktion", { was: "allesZu", t: Date.now() }, { public: false, persist: false }); } catch (e) {} } else location.href = "handy.html"; }
+// ---- Variante A (23.10.2026, Sam): Gespräch direkt hier, ohne Karte – Ton per WebRTC von Gerät zu Gerät (verschlüsselt).
+// Unser Server reicht nur die Verbindungsdaten weiter (/anruf/:id/signal). STUN (Cloudflare/Google) sieht nur die IP-Adressen, keinen Ton.
+// Nur wenn der Server modus „web“ meldet (Test Sam + Leutrim), sonst wie bisher der WorkAdventure-Gesprächsraum.
+const STUN = [{ urls: "stun:stun.cloudflare.com:3478" }, { urls: "stun:stun.l.google.com:19302" }];
+let pc = null, mikro = null, sigAb = 0, sigTakt = null, iceWarte = [], holt = false, gStart = 0, uhrTakt = null, sperre = null, stumm = false;
+async function mikroHolen() { if (!mikro) mikro = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false }); return mikro; }
+const signal = d => fetch(B + "/" + encodeURIComponent(ID) + "/signal", { method: "POST", headers: H(), body: JSON.stringify({ d }) }).catch(() => {});
+function gespraechUI(a) {
+  $("inhalt").innerHTML = `<div class="gs">${esc(kuerzel(a.mit))}</div><h1>${esc(a.mit)}</h1><p id="zust">Verbinde …</p><audio id="ton" autoplay playsinline></audio>
+    <button id="tonAn" hidden style="margin:-12px 0 20px;border:0;border-radius:12px;padding:10px 16px;font:inherit;font-weight:700;background:#fff;color:#0f766e">🔊 Tippen zum Hören</button>
+    <div class="knoepfe"><div><button id="stumm" style="background:rgba(255,255,255,.2)">🎙</button><small id="stummT">Stumm</small></div><div><button class="nein" id="auflegen">📵</button><small>Auflegen</small></div></div><div class="fe" id="fe"></div>`;
+  $("tonAn").onclick = () => { $("ton").play().then(() => { $("tonAn").hidden = true; }).catch(() => {}); };
+  $("stumm").onclick = () => { stumm = !stumm; if (mikro) mikro.getAudioTracks().forEach(t => { t.enabled = !stumm; }); $("stumm").textContent = stumm ? "🔇" : "🎙"; $("stummT").textContent = stumm ? "Stumm aus" : "Stumm"; $("stumm").style.background = stumm ? "#f59e0b" : "rgba(255,255,255,.2)"; };
+  $("auflegen").onclick = async () => { gespraechEnde(); try { malen(await api("/" + ID + "/ende", { method: "POST", body: "{}" })); } catch (e) { zurueck(); } };
+}
+function zustand() {
+  const z = pc ? pc.connectionState : "closed", el = $("zust"); if (!el) return;
+  if (z === "connected") { if (!gStart) { gStart = Date.now(); uhrTakt = setInterval(() => { const s = Math.floor((Date.now() - gStart) / 1000); if ($("zust")) $("zust").textContent = "🟢 " + Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); }, 1000); } }
+  else if (z === "disconnected") el.textContent = "Verbindung wackelt …";
+  else if (z === "failed") el.textContent = "⚠️ Keine Verbindung möglich (Netz blockiert) – bitte über WLAN nochmal versuchen";
+}
+async function gespraechStarten(a) {
+  if (pc) return;
+  try { await mikroHolen(); } catch (e) { gespraechUI(a); $("fe").textContent = "🎙 Kein Zugriff aufs Mikrofon – bitte im Browser erlauben."; }
+  pc = new RTCPeerConnection({ iceServers: STUN });
+  if (mikro) mikro.getTracks().forEach(t => pc.addTrack(t, mikro)); else pc.addTransceiver("audio", { direction: "recvonly" });
+  pc.ontrack = e => { const el = $("ton"); if (!el) return; el.srcObject = e.streams[0] || new MediaStream([e.track]); el.play().then(() => { $("tonAn").hidden = true; }).catch(() => { $("tonAn").hidden = false; }); };
+  pc.onicecandidate = e => { if (e.candidate) signal({ ice: e.candidate.toJSON() }); };
+  pc.onconnectionstatechange = zustand;
+  sigTakt = setInterval(abholen, 700);
+  if (a.rolle === "von") { const o = await pc.createOffer(); await pc.setLocalDescription(o); signal({ sdp: pc.localDescription.toJSON() }); }
+  abholen();
+  try { sperre = await navigator.wakeLock.request("screen"); } catch (e) { /* nicht überall */ } // Bildschirm bleibt an – sonst bricht iOS ab
+}
+async function abholen() {
+  if (holt || !pc) return; holt = true;
+  try {
+    const d = await (await fetch(B + "/" + encodeURIComponent(ID) + "/signal?ab=" + sigAb, { headers: H() })).json(); sigAb = d.bis || sigAb;
+    for (const m of d.neu || []) { if (!m || !pc) continue;
+      if (m.sdp) { await pc.setRemoteDescription(m.sdp); for (const c of iceWarte.splice(0)) await pc.addIceCandidate(c).catch(() => {});
+        if (m.sdp.type === "offer") { const an = await pc.createAnswer(); await pc.setLocalDescription(an); signal({ sdp: pc.localDescription.toJSON() }); } }
+      else if (m.ice) { if (pc.remoteDescription) await pc.addIceCandidate(m.ice).catch(() => {}); else iceWarte.push(m.ice); } }
+    if (["beendet", "abgelehnt", "verpasst"].includes(d.status)) { gespraechEnde(); laden(); }
+  } catch (e) { /* nächstes Mal */ }
+  holt = false;
+}
+function gespraechEnde() {
+  clearInterval(sigTakt); clearInterval(uhrTakt); sigTakt = uhrTakt = null;
+  try { pc && pc.close(); } catch (e) {} pc = null;
+  try { mikro && mikro.getTracks().forEach(t => t.stop()); } catch (e) {} mikro = null;
+  try { sperre && sperre.release(); } catch (e) {} sperre = null;
+}
 function malen(a) {
+  if (a.modus === "web" && a.status === "laeuft") { freiton(false); if (!pc) { gespraechUI(a); gespraechStarten(a); } return; }
+  if (pc) gespraechEnde();
+  if (a.modus === "web" && a.status === "klingelt" && a.rolle === "von" && !mikro) mikroHolen().catch(() => {}); // Mikrofon-Frage schon beim Klingeln
   document.body.className = a.status === "klingelt" ? "klingelt" : "";
   freiton(a.status === "klingelt" && a.rolle !== "an" && !weg);
   const kopf = `<div class="gs">${esc(kuerzel(a.mit))}</div>`;
@@ -57,7 +112,7 @@ function malen(a) {
   else if (a.status === "klingelt") $("inhalt").innerHTML = kopf + `<h1>${esc(a.an)}</h1><p>Es klingelt …</p><div class="knoepfe"><div><button class="nein" id="nein">✕</button><small>Auflegen</small></div></div>`;
   else { $("inhalt").innerHTML = kopf + `<h1>${esc(a.mit)}</h1><p>${a.status === "abgelehnt" ? (a.rolle === "von" ? "hat gerade keine Zeit." : "Abgelehnt.") : a.status === "verpasst" ? "nicht erreicht." : "Gespräch beendet."}</p><div class="knoepfe"><div><button class="nein" id="zu" style="background:rgba(255,255,255,.2)">✓</button><small>Schließen</small></div></div>`;
     clearInterval(takt); $("zu").onclick = zurueck; return; }
-  if ($("ja")) $("ja").onclick = async () => { try { malen(await api("/" + ID + "/annehmen", { method: "POST", body: "{}" })); } catch (e) { $("fe").textContent = e.message; } };
+  if ($("ja")) $("ja").onclick = async () => { try { if (a.modus === "web") await mikroHolen().catch(() => {}); /* Mikrofon im Tipp freigeben (iPhone) */ malen(await api("/" + ID + "/annehmen", { method: "POST", body: "{}" })); } catch (e) { $("fe").textContent = e.message; } };
   if ($("nein")) $("nein").onclick = async () => { try { malen(await api("/" + ID + "/ablehnen", { method: "POST", body: "{}" })); } catch (e) { zurueck(); } };
 }
 async function laden() { try { malen(await api("/" + encodeURIComponent(ID))); } catch (e) { clearInterval(takt); $("inhalt").innerHTML = `<div class="gs">📵</div><h1>${esc(e.message)}</h1><p></p><div class="knoepfe"><div><button class="nein" id="zu" style="background:rgba(255,255,255,.2)">✓</button><small>Schließen</small></div></div>`; $("zu").onclick = zurueck; } }
