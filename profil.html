@@ -129,7 +129,8 @@ function zeigen() {
   if (reiter === "kontakt") inhalt = zeile("Durchwahl", p.durchwahl) + zeile("Bürozeiten", p.buerozeiten) || `<div class="leer">Noch keine Kontaktangaben hinterlegt.</div>`;
   if (reiter === "zeit") inhalt = '<div id="zeitBox"><div class="leer">Lade …</div></div>';
   if (reiter === "fb" || reiter === "gesp" || reiter === "danke") inhalt = '<div id="gespBox"><div class="leer">Lade …</div></div>';
-  const REITER = [["ueber", "Über mich"], ["zust", "Zuständig"], ["kontakt", "Kontakt"], ...((p.zeitQuellen || []).length ? [["zeit", "⏱ Zeit"]] : []), ...(p.ich ? [["fb", "💬 Feedback"], ["gesp", "🗂 Gespräche"], ["danke", "💛 Danke"]] : [])];
+  if (reiter === "handy") inhalt = '<div id="handyBox"><div class="leer">Lade …</div></div>';
+  const REITER = [["ueber", "Über mich"], ["zust", "Zuständig"], ["kontakt", "Kontakt"], ...((p.zeitQuellen || []).length ? [["zeit", "⏱ Zeit"]] : []), ...(p.ich ? [["fb", "💬 Feedback"], ["gesp", "🗂 Gespräche"], ["danke", "💛 Danke"], ["handy", "📱 Sichtbar"]] : [])];
   $("seite").innerHTML = `<div class="banner"><div class="firma">SW DIGITAL TAX</div></div>
     <div class="foto" style="${p.foto ? "background-image:url('" + p.foto + "')" : ""}">${p.foto ? "" : esc(initialen)}</div>
     <div class="name">${esc(p.name)}</div><div class="rolle">${esc([p.rolle, (p.abteilungen || []).join(", ")].filter(Boolean).join(" · "))}</div>
@@ -142,8 +143,33 @@ function zeigen() {
   document.querySelectorAll("[data-r]").forEach(b => b.onclick = () => { reiter = b.dataset.r; zeigen(); });
   liveLaden();
   if (reiter === "zeit") zeitLaden();
-  if (reiter === "fb") feedbackLaden(); if (reiter === "gesp") gespraecheLaden(); if (reiter === "danke") dankeLaden();
+  if (reiter === "fb") feedbackLaden(); if (reiter === "gesp") gespraecheLaden(); if (reiter === "danke") dankeLaden(); if (reiter === "handy") handyLaden();
   const hin = $("hin"); if (hin) hin.onclick = () => { try { WA.player.state.saveVariable("swAktion", { was: "zuPerson", name: p.name, buero: NAME, t: Date.now() }, { public: false, persist: false }); } catch (e) { console.warn(e); } };
+}
+// Reiter „📱 Sichtbar“ (23.10.2026, Sam: „ich will entscheiden, wer sieht, dass ich am Handy online bin“) – nur im eigenen Profil.
+// Wer es nicht sehen darf, sieht mich als „nicht im Büro“; im Büro am Rechner bin ich für alle sichtbar wie bisher.
+async function handyLaden() {
+  const box = $("handyBox"); if (!box) return;
+  let d; try { d = await api("/profil/handy"); } catch (e) { box.innerHTML = `<div class="leer">${esc(e.message)}</div>`; return; }
+  const ids = new Set(d.ids);
+  const malen = () => {
+    box.innerHTML = `<div class="z"><b>Wer sieht, dass ich am Handy online bin?</b>
+      ${[["alle", "Alle"], ["niemand", "Niemand"], ["auswahl", "Nur ausgewählte Personen"]].map(([k, t]) => `<label style="display:flex;gap:8px;align-items:center;padding:5px 0;font-size:14px;cursor:pointer"><input type="radio" name="hm" value="${k}" ${d.modus === k ? "checked" : ""}> ${t}</label>`).join("")}
+      ${d.modus === "auswahl" ? `<div style="margin:6px 0 0 4px;max-height:220px;overflow-y:auto">${d.personen.map(p => `<label style="display:flex;gap:8px;align-items:center;padding:3px 0;font-size:13.5px;cursor:pointer"><input type="checkbox" value="${esc(p.id)}" ${ids.has(p.id) ? "checked" : ""}> ${esc(p.name)}</label>`).join("")}</div>` : ""}
+      <div style="font-size:12px;opacity:.75;margin-top:8px">Wer es nicht sehen darf, sieht dich in Listen und im Chat als „nicht im Büro“. Am Rechner im Büro sehen dich weiter alle.</div>
+      <div class="knoepfe" style="padding:8px 0 0"><button class="haupt" id="hmOk">Speichern</button></div><div class="fehler" id="hmFe"></div></div>`;
+    box.querySelectorAll("input[name=hm]").forEach(r => r.onchange = () => { d.modus = r.value; malen(); });
+    box.querySelectorAll("input[type=checkbox]").forEach(c => c.onchange = () => { c.checked ? ids.add(c.value) : ids.delete(c.value); });
+    $("hmOk").onclick = async () => {
+      if (d.modus === "auswahl" && !ids.size) { $("hmFe").textContent = "Bitte mindestens eine Person wählen – oder „Niemand“."; return; }
+      $("hmOk").disabled = true;
+      try { const r = await fetch(API + "/profil/handy", { method: "POST", headers: { "X-Buero-Key": KEY, "X-Buero-Ausweis": ausweis.holen(), "X-Buero-Name": encodeURIComponent(window.__waName || ""), "Content-Type": "application/json" }, body: JSON.stringify({ modus: d.modus, ids: [...ids] }) });
+        const x = await r.json().catch(() => ({})); if (!r.ok) throw new Error(x.error || "Fehler"); $("hmFe").style.color = "#0f766e"; $("hmFe").textContent = "✓ Gespeichert"; }
+      catch (e) { $("hmFe").style.color = ""; $("hmFe").textContent = e.message; }
+      $("hmOk").disabled = false;
+    };
+  };
+  malen();
 }
 // Live-Kasten (11.10.2026, Sam): woran die Person gerade im SW-internen Portal arbeitet — nur mit Recht „Live-Anzeige“ und Freigabe
 // für diese Person; sonst bleibt der Kasten leer. Mit „arbeiten“ auch der Verlauf von heute. Aktualisiert sich jede Minute.
