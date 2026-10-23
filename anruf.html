@@ -30,7 +30,8 @@ const KEY = "a21b2aa2a42fe6189b05773c07bbc9ad78e38b34ba3bb6fe", B = "https://swd
 const $ = id => document.getElementById(id), q = new URLSearchParams(location.search), ID = q.get("id") || "";
 const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const ausweis = () => { try { return localStorage.getItem("swBueroAusweis") || ""; } catch { return ""; } };
-const H = () => ({ "X-Buero-Key": KEY, "X-Buero-Ausweis": ausweis(), "Content-Type": "application/json" });
+const SITZ = q.get("s") || ""; // im VBüro reicht die Büro-Sitzung (23.10.2026)
+const H = () => SITZ && !ausweis() ? { "X-Buero-Key": KEY, "X-Buero-Sitzung": SITZ, "Content-Type": "application/json" } : { "X-Buero-Key": KEY, "X-Buero-Ausweis": ausweis(), "X-Buero-Sitzung": SITZ, "Content-Type": "application/json" };
 // im VBüro als Fenster geöffnet (Eltern-Seite ist WorkAdventure) – im Handy-Büro-Blatt dagegen nicht
 const imBuero = window.top !== window && (location.ancestorOrigins ? [...location.ancestorOrigins].some(o => /workadventu/.test(o)) : /workadventu/.test(document.referrer));
 const kuerzel = n => String(n || "?").split(/\s+/).map(t => t[0] || "").join("").slice(0, 2).toUpperCase();

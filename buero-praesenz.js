@@ -3,7 +3,7 @@
   var ENDPOINT = "https://swdigitaltest.de/buero-praesenz/melden";
   var BUERO_KEY = "a21b2aa2a42fe6189b05773c07bbc9ad78e38b34ba3bb6fe";
   var DASHBOARD = "https://swdigitaltest.de";
-  var SITZUNG = Math.random().toString(36).slice(2) + Date.now().toString(36);
+  var SITZUNG = (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID().replace(/-/g, "") : Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2)) + Date.now().toString(36);
   var DY = 26;
   var MI = (x) => x >= 48 ? x + 8 : x;
   var MI32 = (px) => px >= 48 * 32 ? px + 256 : px;
@@ -141,7 +141,7 @@
       mtWeg(m.id);
     },
     mtAnruf: (m) => {
-      glasFenster(SEITEN + "anruf.html?id=" + encodeURIComponent(m.anruf || "") + "&t=" + Date.now());
+      glasFenster(SEITEN + "anruf.html?id=" + encodeURIComponent(m.anruf || "") + "&s=" + SITZUNG + "&t=" + Date.now());
       mtWeg(m.id);
     },
     // 23.10.2026
@@ -162,7 +162,7 @@
       mtWeg(m.id);
     },
     mtChat: (m) => {
-      glasFenster(m.vonId ? SEITEN + "chat.html?mit=" + encodeURIComponent(m.vonId) + "&t=" + Date.now() : SEITEN + "wer.html?an=" + encodeURIComponent(m.von || "") + "&t=" + Date.now());
+      glasFenster(m.vonId ? SEITEN + "chat.html?mit=" + encodeURIComponent(m.vonId) + "&s=" + SITZUNG + "&t=" + Date.now() : SEITEN + "wer.html?an=" + encodeURIComponent(m.von || "") + "&t=" + Date.now());
       mtWeg(m.id);
     },
     mtPush: (m) => {
@@ -3644,7 +3644,7 @@
           ["sw-mein-profil", "Profil", "profil", () => glasFenster(SEITEN + "profil.html?ich=1&tore=" + toreVon(WA.player.name || "") + "&t=" + Date.now())],
           ...tcAktiv ? [["sw-tagescheck", "Tages-Check", "tagescheck", () => glasFenster(SEITEN + "tagescheck.html?t=" + Date.now())]] : [],
           ...kzAktiv ? [["sw-arbeitszeit", "Arbeitszeit", "arbeitszeit", () => glasFenster(SEITEN + "kernzeit.html?t=" + Date.now())], ["sw-feierabend", "Feierabend", "feierabend", feierabendOeffnen]] : [],
-          ...chatDarf ? [["sw-chat", "Chats", "chat", () => glasFenster(SEITEN + "chat.html?t=" + Date.now())]] : [],
+          ...chatDarf ? [["sw-chat", "Chats", "chat", () => glasFenster(SEITEN + "chat.html?s=" + SITZUNG + "&t=" + Date.now())]] : [],
           // 23.10.2026 Chat (Test)
           ["sw-toene", "T\xF6ne", "toene", () => glasFenster(SEITEN + "toene.html?t=" + Date.now())],
           // 22.10.2026: Lautstärke je Art

@@ -54,7 +54,10 @@ const KEY = "a21b2aa2a42fe6189b05773c07bbc9ad78e38b34ba3bb6fe", B = "https://swd
 const $ = id => document.getElementById(id), q = new URLSearchParams(location.search);
 const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const ausweis = () => { try { return localStorage.getItem("swBueroAusweis") || ""; } catch { return ""; } };
-const H = () => ({ "X-Buero-Key": KEY, "X-Buero-Ausweis": ausweis(), "Content-Type": "application/json" });
+// im VBüro reicht die Büro-Sitzung (?s=…), sonst Büro-Ausweis (Handy-Büro) – 23.10.2026
+const SITZ = q.get("s") || "";
+const H = () => SITZ && !ausweis() ? { "X-Buero-Key": KEY, "X-Buero-Sitzung": SITZ, "Content-Type": "application/json" } : { "X-Buero-Key": KEY, "X-Buero-Ausweis": ausweis(), "X-Buero-Sitzung": SITZ, "Content-Type": "application/json" };
+const mitS = () => (SITZ ? "&s=" + encodeURIComponent(SITZ) : "") + (q.get("glas") ? "&glas=1" : "");
 const kuerzel = n => String(n || "?").split(/\s+/).map(t => t[0] || "").join("").slice(0, 2).toUpperCase();
 const uhr = iso => new Date(iso).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
 const tagText = iso => { const d = new Date(iso), h = new Date(); const g = new Date(h); g.setDate(h.getDate() - 1);
@@ -67,12 +70,12 @@ async function api(pfad, opt = {}) {
 }
 let mit = q.get("mit") || "", takt = null, letzteAnzahl = -1;
 function fehler(e) {
-  if (e.anmelden) { $("inhalt").innerHTML = '<div class="leer">Bitte zuerst im Handy-Büro anmelden.<br><br><a href="handy.html" style="color:#0f766e;font-weight:600">→ Zum Handy-Büro</a></div>'; $("fuss").style.display = "none"; return; }
+  if (e.anmelden) { $("inhalt").innerHTML = SITZ ? '<div class="leer">Die Büro-Anmeldung ist abgelaufen – bitte das Büro einmal neu laden.</div>' : '<div class="leer">Bitte zuerst im Handy-Büro anmelden.<br><br><a href="handy.html" style="color:#0f766e;font-weight:600">→ Zum Handy-Büro</a></div>'; $("fuss").style.display = "none"; return; }
   $("inhalt").innerHTML = '<div class="leer">' + esc(e.message) + "</div>";
 }
 // ---- ② Liste ----
 async function liste() {
-  mit = ""; $("fuss").style.display = "none"; history.replaceState(null, "", location.pathname + (q.get("glas") ? "?glas=1" : ""));
+  mit = ""; $("fuss").style.display = "none"; history.replaceState(null, "", location.pathname + "?" + mitS().slice(1));
   $("kopf").innerHTML = "<h1>💬 Chats</h1>";
   clearInterval(takt); await listeLaden(); takt = setInterval(listeLaden, 8000);
 }
@@ -89,7 +92,7 @@ async function listeLaden() {
 // ---- ③ Verlauf ----
 async function verlauf(id) {
   mit = id; letzteAnzahl = -1; clearInterval(takt);
-  history.replaceState(null, "", location.pathname + "?mit=" + encodeURIComponent(id) + (q.get("glas") ? "&glas=1" : ""));
+  history.replaceState(null, "", location.pathname + "?mit=" + encodeURIComponent(id) + mitS());
   $("kopf").innerHTML = '<button id="zurueck" aria-label="Zurück">←</button><h1 id="mitName">…</h1><button id="anrufen" aria-label="Anrufen" title="Anrufen">📞</button>';
   $("zurueck").onclick = liste; $("anrufen").onclick = anrufen;
   $("inhalt").innerHTML = '<div id="verlauf"><div class="leer">Lädt …</div></div>'; $("fuss").style.display = "flex";
@@ -115,7 +118,7 @@ function lesestand(d) { for (const n of d.nachrichten) if (n.vonMir && n.gelesen
 // 📞 Anrufen (23.10.2026): Anruf starten → Klingel-Bildschirm (anruf.html), der leitet nach dem Annehmen in den Gesprächsraum
 async function anrufen() {
   try { const r = await fetch("https://swdigitaltest.de/buero-praesenz/anruf/start", { method: "POST", headers: H(), body: JSON.stringify({ an: mit }) }); const d = await r.json().catch(() => ({}));
-    if (!r.ok) throw new Error(d.error || "Anruf geht gerade nicht"); clearInterval(takt); location.href = "anruf.html?id=" + encodeURIComponent(d.id); }
+    if (!r.ok) throw new Error(d.error || "Anruf geht gerade nicht"); clearInterval(takt); location.href = "anruf.html?id=" + encodeURIComponent(d.id) + mitS(); }
   catch (e) { const f = document.createElement("div"); f.className = "fehler"; f.textContent = "📞 " + e.message; $("verlauf").appendChild(f); $("inhalt").scrollTop = $("inhalt").scrollHeight; }
 }
 async function senden() {
