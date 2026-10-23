@@ -111,7 +111,7 @@ function zeichnen() {
   $("unter").textContent = ICH.split(" ")[0] + (IM ? " · im Büro · Arbeiten" : " · am Handy") + (seit ? " · online seit " + seit : "");
   $("ab").style.display = IM ? "none" : "";
   const jetzt = new Date().toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
-  let h = IM ? `<button class="gross" id="karte">⬅ Zurück zum Grundriss</button>` : ""; // 23.10.2026: kein „Ins Büro gehen (Karte)“ mehr am Handy
+  let h = IM ? `<button class="gross" id="karte">⬅ Zurück zum Grundriss</button>` : ""; // 23.10.2026: kein großer Karten-Knopf mehr am Handy – nur unten der kleine Notfall-Knopf
   h += meldungen.map((m, i) => `<div class="meldung${m.klopfen ? " klopfen" : ""}"><div><b>${esc(String(m.von).split(" ")[0])}</b> ${esc(m.text)}</div><div class="zeile">
     ${m.anruf ? `<a class="k voll" href="anruf.html?id=${encodeURIComponent(m.anruf)}">📞 Abheben</a>` : ""}${IM && m.klopfen && m.raum ? `<a class="k voll" href="${BUERO}#ziel=${encodeURIComponent(m.raum)}">🚶 Hingehen</a>` : ""}${m.von !== "System" ? `<button class="k" data-antw="${i}">💬 Antworten</button>` : ""}<button class="k" data-weg="${i}">OK</button></div>
     ${offen === "a" + i ? `<div class="eingabe"><input id="txt" placeholder="Antwort an ${esc(String(m.von).split(" ")[0])} …" maxlength="300"><button class="k voll" data-senden="${esc(m.von)}">Senden</button></div>` : ""}</div>`).join("");
@@ -125,7 +125,10 @@ function zeichnen() {
       ${offen === "n" + i ? `<div class="eingabe"><input id="txt" placeholder="Nachricht an ${esc(String(p.name).split(" ")[0])} …" maxlength="300"><button class="k voll" data-senden="${esc(p.name)}">Senden</button></div>` : ""}`; }).join("") : '<div class="leer">Gerade ist niemand außer dir im Büro.</div>'}
     <div id="fe"></div></div>`;
   if (weg.length) h += `<div class="karte"><details><summary>Nicht im Büro (${weg.length})</summary>${weg.map(p => `<div class="p">${p.foto ? `<span class="gesicht aus" style="background-image:url(&quot;${esc(p.foto)}&quot;)"></span>` : `<span class="gesicht aus" style="background-color:#94a3b8">${esc(initialen(p.name))}</span>`}<div><div class="n">${esc(p.name)}</div><div class="w">${p.zuletzt ? "zuletzt " + new Date(p.zuletzt).toLocaleString("de-DE", { weekday: "short", hour: "2-digit", minute: "2-digit" }) : "–"}</div></div>${p.durchwahl ? `<div class="akt"><a class="k" href="tel:${esc(p.durchwahl)}">📞</a></div>` : ""}</div>`).join("")}</details></div>`;
+  // Notfall-Knopf (23.10.2026, Sam: „wenn ich mal in die Karte will, einen Knopf – nur in Notfällen“): klein ganz unten
+  if (!IM) h += `<div style="text-align:center;margin:18px 0 8px"><button id="notKarte" style="border:1px solid #cbd5e1;background:#fff;color:#475569;border-radius:999px;padding:7px 14px;font:inherit;font-size:13px">🗺 Karte öffnen (Notfall)</button></div>`;
   $("inhalt").innerHTML = h;
+  if ($("notKarte")) $("notKarte").onclick = () => { if (confirm("Die Karte ist am Handy langsam und kann hängen. Trotzdem öffnen?")) zurKarte(BUERO + "#karte=1"); };
   if ($("karte")) $("karte").onclick = () => { if (IM) return buero("arbeitenZu"); zurKarte(BUERO + "#karte=1"); }; // 22.10.2026: Karte ausdrücklich gewollt (sonst leitet das Büro-Skript am Handy hierher zurück)
   document.querySelectorAll("[data-k]").forEach(b => b.onclick = () => blatt(KACHELN[+b.dataset.k]));
   if ($("chatKachel")) $("chatKachel").onclick = () => blatt(["💬", "Chats", "chat.html"]); // 23.10.2026: Chat wie WhatsApp

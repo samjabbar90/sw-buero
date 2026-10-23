@@ -3257,7 +3257,6 @@
   var platzhalterAktiv = /* @__PURE__ */ new Map();
   var platzhalterListe = [];
   async function wokaSenden() {
-    if (HANDY) return;
     try {
       const bild = await WA.player.getWokaPicture();
       if (!bild || !/^data:image\//.test(String(bild))) return;
@@ -3577,8 +3576,7 @@
     }
     try {
       const h = WA.room.hashParameters || {};
-      if (HANDY) {
-        void h;
+      if (HANDY && !h.karte) {
         beendet = true;
         rausZu(SEITEN + "handy.html?von=start");
         return;
