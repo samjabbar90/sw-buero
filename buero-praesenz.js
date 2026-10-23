@@ -3254,6 +3254,51 @@
     } catch {
     }
   }
+  var platzhalterAktiv = /* @__PURE__ */ new Map();
+  async function platzhalterZeigen(liste) {
+    if (HANDY) return;
+    let echte = [];
+    try {
+      echte = [...WA.players.list()].map((p) => String(p.name || "").toLowerCase());
+    } catch {
+    }
+    const ich = String(WA.player.name || "").toLowerCase(), soll = /* @__PURE__ */ new Map();
+    for (const p of liste || []) {
+      const n = String(p.name || ""), k2 = String(p.kurz || "").toLowerCase();
+      if (!n || n.toLowerCase() === ich || k2 === ich || echte.includes(k2) || echte.includes(n.toLowerCase())) continue;
+      soll.set(n, p);
+    }
+    for (const [n, raum] of [...platzhalterAktiv]) if (!soll.has(n) || soll.get(n).raum !== raum) {
+      platzhalterAktiv.delete(n);
+      try {
+        await WA.room.website.delete("platzhalter-" + n.replace(/\W+/g, ""));
+      } catch {
+      }
+    }
+    if (!soll.size) return;
+    const k = karte || await ladeKarte().catch(() => null);
+    if (!k) return;
+    const flaechen = ((k.layers || []).find((l) => l.name === "floorLayer") || { objects: [] }).objects;
+    for (const [n, p] of soll) {
+      if (platzhalterAktiv.has(n)) continue;
+      const o = flaechen.find((x) => x.name === p.raum);
+      if (!o) continue;
+      platzhalterAktiv.set(n, p.raum);
+      try {
+        await WA.room.website.create({
+          name: "platzhalter-" + n.replace(/\W+/g, ""),
+          url: SEITEN + "platzhalter.html?name=" + encodeURIComponent(p.kurz || n) + "&foto=" + encodeURIComponent(p.foto || ""),
+          visible: true,
+          allowApi: false,
+          origin: "map",
+          scale: 1,
+          position: { x: Math.round(o.x + o.width / 2 - 40), y: Math.round(o.y + o.height * 0.5 - 24), width: 80, height: 56 }
+        });
+      } catch {
+        platzhalterAktiv.delete(n);
+      }
+    }
+  }
   async function infoLaden() {
     try {
       info = await (await fetch(INFO, { headers: { "X-Buero-Key": BUERO_KEY } })).json();
@@ -3267,6 +3312,8 @@
     } catch {
     }
     editorPruefen();
+    platzhalterZeigen(info.platzhalter || []).catch(() => {
+    });
     try {
       const d = info.durchsage;
       if (d && d.id !== durchsageGezeigt) {

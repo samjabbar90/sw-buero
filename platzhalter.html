@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Platzhalter</title>
+<!-- Platzhalter-Figur (23.10.2026, Sam: „ich muss im Büro sichtbar sein“ – Tarnung am Handy): wer getarnt nur am Handy ist, steht für die
+     anderen trotzdem am eigenen Schreibtisch – Namensschild wie bei WorkAdventure (gelber Punkt = Büro), darunter rundes Bild.
+     Das Büro-Skript legt die Seite als Karten-Fenster an (WA.room.website, origin map). ?name=Sam%20J.&foto=<URL> -->
+<style>
+  html, body { margin:0; background:transparent; overflow:hidden; font-family:system-ui,-apple-system,"Segoe UI",sans-serif; }
+  .f { display:flex; flex-direction:column; align-items:center; gap:3px; padding-top:2px; }
+  .schild { display:flex; align-items:center; gap:4px; background:rgba(30,32,38,.82); color:#fff; font-size:11px; font-weight:600; border-radius:9px; padding:1px 7px 2px 5px; white-space:nowrap; }
+  .schild i { width:7px; height:7px; border-radius:50%; background:#fbbf24; }
+  .bild { width:30px; height:30px; border-radius:50%; background:#5DCAA5 center/cover no-repeat; border:2px solid #fff; box-shadow:0 1px 3px rgba(0,0,0,.35); color:#04342C; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; }
+</style>
+</head>
+<body>
+<div class="f"><div class="schild"><i></i><span id="n"></span></div><div class="bild" id="b"></div></div>
+<script>
+const q = new URLSearchParams(location.search), name = q.get("name") || "", foto = q.get("foto") || "";
+document.getElementById("n").textContent = name;
+const b = document.getElementById("b");
+if (/^https:\/\//.test(foto)) b.style.backgroundImage = "url(" + JSON.stringify(foto) + ")"; else b.textContent = name.split(/\s+/).map(t => t[0] || "").join("").slice(0, 2).toUpperCase();
+</script>
+</body>
+</html>
