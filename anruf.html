@@ -20,6 +20,14 @@
   .ja { background:#22c55e; } .nein { background:#ef4444; }
   .knoepfe small { display:block; margin-top:6px; font-size:12.5px; opacity:.85; }
   .fe { margin-top:18px; color:#fecaca; font-size:14px; }
+  /* Gesprächs-Pille am PC (23.10.2026, Sam: Layout A/C „Fenster viel zu groß“): ?klein=1 – schmale Leiste unten, Annehmen schon in der Karte */
+  html.klein, html.klein body { background:transparent; padding:0; overflow:hidden; }
+  html.klein body { display:block; }
+  html.klein #inhalt { display:flex; align-items:center; gap:10px; background:rgba(22,24,29,.94); border:1px solid rgba(255,255,255,.14); border-radius:34px; padding:7px 8px 7px 12px; height:62px; text-align:left; }
+  html.klein .gs { width:40px; height:40px; font-size:14px; margin:0; flex:none; } html.klein h1 { font-size:14.5px; margin:0; } html.klein p { margin:0; font-size:12px; }
+  html.klein .mitte { flex:1; min-width:0; } html.klein .mitte h1, html.klein .mitte p { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  html.klein .kn { width:40px; height:40px; border-radius:50%; border:0; font-size:17px; cursor:pointer; color:#fff; flex:none; background:rgba(255,255,255,.16); }
+  html.klein .kn.nein { background:#ef4444; } html.klein .kn.ja { background:#22c55e; }
 </style>
 </head>
 <body>
@@ -36,6 +44,13 @@ const H = () => SITZ && !ausweis() ? { "X-Buero-Key": KEY, "X-Buero-Sitzung": SI
 const imBuero = window.top !== window && (location.ancestorOrigins ? [...location.ancestorOrigins].some(o => /workadventu/.test(o)) : /workadventu/.test(document.referrer));
 const kuerzel = n => String(n || "?").split(/\s+/).map(t => t[0] || "").join("").slice(0, 2).toUpperCase();
 let takt = null, weg = false, freiTakt = null;
+const KLEIN = q.get("klein") === "1", AUTO = q.get("annehmen") === "1"; let angenommen = false;
+if (KLEIN) document.documentElement.classList.add("klein");
+const START = location.href.split("#")[0];
+// Pille schließen: eigenes WorkAdventure-Fenster zu (sonst Büro-Skript per swAktion „anrufZu“)
+async function schliessen() { gespraechEnde(); freiton(false); clearInterval(takt);
+  try { const w = (await WA.ui.website.getAll()).find(x => String(x.url || "").split("#")[0] === START); if (w) return w.close(); } catch (e) { /* alt */ }
+  try { WA.player.state.saveVariable("swAktion", { was: "anrufZu", t: Date.now() }, { public: false, persist: false }); } catch (e) {} }
 // Freiton beim Anrufer (23.10.2026, Sam: „kein Geräusch, dass ich weiß, es klingelt“): 425 Hz, 1 s Ton alle 5 s wie im Telefonnetz.
 // Im VBüro spielt ihn das Büro-Skript (swAktion „freiton“, wie die Klingel beim Angerufenen), im Handy-Büro diese Seite selbst.
 let freiAudio = null;
@@ -47,21 +62,33 @@ function ziel(a) { return a.raum + "&zurueck=" + (imBuero ? "buero" : "handy"); 
 function gehe(url) { if (weg) return; weg = true; clearInterval(takt); freiton(false);
   try { if (imBuero && typeof WA !== "undefined" && WA.nav) return WA.nav.goToPage(url); } catch (e) { /* weiter unten */ }
   try { window.top.location.href = url; } catch (e) { location.href = url; } }
-function zurueck() { freiton(false); if (imBuero) { try { WA.player.state.saveVariable("swAktion", { was: "allesZu", t: Date.now() }, { public: false, persist: false }); } catch (e) {} } else location.href = "handy.html"; }
+function zurueck() { if (KLEIN) return schliessen(); freiton(false); if (imBuero) { try { WA.player.state.saveVariable("swAktion", { was: "allesZu", t: Date.now() }, { public: false, persist: false }); } catch (e) {} } else location.href = "handy.html"; }
 // ---- Variante A (23.10.2026, Sam): Gespräch direkt hier, ohne Karte – Ton per WebRTC von Gerät zu Gerät (verschlüsselt).
 // Unser Server reicht nur die Verbindungsdaten weiter (/anruf/:id/signal). STUN (Cloudflare/Google) sieht nur die IP-Adressen, keinen Ton.
 // Nur wenn der Server modus „web“ meldet (Test Sam + Leutrim), sonst wie bisher der WorkAdventure-Gesprächsraum.
 const STUN = [{ urls: "stun:stun.cloudflare.com:3478" }, { urls: "stun:stun.l.google.com:19302" }];
 let pc = null, mikro = null, sigAb = 0, sigTakt = null, iceWarte = [], holt = false, gStart = 0, uhrTakt = null, sperre = null, stumm = false;
-async function mikroHolen() { if (!mikro) mikro = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false }); return mikro; }
+async function mikroHolen() { if (!mikro) { try { if (navigator.audioSession && !KLEIN) navigator.audioSession.type = "play-and-record"; } catch (e) { /* alt */ } } if (!mikro) mikro = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false }); return mikro; }
 const signal = d => fetch(B + "/" + encodeURIComponent(ID) + "/signal", { method: "POST", headers: H(), body: JSON.stringify({ d }) }).catch(() => {});
 function gespraechUI(a) {
-  $("inhalt").innerHTML = `<div class="gs">${esc(kuerzel(a.mit))}</div><h1>${esc(a.mit)}</h1><p id="zust">Verbinde …</p><div id="diagT" style="margin:-18px 0 18px;font-size:12.5px;opacity:.8"></div><audio id="ton" autoplay playsinline></audio>
+  if (KLEIN) $("inhalt").innerHTML = `<div class="gs">${esc(kuerzel(a.mit))}</div><div class="mitte"><h1>${esc(a.mit)} · <span id="zust">verbinde …</span></h1><p id="diagT"></p></div><audio id="ton" autoplay playsinline></audio>
+      <button class="kn" id="tonAn" hidden title="Tippen zum Hören">🔊</button><button class="kn" id="stumm" title="Stumm">🎙</button><button class="kn nein" id="auflegen" title="Auflegen">📵</button><div class="fe" id="fe" hidden></div>`;
+  else $("inhalt").innerHTML = `<div class="gs">${esc(kuerzel(a.mit))}</div><h1>${esc(a.mit)}</h1><p id="zust">Verbinde …</p><div id="diagT" style="margin:-18px 0 18px;font-size:12.5px;opacity:.8"></div><audio id="ton" autoplay playsinline></audio>
     <button id="tonAn" hidden style="margin:-12px 0 20px;border:0;border-radius:12px;padding:10px 16px;font:inherit;font-weight:700;background:#fff;color:#0f766e">🔊 Tippen zum Hören</button>
-    <div class="knoepfe"><div><button id="stumm" style="background:rgba(255,255,255,.2)">🎙</button><small id="stummT">Stumm</small></div><div><button class="nein" id="auflegen">📵</button><small>Auflegen</small></div></div><div class="fe" id="fe"></div>`;
+    <div class="knoepfe"><div><button id="stumm" style="background:rgba(255,255,255,.2)">🎙</button><small id="stummT">Stumm</small></div><div><button id="laut" style="background:rgba(255,255,255,.2)">🔈</button><small>Lautsprecher</small></div><div><button class="nein" id="auflegen">📵</button><small>Auflegen</small></div></div><div class="fe" id="fe"></div>`;
+  if ($("laut")) $("laut").onclick = () => { laut = !laut; ausgabe(); $("laut").textContent = laut ? "🔊" : "🔈"; $("laut").style.background = laut ? "#fff" : "rgba(255,255,255,.2)"; $("laut").style.color = laut ? "#0f766e" : "#fff"; };
   $("tonAn").onclick = () => { $("ton").play().then(() => { $("tonAn").hidden = true; tonFehler = ""; }).catch(() => {}); };
-  $("stumm").onclick = () => { stumm = !stumm; if (mikro) mikro.getAudioTracks().forEach(t => { t.enabled = !stumm; }); $("stumm").textContent = stumm ? "🔇" : "🎙"; $("stummT").textContent = stumm ? "Stumm aus" : "Stumm"; $("stumm").style.background = stumm ? "#f59e0b" : "rgba(255,255,255,.2)"; };
+  $("stumm").onclick = () => { stumm = !stumm; if (mikro) mikro.getAudioTracks().forEach(t => { t.enabled = !stumm; }); $("stumm").textContent = stumm ? "🔇" : "🎙"; if ($("stummT")) $("stummT").textContent = stumm ? "Stumm aus" : "Stumm"; $("stumm").style.background = stumm ? "#f59e0b" : "rgba(255,255,255,.2)"; };
   $("auflegen").onclick = async () => { gespraechEnde(); try { malen(await api("/" + ID + "/ende", { method: "POST", body: "{}" })); } catch (e) { zurueck(); } };
+}
+// Hörer / Lautsprecher am Handy (23.10.2026, Sam: „direkt auf laut – muss normal sein, Lautsprecher wählbar“). Im Browser nur eingeschränkt
+// steuerbar: iPhone über die Audio-Sitzung (Safari ab 16.4), Android über die Ausgabe-Geräte – wo beides fehlt, bleibt es, wie das Gerät will.
+let laut = false;
+async function ausgabe() {
+  try { if (navigator.audioSession) navigator.audioSession.type = laut ? "playback" : "play-and-record"; } catch (e) { /* nicht unterstützt */ }
+  const el = $("ton"); if (!el || !el.setSinkId) return;
+  try { const g = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === "audiooutput");
+    const z = g.find(d => (laut ? /speaker|lautsprecher/i : /earpiece|hörer|receiver|telefon/i).test(d.label)); if (z) await el.setSinkId(z.deviceId); } catch (e) { /* nicht unterstützt */ }
 }
 function zustand() {
   const z = pc ? pc.connectionState : "closed", el = $("zust"); if (!el) return;
@@ -121,7 +148,9 @@ function gespraechEnde() { if (diagTakt) { diag(); clearInterval(diagTakt); diag
 function malen(a) {
   if (a.modus === "web" && a.status === "laeuft") { freiton(false); if (!pc) { gespraechUI(a); gespraechStarten(a); } return; }
   if (pc) gespraechEnde();
-  if (a.modus === "web" && a.status === "klingelt" && a.rolle === "von" && !mikro) mikroHolen().catch(() => {}); // Mikrofon-Frage schon beim Klingeln
+  // Mikrofon-Frage schon beim Klingeln – danach darf das iPhone auch den Freiton spielen (vorher blockiert es Töne)
+  if (a.modus === "web" && a.status === "klingelt" && a.rolle === "von" && !mikro) mikroHolen().then(() => { if (freiTakt && !imBuero) freiEinmal(); }).catch(() => {});
+  if (KLEIN) return malenKlein(a);
   document.body.className = a.status === "klingelt" ? "klingelt" : "";
   freiton(a.status === "klingelt" && a.rolle !== "an" && !weg);
   const kopf = `<div class="gs">${esc(kuerzel(a.mit))}</div>`;
@@ -132,6 +161,19 @@ function malen(a) {
     clearInterval(takt); $("zu").onclick = zurueck; return; }
   if ($("ja")) $("ja").onclick = async () => { try { if (a.modus === "web") await mikroHolen().catch(() => {}); /* Mikrofon im Tipp freigeben (iPhone) */ malen(await api("/" + ID + "/annehmen", { method: "POST", body: "{}" })); } catch (e) { $("fe").textContent = e.message; } };
   if ($("nein")) $("nein").onclick = async () => { try { malen(await api("/" + ID + "/ablehnen", { method: "POST", body: "{}" })); } catch (e) { zurueck(); } };
+}
+// Pille: klingelt (Anrufer) · nimmt automatisch an (Angerufener hat in der Karte „Annehmen“ getippt) · Ende → nach 3 s zu
+function malenKlein(a) {
+  document.body.className = ""; freiton(a.status === "klingelt" && a.rolle !== "an" && !weg);
+  const kopf = `<div class="gs">${esc(kuerzel(a.mit))}</div>`;
+  if (a.status === "klingelt" && a.rolle === "an") {
+    if (AUTO && !angenommen) { angenommen = true; $("inhalt").innerHTML = kopf + `<div class="mitte"><h1>${esc(a.von)}</h1><p>verbinde …</p></div>`;
+      mikroHolen().catch(() => {}).then(() => api("/" + ID + "/annehmen", { method: "POST", body: "{}" })).then(malen).catch(e => { $("inhalt").innerHTML = kopf + `<div class="mitte"><h1>${esc(a.von)}</h1><p>${esc(e.message)}</p></div>`; setTimeout(schliessen, 2500); }); }
+    return; }
+  if (a.status === "klingelt") { $("inhalt").innerHTML = kopf + `<div class="mitte"><h1>${esc(a.an)}</h1><p>📞 Es klingelt …</p></div><button class="kn nein" id="nein" title="Auflegen">📵</button>`;
+    $("nein").onclick = async () => { try { malen(await api("/" + ID + "/ablehnen", { method: "POST", body: "{}" })); } catch (e) { schliessen(); } }; return; }
+  $("inhalt").innerHTML = kopf + `<div class="mitte"><h1>${esc(a.mit)}</h1><p>${a.status === "abgelehnt" ? (a.rolle === "von" ? "hat gerade keine Zeit." : "Abgelehnt.") : a.status === "verpasst" ? "nicht erreicht." : "Gespräch beendet."}</p></div><button class="kn" id="zu" title="Schließen">✕</button>`;
+  clearInterval(takt); $("zu").onclick = schliessen; setTimeout(schliessen, 3000);
 }
 async function laden() { try { malen(await api("/" + encodeURIComponent(ID))); } catch (e) { clearInterval(takt); $("inhalt").innerHTML = `<div class="gs">📵</div><h1>${esc(e.message)}</h1><p></p><div class="knoepfe"><div><button class="nein" id="zu" style="background:rgba(255,255,255,.2)">✓</button><small>Schließen</small></div></div>`; $("zu").onclick = zurueck; } }
 laden(); takt = setInterval(laden, 2000);

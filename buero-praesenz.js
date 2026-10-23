@@ -91,7 +91,7 @@
     mtFenster = null;
     if (mitteilungen.length) try {
       mtFenster = await WA.ui.website.open({
-        url: SEITEN + "mitteilungen.html?v=7",
+        url: SEITEN + "mitteilungen.html?v=8",
         allowApi: true,
         visible: true,
         position: { vertical: "top", horizontal: HANDY ? "middle" : "right" },
@@ -120,6 +120,26 @@
     }
     void mtAnzahl;
   }
+  var anrufFenster = null;
+  async function anrufPille(id, annehmen) {
+    try {
+      anrufFenster && anrufFenster.close();
+    } catch {
+    }
+    anrufFenster = null;
+    try {
+      anrufFenster = await WA.ui.website.open({
+        url: SEITEN + "anruf.html?id=" + encodeURIComponent(id) + "&s=" + SITZUNG + "&klein=1" + (annehmen ? "&annehmen=1" : "") + "&t=" + Date.now(),
+        allowApi: true,
+        allowPolicy: "microphone; autoplay",
+        visible: true,
+        position: { vertical: "bottom", horizontal: "middle" },
+        size: { width: "380px", height: "64px" },
+        margin: { bottom: "136px" }
+      });
+    } catch {
+    }
+  }
   var MT_AKTIONEN = {
     mtWeg: (m) => mtWeg(m.id),
     mtReinlassen: (m) => {
@@ -141,10 +161,15 @@
       mtWeg(m.id);
     },
     mtAnruf: (m) => {
-      glasFenster(SEITEN + "anruf.html?id=" + encodeURIComponent(m.anruf || "") + "&s=" + SITZUNG + "&t=" + Date.now());
+      HANDY ? glasFenster(SEITEN + "anruf.html?id=" + encodeURIComponent(m.anruf || "") + "&s=" + SITZUNG + "&t=" + Date.now()) : anrufPille(m.anruf || "", true);
       mtWeg(m.id);
     },
-    // 23.10.2026
+    // 23.10.2026: am PC Annehmen direkt in der Karte → Pille
+    mtAnrufNein: (m) => {
+      fetch(ENDPOINT.replace(/melden$/, "anruf/" + encodeURIComponent(m.anruf || "") + "/ablehnen"), { method: "POST", headers: { "Content-Type": "application/json", "X-Buero-Key": BUERO_KEY, "X-Buero-Sitzung": SITZUNG }, body: "{}" }).catch(() => {
+      });
+      mtWeg(m.id);
+    },
     // Einladung (22.10.2026): annehmen = Einladenden informieren und hinlaufen; „Später“ sagt es ihm auch
     mtEinladungJa: (m) => {
       try {
@@ -1750,7 +1775,7 @@
       }
     } };
   }
-  var BLEIBT_OFFEN = /leiste-rechts.html|push-start\.html\?pflicht|info\.html|leiste\.html|schloss\.html|tagescheck\.html\?karte|oben\.html|handy-menue\.html|blick\.html|app\.html|ausweis-sync\.html|mitteilungen\.html/;
+  var BLEIBT_OFFEN = /anruf\.html\?.*klein=1|leiste-rechts.html|push-start\.html\?pflicht|info\.html|leiste\.html|schloss\.html|tagescheck\.html\?karte|oben\.html|handy-menue\.html|blick\.html|app\.html|ausweis-sync\.html|mitteilungen\.html/;
   function allesZu() {
     try {
       WA.ui.modal.closeModal();
@@ -3869,7 +3894,15 @@
           return;
         }
         if (v.was === "leisteProfil") return profilOeffnen(String(v.name || ""));
-        if (v.was === "anrufOeffnen") return glasFenster(SEITEN + "anruf.html?id=" + encodeURIComponent(String(v.id || "")) + "&s=" + SITZUNG + "&t=" + Date.now());
+        if (v.was === "anrufOeffnen") return HANDY ? glasFenster(SEITEN + "anruf.html?id=" + encodeURIComponent(String(v.id || "")) + "&s=" + SITZUNG + "&t=" + Date.now()) : anrufPille(String(v.id || ""), false);
+        if (v.was === "anrufZu") {
+          try {
+            anrufFenster && anrufFenster.close();
+          } catch {
+          }
+          anrufFenster = null;
+          return;
+        }
         if (v.was === "pushFertig" || v.was === "pushSpaeter") return pushPflichtFertig();
         if (v.was === "freiton") return ton("freiton", "direkt");
         if (v.was === "tonProbe") return ton(v.art === "direkt" ? "klopfen" : "klingel", String(v.art || "gruppe"));

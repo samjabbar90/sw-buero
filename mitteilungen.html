@@ -44,7 +44,7 @@ function zeichnen() {
     if (m.art === "klopfen") k = `<button class="voll" data-a="mtReinlassen" data-id="${m.id}">Reinlassen</button><button data-a="mtGleich" data-id="${m.id}">Komme gleich</button>`;
     if (m.art === "nachricht") k = antwortAuf === m.id ? `<input id="ant" placeholder="Antwort an ${esc(vn)} …" maxlength="300"><button class="voll" data-senden="${m.id}">Senden</button>`
       : `<button class="voll" data-antw="${m.id}">Antworten</button><button data-a="mtChat" data-id="${m.id}">Chat öffnen</button>`;
-    if (m.art === "anruf") k = `<button class="voll" data-a="mtAnruf" data-id="${m.id}">📞 Annehmen</button><button data-a="mtWeg" data-id="${m.id}">Später</button>`; // 23.10.2026
+    if (m.art === "anruf") k = `<button class="voll" data-a="mtAnruf" data-id="${m.id}" style="background:#16a34a;border-color:#16a34a">📞 Annehmen</button><button data-a="mtAnrufNein" data-id="${m.id}" style="color:#b91c1c;border-color:#b91c1c">Ablehnen</button>`; // 23.10.2026 (Layout A: direkt in der Karte)
     if (m.art === "einladung") k = `<button class="voll" data-a="mtEinladungJa" data-id="${m.id}">✓ Annehmen & hingehen</button><button data-a="mtEinladungNein" data-id="${m.id}">Später</button>`; // 22.10.2026
     if (m.art === "push") k = `<button class="voll" data-a="mtPush" data-id="${m.id}">🔔 Aktivieren</button><button data-a="mtWeg" data-id="${m.id}">Später</button>`; // 16.10.2026
     if (m.art === "termin") k = (m.raum ? `<button class="voll" data-a="mtHin" data-id="${m.id}">🚶 Hingehen</button>` : "") + `<button data-a="mtWeg" data-id="${m.id}">OK</button>`;
