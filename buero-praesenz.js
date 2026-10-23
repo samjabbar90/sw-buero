@@ -3245,7 +3245,7 @@
   var editorAn = null;
   function editorPruefen() {
     if (!Array.isArray(info.editoren)) return;
-    const soll = info.editoren.includes(vorname(WA.player.name));
+    const soll = !HANDY && info.editoren.includes(vorname(WA.player.name));
     if (soll === editorAn) return;
     editorAn = soll;
     try {
