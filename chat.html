@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f766e">
+<title>Chats</title>
+<!-- Chat im VBüro (23.10.2026, Sam: „das ist ja kein Chat“ → Layout wie WhatsApp: ① Chats im Handy-Büro ② Liste ③ Verlauf).
+     Dieselbe Seite im Handy-Büro (Blatt) und im VBüro am PC (Glas-Fenster); Push-Meldung öffnet chat.html?mit=<id> direkt.
+     Server: /buero-praesenz/chat/liste | verlauf | senden (Büro-Ausweis). Noch Test: nur Sam + Leutrim (CHAT_TEST in routes/buero.js). -->
+<style>
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { height:100%; }
+  body { margin:0; background:#fff; color:#111827; font-family:system-ui,-apple-system,"Segoe UI",sans-serif; font-size:15px; display:flex; flex-direction:column; }
+  header { background:#0f766e; color:#fff; padding:calc(10px + env(safe-area-inset-top)) 12px 10px; display:flex; align-items:center; gap:10px; flex:none; }
+  header h1 { margin:0; font-size:17px; flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; } header small { display:block; font-size:12px; font-weight:400; opacity:.85; }
+  header button { background:rgba(255,255,255,.18); color:#fff; border:0; border-radius:10px; padding:7px 11px; font:inherit; font-size:15px; cursor:pointer; }
+  main { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; }
+  .z { display:flex; align-items:center; gap:11px; padding:11px 14px; border-bottom:1px solid #eef0f2; cursor:pointer; }
+  .z:active { background:#f3f4f6; }
+  .gs { position:relative; width:42px; height:42px; border-radius:50%; background:#9FE1CB; color:#04342C; display:flex; align-items:center; justify-content:center; font-weight:600; font-size:14px; flex:none; }
+  .gs i { position:absolute; right:0; bottom:0; width:11px; height:11px; border-radius:50%; background:#22c55e; border:2px solid #fff; }
+  .z .n { font-weight:600; } .z .l { font-size:13px; color:#6b7280; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .z .r { margin-left:auto; text-align:right; flex:none; font-size:11.5px; color:#9ca3af; }
+  .rot { display:inline-block; background:#E24B4A; color:#fff; border-radius:10px; padding:1px 7px; font-size:12px; font-weight:600; margin-top:3px; }
+  .leer { color:#6b7280; padding:22px 16px; font-size:14px; line-height:1.5; }
+  #verlauf { padding:10px 12px 6px; display:flex; flex-direction:column; }
+  .sb { max-width:80%; padding:8px 11px; border-radius:14px; margin:3px 0; line-height:1.4; white-space:pre-wrap; word-wrap:break-word; font-size:15px; }
+  .sb small { display:block; font-size:10.5px; opacity:.7; margin-top:2px; text-align:right; }
+  .meins { background:#0f766e; color:#fff; align-self:flex-end; border-bottom-right-radius:4px; }
+  .seins { background:#f1f5f9; align-self:flex-start; border-bottom-left-radius:4px; }
+  .tag { align-self:center; font-size:11.5px; color:#6b7280; background:#f3f4f6; border-radius:8px; padding:2px 9px; margin:8px 0 4px; }
+  footer { flex:none; display:flex; gap:8px; align-items:flex-end; padding:8px 10px calc(8px + env(safe-area-inset-bottom)); border-top:1px solid #eef0f2; background:#fff; }
+  footer textarea { flex:1; resize:none; font:inherit; font-size:16px; padding:9px 12px; border:1px solid #d1d5db; border-radius:20px; max-height:120px; line-height:1.35; }
+  footer button { width:42px; height:42px; border-radius:50%; border:0; background:#0f766e; color:#fff; font-size:18px; cursor:pointer; flex:none; }
+  .fehler { color:#b91c1c; font-size:13px; padding:6px 14px; }
+  html.glas body { background:transparent; } html.glas main, html.glas footer { background:#fff; }
+</style>
+<script src="glas.js?v=1792088168"></script>
+</head>
+<body>
+<header id="kopf"><h1>💬 Chats</h1></header>
+<main id="inhalt"><div class="leer">Lädt …</div></main>
+<footer id="fuss" style="display:none"><textarea id="txt" rows="1" placeholder="Nachricht schreiben …"></textarea><button id="los" aria-label="Senden">➤</button></footer>
+<script src="https://play.workadventu.re/iframe_api.js"></script>
+<script>
+const KEY = "a21b2aa2a42fe6189b05773c07bbc9ad78e38b34ba3bb6fe", B = "https://swdigitaltest.de/buero-praesenz/chat";
+const $ = id => document.getElementById(id), q = new URLSearchParams(location.search);
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const ausweis = () => { try { return localStorage.getItem("swBueroAusweis") || ""; } catch { return ""; } };
+const H = () => ({ "X-Buero-Key": KEY, "X-Buero-Ausweis": ausweis(), "Content-Type": "application/json" });
+const kuerzel = n => String(n || "?").split(/\s+/).map(t => t[0] || "").join("").slice(0, 2).toUpperCase();
+const uhr = iso => new Date(iso).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
+const tagText = iso => { const d = new Date(iso), h = new Date(); const g = new Date(h); g.setDate(h.getDate() - 1);
+  return d.toDateString() === h.toDateString() ? "Heute" : d.toDateString() === g.toDateString() ? "Gestern" : d.toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit" }); };
+const kurzZeit = iso => { const d = new Date(iso); return d.toDateString() === new Date().toDateString() ? uhr(iso) : d.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" }); };
+async function api(pfad, opt = {}) {
+  const r = await fetch(B + pfad, { ...opt, headers: H() }); const d = await r.json().catch(() => ({}));
+  if (r.status === 401) throw Object.assign(new Error("anmelden"), { anmelden: true });
+  if (!r.ok) throw new Error(d.error || "Fehler " + r.status); return d;
+}
+let mit = q.get("mit") || "", takt = null, letzteAnzahl = -1;
+function fehler(e) {
+  if (e.anmelden) { $("inhalt").innerHTML = '<div class="leer">Bitte zuerst im Handy-Büro anmelden.<br><br><a href="handy.html" style="color:#0f766e;font-weight:600">→ Zum Handy-Büro</a></div>'; $("fuss").style.display = "none"; return; }
+  $("inhalt").innerHTML = '<div class="leer">' + esc(e.message) + "</div>";
+}
+// ---- ② Liste ----
+async function liste() {
+  mit = ""; $("fuss").style.display = "none"; history.replaceState(null, "", location.pathname + (q.get("glas") ? "?glas=1" : ""));
+  $("kopf").innerHTML = "<h1>💬 Chats</h1>";
+  clearInterval(takt); await listeLaden(); takt = setInterval(listeLaden, 8000);
+}
+async function listeLaden() {
+  try {
+    const d = await api("/liste");
+    $("inhalt").innerHTML = d.chats.length ? d.chats.map(c => `<div class="z" data-id="${esc(c.id)}"><span class="gs">${esc(kuerzel(c.name))}${c.online ? "<i></i>" : ""}</span>
+      <div style="min-width:0;flex:1"><div class="n">${esc(c.name)}</div><div class="l">${c.letzte ? (c.letzte.vonMir ? "Du: " : "") + esc(c.letzte.text) : (c.online ? "im Büro" : "noch keine Nachricht")}</div></div>
+      <div class="r">${c.letzte ? kurzZeit(c.letzte.zeit) : ""}${c.ungelesen ? '<br><span class="rot">' + c.ungelesen + "</span>" : ""}</div></div>`).join("")
+      : '<div class="leer">Hier gibt es noch niemanden zum Schreiben. (Der Chat ist im Test – nur für freigeschaltete Personen.)</div>';
+    document.querySelectorAll(".z").forEach(z => z.onclick = () => verlauf(z.dataset.id));
+  } catch (e) { fehler(e); }
+}
+// ---- ③ Verlauf ----
+async function verlauf(id) {
+  mit = id; letzteAnzahl = -1; clearInterval(takt);
+  history.replaceState(null, "", location.pathname + "?mit=" + encodeURIComponent(id) + (q.get("glas") ? "&glas=1" : ""));
+  $("kopf").innerHTML = '<button id="zurueck" aria-label="Zurück">←</button><h1 id="mitName">…</h1>';
+  $("zurueck").onclick = liste;
+  $("inhalt").innerHTML = '<div id="verlauf"><div class="leer">Lädt …</div></div>'; $("fuss").style.display = "flex";
+  await verlaufLaden(true); takt = setInterval(() => verlaufLaden(false), 3000);
+  if (!/Mobi|iPhone|Android/i.test(navigator.userAgent)) $("txt").focus();
+}
+async function verlaufLaden(erstes) {
+  if (!mit) return;
+  try {
+    const d = await api("/verlauf?mit=" + encodeURIComponent(mit));
+    $("mitName").innerHTML = esc(d.mit.name) + "<small>" + (d.mit.online ? "im Büro" : "nicht im Büro") + "</small>";
+    if (!erstes && d.nachrichten.length === letzteAnzahl) { lesestand(d); return; }
+    letzteAnzahl = d.nachrichten.length;
+    const m = $("inhalt"), unten = erstes || m.scrollHeight - m.scrollTop - m.clientHeight < 80;
+    let h = "", tag = "";
+    for (const n of d.nachrichten) { const t = tagText(n.zeit); if (t !== tag) { tag = t; h += `<div class="tag">${t}</div>`; }
+      h += `<div class="sb ${n.vonMir ? "meins" : "seins"}" data-id="${esc(n.id)}">${esc(n.text)}<small>${uhr(n.zeit)}${n.vonMir ? " " + (n.gelesen ? "✓✓" : "✓") : ""}</small></div>`; }
+    $("verlauf").innerHTML = h || '<div class="leer">Noch keine Nachricht – schreib die erste.</div>';
+    if (unten) m.scrollTop = m.scrollHeight;
+  } catch (e) { clearInterval(takt); fehler(e); }
+}
+function lesestand(d) { for (const n of d.nachrichten) if (n.vonMir && n.gelesen) { const el = document.querySelector(`.sb[data-id="${CSS.escape(n.id)}"] small`); if (el && !/✓✓/.test(el.textContent)) el.textContent = uhr(n.zeit) + " ✓✓"; } }
+async function senden() {
+  const t = $("txt").value.trim(); if (!t || !mit) return;
+  $("los").disabled = true;
+  try { await api("/senden", { method: "POST", body: JSON.stringify({ an: mit, text: t }) }); $("txt").value = ""; groesse(); await verlaufLaden(false); $("inhalt").scrollTop = $("inhalt").scrollHeight; }
+  catch (e) { const f = document.createElement("div"); f.className = "fehler"; f.textContent = e.message; $("verlauf").appendChild(f); }
+  $("los").disabled = false;
+}
+function groesse() { const t = $("txt"); t.style.height = "auto"; t.style.height = Math.min(120, t.scrollHeight) + "px"; }
+$("los").onclick = senden;
+$("txt").oninput = groesse;
+$("txt").onkeydown = e => { if (e.key === "Enter" && !e.shiftKey && !/Mobi|iPhone|Android/i.test(navigator.userAgent)) { e.preventDefault(); senden(); } e.stopPropagation(); };
+document.addEventListener("visibilitychange", () => { if (!document.hidden) mit ? verlaufLaden(false) : listeLaden(); });
+mit ? verlauf(mit) : liste();
+</script>
+</body>
+</html>

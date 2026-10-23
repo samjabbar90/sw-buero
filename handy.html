@@ -63,6 +63,9 @@ const ausweis = () => { try { return localStorage.getItem("swBueroAusweis") || "
 async function zurKarte(url) { try { await fetch(B + "/ausweis/zur-karte", { method: "POST", headers: H() }); } catch {} melden("verlassen"); location.href = url; }
 document.addEventListener("click", e => { const a = e.target.closest && e.target.closest('a[href^="' + BUERO + '"]'); if (!a || IM || e.defaultPrevented) return; e.preventDefault(); zurKarte(a.href); });
 const H = () => ({ "X-Buero-Key": KEY, "X-Buero-Ausweis": ausweis(), "Content-Type": "application/json" });
+// Chat (23.10.2026, Sam): Kachel nur für freigeschaltete (Test), Zahl der ungelesenen alle 30 s
+let chatDarf = false, chatUngelesen = 0;
+async function chatPruefen() { try { const r = await fetch(B + "/chat/liste", { headers: H() }); if (!r.ok) { chatDarf = false; return; } const d = await r.json(); const neu = !chatDarf || d.ungelesen !== chatUngelesen; chatDarf = true; chatUngelesen = d.ungelesen || 0; if (neu && typeof zeichnen === "function") zeichnen(); } catch {} }
 let ICH = "", leute = [], weg = [], meldungen = [], termine = [], offen = "", seit = "", gestartet = false, takt = null;
 // Anzeige-Namen der Räume wie in der Schnellreise
 const PERSON = { "Zimmer 1": "Tanja R.", "Zimmer 2": "Christiane S.", "Zimmer 3": "Jana J.", "Zimmer 4": "Kubilay A.", "Zimmer 5": "Bin W.", "Zimmer 6": "Onur K.", "Zimmer 7": "Dilber A.", "Zimmer 8": "Fatih K.",
@@ -109,7 +112,7 @@ function zeichnen() {
     ${offen === "a" + i ? `<div class="eingabe"><input id="txt" placeholder="Antwort an ${esc(String(m.von).split(" ")[0])} …" maxlength="300"><button class="k voll" data-senden="${esc(m.von)}">Senden</button></div>` : ""}</div>`).join("");
   h += termine.map(t => `<div class="meldung termin"><div>📅 <b>${esc(t.von)}${t.ende ? "–" + esc(t.ende) : ""}</b> ${esc(t.titel)}${t.ort ? " · " + esc(t.ort) : ""}${t.von <= jetzt ? " · <b>läuft</b>" : ""}</div>
     ${t.ort ? `<div class="zeile"><a class="k voll" href="${BUERO}#ziel=${encodeURIComponent(t.ort)}">🚶 Hingehen</a></div>` : ""}</div>`).join("");
-  h += `<div class="kacheln">${KACHELN.map((k, i) => `<button data-k="${i}"><span>${k[0]}</span>${k[1]}</button>`).join("")}</div>`;
+  h += `<div class="kacheln">${chatDarf ? `<button id="chatKachel" style="border:2px solid #0f766e;color:#0f766e;font-weight:700"><span>💬</span>Chats${chatUngelesen ? ` <b style="background:#E24B4A;color:#fff;border-radius:9px;padding:0 6px;font-size:11px">${chatUngelesen}</b>` : ""}</button>` : ""}${KACHELN.map((k, i) => `<button data-k="${i}"><span>${k[0]}</span>${k[1]}</button>`).join("")}</div>`;
   h += `<div class="karte"><h2>Im Büro <span>${leute.length}</span></h2>${leute.length ? leute.map((p, i) => {
     const f = p.foto ? `<span class="gesicht" style="background-image:url(&quot;${esc(p.foto)}&quot;)"></span>` : `<span class="gesicht">${esc(initialen(p.name))}</span>`;
     return `<div class="p" data-p="${i}">${f}<div><div class="n">${esc(p.name)}</div><div class="w">${esc(raumText(p.bereich))}${p.telefoniert ? " · 📞 telefoniert" : ""}</div></div>
@@ -120,6 +123,7 @@ function zeichnen() {
   $("inhalt").innerHTML = h;
   $("karte").onclick = () => { if (IM) return buero("arbeitenZu"); zurKarte(BUERO + "#karte=1"); }; // 22.10.2026: Karte ausdrücklich gewollt (sonst leitet das Büro-Skript am Handy hierher zurück)
   document.querySelectorAll("[data-k]").forEach(b => b.onclick = () => blatt(KACHELN[+b.dataset.k]));
+  if ($("chatKachel")) $("chatKachel").onclick = () => blatt(["💬", "Chats", "chat.html"]); // 23.10.2026: Chat wie WhatsApp
   document.querySelectorAll("[data-weg]").forEach(b => b.onclick = () => { meldungen.splice(+b.dataset.weg, 1); offen = ""; zeichnen(); });
   document.querySelectorAll("[data-antw]").forEach(b => b.onclick = () => { offen = offen === "a" + b.dataset.antw ? "" : "a" + b.dataset.antw; zeichnen(); $("txt") && $("txt").focus(); });
   document.querySelectorAll("[data-nachricht]").forEach(b => b.onclick = () => { offen = offen === "n" + b.dataset.nachricht ? "" : "n" + b.dataset.nachricht; zeichnen(); $("txt") && $("txt").focus(); });
@@ -161,7 +165,7 @@ async function start() {
   try { const r = await fetch(B + "/ausweis/pruefen", { method: "POST", headers: H(), body: "{}" }); const d = await r.json().catch(() => ({}));
     if (!r.ok || !d.name) { try { localStorage.removeItem("swBueroAusweis"); } catch {} return anmelden(r.status === 401 ? "Bitte kurz neu anmelden." : ""); }
     ICH = d.name; } catch { $("inhalt").innerHTML = '<div class="leer">Keine Verbindung – bitte gleich nochmal versuchen.</div>'; return; }
-  gestartet = false; await melden("betreten"); await laden();
+  gestartet = false; await melden("betreten"); await laden(); chatPruefen(); setInterval(chatPruefen, 30000);
   clearInterval(takt); takt = setInterval(() => { melden("heartbeat").then(zeichnen); }, 30000);
   setInterval(laden, 60000);
 }

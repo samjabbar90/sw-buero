@@ -90,7 +90,7 @@
     mtFenster = null;
     if (mitteilungen.length) try {
       mtFenster = await WA.ui.website.open({
-        url: SEITEN + "mitteilungen.html?v=5",
+        url: SEITEN + "mitteilungen.html?v=6",
         allowApi: true,
         visible: true,
         position: { vertical: "top", horizontal: HANDY ? "middle" : "right" },
@@ -156,7 +156,7 @@
       mtWeg(m.id);
     },
     mtChat: (m) => {
-      glasFenster(SEITEN + "wer.html?an=" + encodeURIComponent(m.von || "") + "&t=" + Date.now());
+      glasFenster(m.vonId ? SEITEN + "chat.html?mit=" + encodeURIComponent(m.vonId) + "&t=" + Date.now() : SEITEN + "wer.html?an=" + encodeURIComponent(m.von || "") + "&t=" + Date.now());
       mtWeg(m.id);
     },
     mtPush: (m) => {
@@ -169,7 +169,7 @@
   var pushHinweisGezeigt = false;
   function nachrichtZeigen(m) {
     {
-      mitteilung({ art: "nachricht", von: m.von, text: String(m.text || "").slice(0, 300) });
+      mitteilung({ art: "nachricht", von: m.von, vonId: m.vonId, text: String(m.text || "").slice(0, 300) });
       return;
     }
     try {
@@ -3442,12 +3442,17 @@
       }
     } catch {
     }
-    let kzAktiv = false, tcAktiv = false;
+    let kzAktiv = false, tcAktiv = false, chatDarf = false;
     try {
       const r = await fetch(ENDPOINT.replace(/melden$/, "kernzeit/hinweis"), { method: "POST", headers: { "Content-Type": "application/json", "X-Buero-Key": BUERO_KEY }, body: JSON.stringify({ name: WA.player.name }) });
       const h = await r.json();
       kzAktiv = !!h.aktiv;
       tcAktiv = !!h.tc;
+    } catch {
+    }
+    try {
+      const r = await fetch(ENDPOINT.replace(/melden$/, "chat/darf"), { method: "POST", headers: { "Content-Type": "application/json", "X-Buero-Key": BUERO_KEY }, body: JSON.stringify({ name: WA.player.name }) });
+      chatDarf = !!(await r.json()).darf;
     } catch {
     }
     if (tcAktiv && !HANDY) {
@@ -3624,6 +3629,8 @@
           ["sw-mein-profil", "Profil", "profil", () => glasFenster(SEITEN + "profil.html?ich=1&tore=" + toreVon(WA.player.name || "") + "&t=" + Date.now())],
           ...tcAktiv ? [["sw-tagescheck", "Tages-Check", "tagescheck", () => glasFenster(SEITEN + "tagescheck.html?t=" + Date.now())]] : [],
           ...kzAktiv ? [["sw-arbeitszeit", "Arbeitszeit", "arbeitszeit", () => glasFenster(SEITEN + "kernzeit.html?t=" + Date.now())], ["sw-feierabend", "Feierabend", "feierabend", feierabendOeffnen]] : [],
+          ...chatDarf ? [["sw-chat", "Chats", "chat", () => glasFenster(SEITEN + "chat.html?t=" + Date.now())]] : [],
+          // 23.10.2026 Chat (Test)
           ["sw-toene", "T\xF6ne", "toene", () => glasFenster(SEITEN + "toene.html?t=" + Date.now())],
           // 22.10.2026: Lautstärke je Art
           ["sw-alles-zu", "Alles zu", "alleszu", allesZu]

@@ -58,7 +58,9 @@ function zeichnen() {
 async function senden(id) {
   const m = liste.find(x => x.id === id), i = document.getElementById("ant"), t = i ? i.value.trim() : ""; if (!m || !t) return;
   let aw = ""; try { aw = localStorage.getItem("swBueroAusweis") || ""; } catch {}
-  try { const r = await fetch("https://swdigitaltest.de/buero-praesenz/wer/nachricht", { method: "POST", headers: { "X-Buero-Key": KEY, "X-Buero-Ausweis": aw, "X-Buero-Name": encodeURIComponent(WA.player.name || ""), "Content-Type": "application/json" }, body: JSON.stringify({ an: m.von, text: t }) });
+  // 23.10.2026: Nachricht aus dem Chat → Antwort landet im Chat-Verlauf
+  const ziel = m.vonId ? { url: "https://swdigitaltest.de/buero-praesenz/chat/senden", body: { an: m.vonId, text: t } } : { url: "https://swdigitaltest.de/buero-praesenz/wer/nachricht", body: { an: m.von, text: t } };
+  try { const r = await fetch(ziel.url, { method: "POST", headers: { "X-Buero-Key": KEY, "X-Buero-Ausweis": aw, "X-Buero-Name": encodeURIComponent(WA.player.name || ""), "Content-Type": "application/json" }, body: JSON.stringify(ziel.body)});
     const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || "Fehler");
     antwortAuf = ""; aktion("mtWeg", id); }
   catch (e) { aktion("mtChat", id); } // ohne Ausweis o. Ä.: Chat-Fenster öffnet die Anmeldung
