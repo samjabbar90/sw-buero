@@ -3255,6 +3255,7 @@
     }
   }
   var platzhalterAktiv = /* @__PURE__ */ new Map();
+  var SITZPLATZ = { "B\xFCro Sam": [7.6, 26.5] };
   var platzhalterListe = [];
   async function wokaSenden() {
     try {
@@ -3291,6 +3292,10 @@
       platzhalterHinweis = null;
     }
   }
+  function platzhalterLage(o, raum) {
+    const s = SITZPLATZ[raum] || [o.x / 32 + o.width / 64, o.y / 32 + 1.5];
+    return { x: Math.round(s[0] * 32 - 40), y: Math.round(s[1] * 32 - 36), width: 80, height: 54 };
+  }
   async function platzhalterZeigen(liste) {
     platzhalterListe = liste || [];
     if (HANDY) return;
@@ -3324,12 +3329,12 @@
       try {
         await WA.room.website.create({
           name: "platzhalter-" + n.replace(/\W+/g, ""),
-          url: SEITEN + "platzhalter.html?v=2&name=" + encodeURIComponent(p.kurz || n) + "&foto=" + encodeURIComponent(p.foto || "") + "&woka=" + encodeURIComponent(p.woka || ""),
+          url: SEITEN + "platzhalter.html?v=3&name=" + encodeURIComponent(p.kurz || n) + "&foto=" + encodeURIComponent(p.foto || "") + "&woka=" + encodeURIComponent(p.woka || ""),
           visible: true,
           allowApi: false,
           origin: "map",
           scale: 1,
-          position: { x: Math.round(o.x + o.width / 2 - 40), y: Math.round(o.y + o.height * 0.5 - 24), width: 80, height: 56 }
+          position: platzhalterLage(o, p.raum)
         });
       } catch {
         platzhalterAktiv.delete(n);

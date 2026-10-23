@@ -2,27 +2,27 @@
 <html lang="de">
 <head>
 <meta charset="utf-8">
+<meta name="color-scheme" content="dark"><!-- sonst legt der Browser einen weißen Kasten hinter die Figur (23.10.2026) -->
 <title>Platzhalter</title>
-<!-- Platzhalter-Figur (23.10.2026, Sam: „ich muss im Büro sichtbar sein“ – Tarnung am Handy): wer getarnt nur am Handy ist, steht für die
-     anderen trotzdem am eigenen Schreibtisch – Namensschild wie bei WorkAdventure (gelber Punkt = Büro), darunter die echte Figur
-     (Woka-Bild, vom PC gespeichert, ?woka=) bzw. ohne Woka-Bild das runde Profilbild.
-     Das Büro-Skript legt die Seite als Karten-Fenster an (WA.room.website, origin map). ?name=Sam%20J.&foto=<URL> -->
+<!-- Platzhalter-Figur (23.10.2026, Sam: „ich muss im Büro sichtbar sein“ – Tarnung): wer getarnt ist, sitzt für die anderen am eigenen
+     Schreibtisch – Namensschild wie bei WorkAdventure (gelber Punkt), darunter die Figur: echtes Woka-Bild (?woka=, vom PC/Handy-Karte
+     gespeichert) bzw. sonst das runde Profilbild mit weißem Rand wie die Figuren im Büro. Das Büro-Skript legt die Seite als
+     Karten-Fenster an (WA.room.website, origin map) und setzt sie auf den Stuhl (SITZPLATZ in main.ts). ?name=Sam%20J.&foto=&woka= -->
 <style>
-  html, body { margin:0; background:transparent; overflow:hidden; font-family:system-ui,-apple-system,"Segoe UI",sans-serif; }
-  .f { display:flex; flex-direction:column; align-items:center; gap:3px; padding-top:2px; }
-  .schild { display:flex; align-items:center; gap:4px; background:rgba(30,32,38,.82); color:#fff; font-size:11px; font-weight:600; border-radius:9px; padding:1px 7px 2px 5px; white-space:nowrap; }
+  html, body { margin:0; background:transparent !important; color-scheme:dark; overflow:hidden; font-family:system-ui,-apple-system,"Segoe UI",sans-serif; }
+  .f { display:flex; flex-direction:column; align-items:center; gap:2px; }
+  .schild { display:flex; align-items:center; gap:4px; background:rgba(40,42,48,.85); color:#fff; font-size:11px; font-weight:600; border-radius:10px; padding:1px 7px 2px 5px; white-space:nowrap; }
   .schild i { width:7px; height:7px; border-radius:50%; background:#fbbf24; }
   .woka { width:32px; height:32px; image-rendering:pixelated; object-fit:contain; }
-  .bild { width:30px; height:30px; border-radius:50%; background:#5DCAA5 center/cover no-repeat; border:2px solid #fff; box-shadow:0 1px 3px rgba(0,0,0,.35); color:#04342C; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; }
+  .bild { width:30px; height:30px; border-radius:50%; background:#5DCAA5 center/cover no-repeat; border:2px solid #fff; box-shadow:0 1px 2px rgba(0,0,0,.4); color:#04342C; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; }
 </style>
 </head>
 <body>
 <div class="f"><div class="schild"><i></i><span id="n"></span></div><img class="woka" id="w" alt="" hidden><div class="bild" id="b"></div></div>
 <script>
-const q = new URLSearchParams(location.search), name = q.get("name") || "", foto = q.get("foto") || "";
+const q = new URLSearchParams(location.search), name = q.get("name") || "", foto = q.get("foto") || "", woka = q.get("woka") || "";
 document.getElementById("n").textContent = name;
-const b = document.getElementById("b"), w = document.getElementById("w"), woka = q.get("woka") || "";
-// echte WorkAdventure-Figur (Bild vom PC, 23.10.2026) – sonst rundes Profilbild
+const b = document.getElementById("b"), w = document.getElementById("w");
 if (/^https:\/\//.test(woka)) { w.src = woka; w.hidden = false; b.hidden = true; w.onerror = () => { w.hidden = true; b.hidden = false; }; }
 if (/^https:\/\//.test(foto)) b.style.backgroundImage = "url(" + JSON.stringify(foto) + ")"; else b.textContent = name.split(/\s+/).map(t => t[0] || "").join("").slice(0, 2).toUpperCase();
 </script>
