@@ -89,7 +89,7 @@ if (/\/(info|blick)\.html$/.test(location.pathname)) window.addEventListener("be
         const i = stufen.findIndex(w => (ein.b || 780) < w - 20); const n = i < 0 ? 0 : i; ein.voll = false; ein.b = Math.min(stufen[n], SW - 40); ein.hv = hoehe[n]; ein.r = Math.min(ein.r ?? 14, 40); speichern(true); }),
       knopf("↺", "Größe und Platz zurücksetzen", () => { const sch = ein.schrift, d = ein.d; ein = STANDARD(); ein.schrift = sch; ein.d = d; speichern(true); }),
       knopf("⛶", "Vollbild an/aus", () => { ein.voll = !ein.voll; speichern(true); }),
-      knopf("×", "Schließen", async () => { await bereit; if (ich) ich.close(); else if (api) try { api.player.state.saveVariable("swAktion", { was: "glasZu", t: Date.now() }, { public: false, persist: false }); } catch { /* alt */ } }), // ohne Treffer: Büro-Skript schließt das Glas-Fenster
+      knopf("×", "Schließen", async () => { if (typeof window.glasZurueck === "function" && window.glasZurueck()) return; /* 23.10.2026 (Sam): Seiten mit Unterseiten (Chat-Gespräch) gehen erst eine Stufe zurück */ await bereit; if (ich) ich.close(); else if (api) try { api.player.state.saveVariable("swAktion", { was: "glasZu", t: Date.now() }, { public: false, persist: false }); } catch { /* alt */ } }), // ohne Treffer: Büro-Skript schließt das Glas-Fenster
     );
     const rand = document.createElement("div"); rand.id = "glas-rand"; rand.title = "Ziehen: breiter / schmaler";
     const ecke = document.createElement("div"); ecke.id = "glas-ecke"; ecke.title = "Ziehen: größer / kleiner";

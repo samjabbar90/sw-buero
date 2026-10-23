@@ -87,7 +87,7 @@
   html.glas .karte { background:#1f2937; color:#f1f5f9; } html.glas .karte .pkt:hover, html.glas .emojis span:hover { background:rgba(255,255,255,.1); } html.glas .karte input[type=text] { background:rgba(0,0,0,.35); color:#fff; border-color:rgba(255,255,255,.25); }
   html.glas .karte .knopf.hell { background:rgba(255,255,255,.12); color:#fff; } html.glas .klein { color:rgba(255,255,255,.7); } html.glas .karte .pkt.rot2 { color:#fca5a5; }
 </style>
-<script src="glas.js?v=1792770000"></script>
+<script src="glas.js?v=1792772000"></script>
 </head>
 <body>
 <header id="kopf"><h1>💬 Chats</h1></header>
@@ -394,6 +394,8 @@ const EMOJIS = "😀 😂 😊 😍 🥰 😎 🤔 😅 😉 🙂 😢 😭 😡
 $("emoBtn").onclick = () => { const h = fenster('<div class="emojis">' + EMOJIS.map(e => `<span>${e}</span>`).join("") + "</div>");
   h.querySelectorAll(".emojis span").forEach(s => s.onclick = () => { const t = $("txt"), a = t.selectionStart ?? t.value.length; t.value = t.value.slice(0, a) + s.textContent + t.value.slice(t.selectionEnd ?? a); zu(); groesse(); knopf(); t.focus(); }); };
 
+// ✕ des Fensters (glas.js / Handy-Büro) im Gespräch = zurück zur Chat-Liste, erst dort schließt es (23.10.2026, Sam)
+window.glasZurueck = () => { if ($("huelle")) { zu(); return true; } if (konv || $("zurueck")) { liste(); return true; } return false; };
 document.addEventListener("visibilitychange", () => { if (!document.hidden) konv ? verlaufLaden(false) : listeLaden(); });
 konv ? verlauf(konv) : liste();
 </script>

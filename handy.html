@@ -141,7 +141,7 @@ const KACHELN = [["📅", "Kalender", "kalender.html"], ["💡", "Ideen", "ideen
   ["❤️", "Health", "health.html"], ["👥", "Team", "wer.html?sheet=1"], ["👤", "Profil", "profil.html?ich=1"], ["💛", "Danke", "danke.html"],
   ["📰", "News", "news.html"], ["🎓", "Schulung", "lernen.html"], ["🗓", "Donna", "ute.html"], ["🚪", "Feierabend", "kernzeit.html?feierabend=1"]];
 function blatt(k) { $("blattTitel").textContent = k[0] + " " + k[1]; $("blattRahmen").src = k[2] + (k[2].includes("?") ? "&" : "?") + "name=" + encodeURIComponent(ICH) + "&t=" + Date.now(); $("blatt").style.display = "flex"; }
-$("blattZu").onclick = () => { $("blatt").style.display = "none"; $("blattRahmen").src = "about:blank"; laden(); };
+$("blattZu").onclick = () => { try { const w = $("blattRahmen").contentWindow; if (w && typeof w.glasZurueck === "function" && w.glasZurueck()) return; } catch { /* andere Seite */ } /* 23.10.2026: im Chat-Gespräch erst zur Liste */ $("blatt").style.display = "none"; $("blattRahmen").src = "about:blank"; laden(); };
 $("ab").onclick = async () => { if (!confirm("Aus dem Büro abmelden?")) return; await melden("verlassen"); clearInterval(takt); takt = null; ICH = ""; $("inhalt").innerHTML = '<div class="karte"><b>Abgemeldet.</b><div class="leer">Bis später! 👋</div><button class="gross" onclick="location.reload()">Wieder ins Büro</button></div>'; $("ab").style.display = "none"; };
 
 // ---------- Anmelden (Büro-Passwort/PIN oder Code per E-Mail → Büro-Ausweis) ----------
