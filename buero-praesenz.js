@@ -3329,7 +3329,7 @@
       try {
         await WA.room.website.create({
           name: "platzhalter-" + n.replace(/\W+/g, ""),
-          url: SEITEN + "platzhalter.html?v=3&name=" + encodeURIComponent(p.kurz || n) + "&foto=" + encodeURIComponent(p.foto || "") + "&woka=" + encodeURIComponent(p.woka || ""),
+          url: SEITEN + "platzhalter.html?v=4&name=" + encodeURIComponent(p.kurz || n) + "&foto=" + encodeURIComponent(p.foto || "") + "&woka=" + encodeURIComponent(p.woka || ""),
           visible: true,
           allowApi: false,
           origin: "map",

@@ -13,17 +13,20 @@
   .f { display:flex; flex-direction:column; align-items:center; gap:2px; }
   .schild { display:flex; align-items:center; gap:4px; background:rgba(40,42,48,.85); color:#fff; font-size:11px; font-weight:600; border-radius:10px; padding:1px 7px 2px 5px; white-space:nowrap; }
   .schild i { width:7px; height:7px; border-radius:50%; background:#fbbf24; }
+  /* Spritesheet 96×128 (3 Schritte × 4 Richtungen à 32 px): Blick nach vorne, mittlerer Schritt = Stehen */
+  .sheet { width:32px; height:32px; background-size:96px 128px; background-position:-32px 0; background-repeat:no-repeat; image-rendering:pixelated; }
   .woka { width:32px; height:32px; image-rendering:pixelated; object-fit:contain; }
   .bild { width:30px; height:30px; border-radius:50%; background:#5DCAA5 center/cover no-repeat; border:2px solid #fff; box-shadow:0 1px 2px rgba(0,0,0,.4); color:#04342C; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; }
 </style>
 </head>
 <body>
-<div class="f"><div class="schild"><i></i><span id="n"></span></div><img class="woka" id="w" alt="" hidden><div class="bild" id="b"></div></div>
+<div class="f"><div class="schild"><i></i><span id="n"></span></div><img class="woka" id="w" alt="" hidden><div class="sheet" id="s" hidden></div><div class="bild" id="b"></div></div>
 <script>
 const q = new URLSearchParams(location.search), name = q.get("name") || "", foto = q.get("foto") || "", woka = q.get("woka") || "";
 document.getElementById("n").textContent = name;
 const b = document.getElementById("b"), w = document.getElementById("w");
-if (/^https:\/\//.test(woka)) { w.src = woka; w.hidden = false; b.hidden = true; w.onerror = () => { w.hidden = true; b.hidden = false; }; }
+if (/^https:\/\//.test(woka) && /[?&]sheet=1/.test(woka)) { const s = document.getElementById("s"); s.style.backgroundImage = "url(" + JSON.stringify(woka) + ")"; s.hidden = false; b.hidden = true; }
+else if (/^https:\/\//.test(woka)) { w.src = woka; w.hidden = false; b.hidden = true; w.onerror = () => { w.hidden = true; b.hidden = false; }; }
 if (/^https:\/\//.test(foto)) b.style.backgroundImage = "url(" + JSON.stringify(foto) + ")"; else b.textContent = name.split(/\s+/).map(t => t[0] || "").join("").slice(0, 2).toUpperCase();
 </script>
 </body>
