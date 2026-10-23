@@ -117,7 +117,7 @@ function zeichnen() {
   h += `<div class="karte"><h2>Im Büro <span>${leute.length}</span></h2>${leute.length ? leute.map((p, i) => {
     const f = p.foto ? `<span class="gesicht" style="background-image:url(&quot;${esc(p.foto)}&quot;)"></span>` : `<span class="gesicht">${esc(initialen(p.name))}</span>`;
     return `<div class="p" data-p="${i}">${f}<div><div class="n">${esc(p.name)}</div><div class="w">${esc(raumText(p.bereich))}${p.telefoniert ? " · 📞 telefoniert" : ""}</div></div>
-      <div class="akt"><button class="k" data-nachricht="${i}" aria-label="Nachricht">💬</button>${hingehbar(p.bereich) ? `<a class="k voll" href="${BUERO}#ziel=${encodeURIComponent(p.bereich)}">🚶 Hin</a>` : ""}</div></div>
+      <div class="akt"><button class="k" data-nachricht="${i}" aria-label="Nachricht">💬</button>${chatDarf && p.id ? `<button class="k" data-anruf="${i}" aria-label="Anrufen">📞</button>` : ""}${hingehbar(p.bereich) ? `<a class="k voll" href="${BUERO}#ziel=${encodeURIComponent(p.bereich)}">🚶 Hin</a>` : ""}</div></div>
       ${offen === "n" + i ? `<div class="eingabe"><input id="txt" placeholder="Nachricht an ${esc(String(p.name).split(" ")[0])} …" maxlength="300"><button class="k voll" data-senden="${esc(p.name)}">Senden</button></div>` : ""}`; }).join("") : '<div class="leer">Gerade ist niemand außer dir im Büro.</div>'}
     <div id="fe"></div></div>`;
   if (weg.length) h += `<div class="karte"><details><summary>Nicht im Büro (${weg.length})</summary>${weg.map(p => `<div class="p"><span class="gesicht" style="background:#cbd5e1">${esc(initialen(p.name))}</span><div><div class="n">${esc(p.name)}</div><div class="w">${p.zuletzt ? "zuletzt " + new Date(p.zuletzt).toLocaleString("de-DE", { weekday: "short", hour: "2-digit", minute: "2-digit" }) : "–"}</div></div>${p.durchwahl ? `<div class="akt"><a class="k" href="tel:${esc(p.durchwahl)}">📞</a></div>` : ""}</div>`).join("")}</details></div>`;
@@ -127,7 +127,12 @@ function zeichnen() {
   if ($("chatKachel")) $("chatKachel").onclick = () => blatt(["💬", "Chats", "chat.html"]); // 23.10.2026: Chat wie WhatsApp
   document.querySelectorAll("[data-weg]").forEach(b => b.onclick = () => { meldungen.splice(+b.dataset.weg, 1); offen = ""; zeichnen(); });
   document.querySelectorAll("[data-antw]").forEach(b => b.onclick = () => { offen = offen === "a" + b.dataset.antw ? "" : "a" + b.dataset.antw; zeichnen(); $("txt") && $("txt").focus(); });
-  document.querySelectorAll("[data-nachricht]").forEach(b => b.onclick = () => { offen = offen === "n" + b.dataset.nachricht ? "" : "n" + b.dataset.nachricht; zeichnen(); $("txt") && $("txt").focus(); });
+  // 📞 Anrufen (23.10.2026, Sam: „warum kann ich Emre nicht anrufen?“) – 💬 öffnet den Chat mit der Person
+  document.querySelectorAll("[data-anruf]").forEach(b => b.onclick = async () => { const p = leute[+b.dataset.anruf]; b.disabled = true;
+    try { const r = await fetch(B + "/anruf/start", { method: "POST", headers: H(), body: JSON.stringify({ an: p.id }) }); const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || "Anruf geht gerade nicht"); location.href = "anruf.html?id=" + encodeURIComponent(d.id); }
+    catch (e) { b.disabled = false; if ($("fe")) $("fe").textContent = "📞 " + e.message; } });
+  if (chatDarf) document.querySelectorAll("[data-nachricht]").forEach(b => { const p = leute[+b.dataset.nachricht]; if (p && p.id) b.dataset.chat = p.id; });
+  document.querySelectorAll("[data-nachricht]").forEach(b => b.onclick = () => { if (b.dataset.chat) return blatt(["💬", "Chats", "chat.html?mit=" + encodeURIComponent(b.dataset.chat)]); offen = offen === "n" + b.dataset.nachricht ? "" : "n" + b.dataset.nachricht; zeichnen(); $("txt") && $("txt").focus(); });
   document.querySelectorAll("[data-senden]").forEach(b => b.onclick = () => senden(b.dataset.senden));
 }
 async function senden(an) {
