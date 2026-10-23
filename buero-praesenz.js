@@ -3816,7 +3816,7 @@
       if (!HANDY) {
         const KNOEPFE = [
           ["sw-uebersicht", "\xDCbersicht", "karte", () => uebersichtAn ? zuMir() : uebersicht()],
-          ["sw-zu-mir", "Zu mir", "zumir", zuMir],
+          /* 23.10.2026 (Sam): „Zu mir“ sitzt jetzt in der Leiste rechts neben dem eigenen Namen */
           ["sw-schnellreise", "Reise", "reise", schnellreise],
           ["sw-ideen", "Ideen", "ideen", () => ideenOeffnen()],
           ["sw-kalender", "Kalender", "kalender", () => glasFenster(SEITEN + "kalender.html?t=" + Date.now())],
