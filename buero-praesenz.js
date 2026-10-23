@@ -2239,7 +2239,7 @@
         allowApi: true,
         visible: true,
         position: { vertical: "top", horizontal: "right" },
-        size: { width: (leisteSchmal ? LEISTE_SCHMAL : LEISTE_BREIT) + "px", height: "58vh" },
+        size: { width: (leisteSchmal ? LEISTE_SCHMAL : LEISTE_BREIT) + "px", height: "48vh" },
         margin: { top: "72px", right: "8px" }
       });
     } catch {
