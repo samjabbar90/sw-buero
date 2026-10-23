@@ -95,12 +95,12 @@ async function laden() {
   catch (e) { if (!daten) $("inh").innerHTML = '<div class="leer">' + esc(e.message) + "</div>"; }
 }
 // Frei verschieben (23.10.2026, Sam): Kopfzeile ziehen. Live über den Abstand des WorkAdventure-Fensters; beim Loslassen meldet die Seite
-// die Lage ans Büro-Skript (swAktion „leisteLage“), das sie dauerhaft merkt (swLeisteLage { r, o }) und die Leiste dort neu öffnet.
+// die Lage ans Büro-Skript (swAktion „leisteLage“), das sie dauerhaft merkt (swLeisteRechtsLage { r, o }) und die Leiste dort neu öffnet.
 const START = location.href.split("#")[0]; let ich = null;
 WA.onInit().then(async () => { try { ich = (await WA.ui.website.getAll()).find(w => String(w.url || "").split("#")[0] === START) || null; } catch { /* alt */ } });
 document.querySelector(".kopf").addEventListener("pointerdown", e => {
   if (e.button !== 0 || e.target.closest("button")) return; e.preventDefault(); const k = e.currentTarget; k.setPointerCapture(e.pointerId);
-  let lage = {}; try { lage = WA.player.state.swLeisteLage || {}; } catch { /* neu */ }
+  let lage = {}; try { lage = WA.player.state.swLeisteRechtsLage || {}; } catch { /* neu */ }
   const r0 = Number(lage.r ?? 8), o0 = Number(lage.o ?? 72), x0 = e.screenX, y0 = e.screenY, zw = (v, a, z) => Math.min(z, Math.max(a, v));
   const SW = window.outerWidth || screen.availWidth || 1600, SH = window.outerHeight || screen.availHeight || 900;
   let r = r0, o = o0, bewegt = false; document.body.classList.add("zieht");

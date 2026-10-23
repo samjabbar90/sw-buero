@@ -1391,6 +1391,7 @@
     return LAUT_STANDARD[art] ?? 0.5;
   }
   function ton(name, art = "gruppe") {
+    if (HANDY) return;
     const volume = lautstaerke(art);
     if (!volume) return;
     try {
@@ -2234,7 +2235,7 @@
     }
     let lage = {};
     try {
-      lage = WA.player.state.swLeisteLage || {};
+      lage = WA.player.state.swLeisteRechtsLage || {};
     } catch {
     }
     const breite = leisteSchmal ? LEISTE_SCHMAL : LEISTE_BREIT, zw = (v, a, z) => Math.min(z, Math.max(a, v));
@@ -3723,6 +3724,11 @@
           }
         }
       } else {
+        try {
+          const v = WA.player.state.swLeisteLage;
+          if (v && typeof v === "object") WA.player.state.saveVariable("swLeisteLage", "links", { public: false, persist: true });
+        } catch {
+        }
         let leiste = null;
         const leisteAuf = async () => {
           let lage = "links";
@@ -3837,7 +3843,7 @@
         if (v.was === "chat") return chatUmschalten();
         if (v.was === "leisteLage") {
           try {
-            WA.player.state.saveVariable("swLeisteLage", { r: Number(v.r) || 0, o: Number(v.o) || 0 }, { public: false, persist: true });
+            WA.player.state.saveVariable("swLeisteRechtsLage", { r: Number(v.r) || 0, o: Number(v.o) || 0 }, { public: false, persist: true });
           } catch {
           }
           return leisteRechtsAuf();
