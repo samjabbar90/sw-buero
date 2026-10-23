@@ -243,7 +243,11 @@ $("blattZu").onclick = () => { $("blatt").style.display = "none"; $("blattRahmen
 
 // ---------- Chat (Mitteilungen + Nachricht schreiben) ----------
 let neueAn = "", antwortAuf = "";
+// Neuer Chat wie WhatsApp (23.10.2026, Sam): wer freigeschaltet ist, bekommt im Reiter „Chat“ chat.html statt der Einzel-Nachrichten
+let chatNeu = null;
+fetch(B + "/chat/liste", { headers: { "X-Buero-Key": KEY, "X-Buero-Ausweis": aw() } }).then(r => { chatNeu = r.ok; if (chatNeu && tab === "chat") chatMalen(); }).catch(() => { chatNeu = false; });
 function chatMalen() {
+  if (chatNeu) { if (!$("chatRahmen")) $("s-chat").innerHTML = '<iframe id="chatRahmen" src="chat.html" title="Chats" style="width:100%;height:100%;min-height:70vh;border:0;display:block"></iframe>'; return; }
   const ICON = { klopfen: "✊", termin: "📅", nachricht: "💬", info: "👋" };
   let h = mitteilungen.length ? mitteilungen.map(m => { const v = vor(m.von), zeit = new Date(m.t).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
     const titel = m.art === "klopfen" ? v + " klopft an" : m.art === "nachricht" ? v : m.art === "termin" ? (m.titel || "Termin") : (v ? v + " " : "") + (m.kurz || "");
