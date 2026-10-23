@@ -2854,7 +2854,7 @@
     grundrissOeffnet = true;
     try {
       grundriss = await WA.ui.website.open({
-        url: SEITEN + "app.html?v=5",
+        url: SEITEN + "app.html?v=6",
         allowApi: true,
         visible: true,
         position: { vertical: "top", horizontal: "left" },

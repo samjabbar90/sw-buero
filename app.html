@@ -9,6 +9,7 @@
      Liegt am Handy im Vollbild über dem echten Büro (main.ts › appZeigen) – man ist eine echte Figur, die Kollegen sehen einen.
      Tabs: Büro (Grundriss, Antippen = hingehen) · Team · Arbeiten · Chat · Ich. Im Gespräch blendet das Büro-Skript die App aus
      (dann sieht man Video/Ton von WorkAdventure). Kommuniziert über swAktion (→ Büro-Skript) und swMitteilungen/swAppHinweis (← Büro-Skript). -->
+<script>try { if (window.top !== window) document.documentElement.classList.add("imWA"); } catch (e) { document.documentElement.classList.add("imWA"); }</script>
 <style>
   :root { --gruen:#0f766e; --text:#111827; --leise:#6b7280; --rand:rgba(17,24,39,.08); --flaeche:#f2f2f7; }
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
@@ -65,6 +66,9 @@
   #blatt .kopf { display:flex; align-items:center; gap:8px; padding:calc(max(env(safe-area-inset-top), 10px) + 4px) 12px 10px; border-bottom:.5px solid var(--rand); background:#f9f9f9; }
   #blatt .kopf b { flex:1; font-size:17px; text-align:center; } #blatt .kopf button { border:0; background:none; color:var(--gruen); font:inherit; font-size:17px; font-weight:600; min-width:70px; text-align:left; }
   #blatt iframe { flex:1; border:0; width:100%; }
+  /* 23.10.2026 (Sam: „WorkAdventure blockiert unten unsere Leiste“): im Büro liegen unten die WA-Knöpfe (Chat, Mikro, Kamera, Menü) über der App –
+     die Tab-Leiste rutscht darüber, der Streifen darunter bleibt für die WA-Knöpfe frei */
+  html.imWA nav { padding-bottom:calc(max(env(safe-area-inset-bottom), 8px) + 62px); }
 </style>
 </head>
 <body>
