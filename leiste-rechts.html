@@ -78,7 +78,10 @@ function malen() {
   const wk = () => { wegZu = !wegZu; try { localStorage.setItem("swLeisteWegZu", wegZu ? "1" : "0"); } catch { /* egal */ } malen(); };
   if ($("wegKlapp")) $("wegKlapp").onclick = wk; if ($("wegVorschau")) $("wegVorschau").onclick = wk;
   document.querySelectorAll(".zumir").forEach(b => b.onclick = e => { e.stopPropagation(); aktion("zumir"); }); // 23.10.2026: früher oben in der Leiste
-  document.querySelectorAll(".p").forEach(el => el.onclick = () => { if (schmal) { schmal = false; aktion("leisteRechts", { schmal: false }); } offen = offen === el.dataset.id ? "" : el.dataset.id; malen(); });
+  document.querySelectorAll(".p").forEach(el => el.onclick = () => { if (schmal) { schmal = false; aktion("leisteRechts", { schmal: false }); }
+    // eigener Name (23.10.2026, Sam: Layout 3): Mini-Profilkarte links neben der Leiste – Kalender, Sammlungen, Zeit, Ideen, Profil, Feierabend
+    const p = daten && daten.liste.find(x => x.id === el.dataset.id); if (p && p.ich) { aktion("meinMenue", { foto: p.foto || "", seit: p.online || 0 }); return; }
+    offen = offen === el.dataset.id ? "" : el.dataset.id; malen(); });
   document.querySelectorAll(".menue button").forEach(b => b.onclick = e => { e.stopPropagation(); los(b.dataset.a); });
 }
 async function los(a) {

@@ -2252,6 +2252,17 @@
   var LEISTE_BREIT = 232;
   var LEISTE_SCHMAL = 58;
   var leisteR = 8;
+  var leisteO = 72;
+  var meinMenue = null;
+  function meinMenueZu() {
+    try {
+      meinMenue && meinMenue.close();
+    } catch {
+    }
+    meinMenue = null;
+  }
+  var leisteOben = () => leisteO;
+  var leisteBreiteVoll = () => leisteSchmal ? LEISTE_SCHMAL : LEISTE_BREIT;
   function leisteBreite() {
     return leisteRechts && leisteR <= 40 ? leisteSchmal ? LEISTE_SCHMAL : LEISTE_BREIT : 0;
   }
@@ -2269,6 +2280,7 @@
     const breite = leisteSchmal ? LEISTE_SCHMAL : LEISTE_BREIT, zw = (v, a, z) => Math.min(z, Math.max(a, v));
     const lr = Math.round(zw(Number(lage.r ?? 8) || 0, 0, Math.max(0, (window.outerWidth || 1600) - breite - 8))), lo = Math.round(zw(Number(lage.o ?? 72) || 0, 0, Math.max(0, (window.outerHeight || 900) * 0.45)));
     leisteR = lr;
+    leisteO = lo;
     const alt = leisteRechts;
     leisteRechts = null;
     try {
@@ -3825,15 +3837,9 @@
           ["sw-uebersicht", "\xDCbersicht", "karte", () => uebersichtAn ? zuMir() : uebersicht()],
           /* 23.10.2026 (Sam): „Zu mir“ sitzt jetzt in der Leiste rechts neben dem eigenen Namen */
           ["sw-schnellreise", "Reise", "reise", schnellreise],
-          ["sw-ideen", "Ideen", "ideen", () => ideenOeffnen()],
-          ["sw-kalender", "Kalender", "kalender", () => glasFenster(SEITEN + "kalender.html?t=" + Date.now())],
-          ["sw-wer", "Wer ist da", "wer", () => glasFenster(SEITEN + "wer.html?t=" + Date.now())],
-          // 11.10.: Liste mit Live-Anzeige (Recht „live“)
-          ...HANDY ? [] : [["sw-pokedex", "Sammlungen", "pokedex", () => glasFenster(SEITEN + "pokedex.html?name=" + encodeURIComponent(WA.player.name || "") + "&t=" + Date.now())]],
-          // 18.10.2026 Sammlungen (nicht am Handy)
-          ["sw-mein-profil", "Profil", "profil", () => glasFenster(SEITEN + "profil.html?ich=1&tore=" + toreVon(WA.player.name || "") + "&t=" + Date.now())],
+          // 23.10.2026 (Sam, Layout 3): Ideen, Kalender, Sammlungen, Profil, Arbeitszeit → Mini-Profilkarte (Klick auf den eigenen Namen in der Leiste rechts); „Wer ist da“ = Leiste rechts
           ...tcAktiv ? [["sw-tagescheck", "Tages-Check", "tagescheck", () => glasFenster(SEITEN + "tagescheck.html?t=" + Date.now())]] : [],
-          ...kzAktiv ? [["sw-arbeitszeit", "Arbeitszeit", "arbeitszeit", () => glasFenster(SEITEN + "kernzeit.html?t=" + Date.now())], ["sw-feierabend", "Feierabend", "feierabend", feierabendOeffnen]] : [],
+          ...kzAktiv ? [["sw-feierabend", "Feierabend", "feierabend", feierabendOeffnen]] : [],
           ...chatDarf ? [["sw-chat", "Chats", "chat", () => glasFenster(SEITEN + "chat.html?s=" + SITZUNG + "&t=" + Date.now())]] : [],
           // 23.10.2026 Chat (seit abends für alle)
           ["sw-toene", "T\xF6ne", "toene", () => glasFenster(SEITEN + "toene.html?t=" + Date.now())],
@@ -3963,10 +3969,28 @@
     } catch {
     }
     try {
-      WA.player.state.onVariableChange("swAktion").subscribe((v) => {
+      WA.player.state.onVariableChange("swAktion").subscribe(async (v) => {
         if (!v || !v.t || v.t === letzteAktion) return;
         letzteAktion = v.t;
         if (v.was === "chat") return chatUmschalten();
+        if (v.was === "meinMenue") {
+          if (meinMenue) return meinMenueZu();
+          const tuer2 = meineTuer();
+          try {
+            meinMenue = await WA.ui.website.open({
+              url: SEITEN + "mein-menue.html?name=" + encodeURIComponent(String(WA.player.name || "")) + "&foto=" + encodeURIComponent(String(v.foto || "")) + "&seit=" + (Number(v.seit) || 0) + "&tuer=" + (tuer2 ? tuerStatus(tuer2) : "") + "&t=" + Date.now(),
+              allowApi: true,
+              visible: true,
+              position: { vertical: "top", horizontal: "right" },
+              size: { width: "232px", height: "196px" },
+              margin: { top: leisteOben() + 40 + "px", right: leisteR + leisteBreiteVoll() + 10 + "px" }
+            });
+          } catch {
+            meinMenue = null;
+          }
+          return;
+        }
+        if (v.was === "meinMenueZu") return meinMenueZu();
         if (v.was === "leisteLage") {
           try {
             WA.player.state.saveVariable("swLeisteRechtsLage", { r: Number(v.r) || 0, o: Number(v.o) || 0 }, { public: false, persist: true });
@@ -4063,6 +4087,7 @@
         }
         menueZu();
         handyMenueZu();
+        meinMenueZu();
         if (HANDY) handyBlattZu();
         const tuer = meineTuer();
         ({
@@ -4071,6 +4096,7 @@
           karte: () => uebersichtAn ? zuMir() : uebersicht(),
           zumir: zuMir,
           reise: schnellreise,
+          pokedex: () => glasFenster(SEITEN + "pokedex.html?name=" + encodeURIComponent(WA.player.name || "") + "&t=" + Date.now()),
           news: () => newsOeffnen(),
           feierabend: () => feierabendOeffnen(),
           kalender: () => glasFenster(SEITEN + "kalender.html?t=" + Date.now()),
