@@ -74,7 +74,7 @@ async function listeLaden() {
   try {
     const d = await api("/liste");
     $("inhalt").innerHTML = d.chats.length ? d.chats.map(c => `<div class="z" data-id="${esc(c.id)}"><span class="gs">${esc(kuerzel(c.name))}${c.online ? "<i></i>" : ""}</span>
-      <div style="min-width:0;flex:1"><div class="n">${esc(c.name)}</div><div class="l">${c.letzte ? (c.letzte.vonMir ? "Du: " : "") + esc(c.letzte.text) : (c.online ? "im Büro" : "noch keine Nachricht")}</div></div>
+      <div style="min-width:0;flex:1"><div class="n">${esc(c.name)}</div><div class="l">${c.imGespraech ? "📞 im Gespräch · " : ""}${c.letzte ? (c.letzte.vonMir ? "Du: " : "") + esc(c.letzte.text) : (c.online ? "im Büro" : "noch keine Nachricht")}</div></div>
       <div class="r">${c.letzte ? kurzZeit(c.letzte.zeit) : ""}${c.ungelesen ? '<br><span class="rot">' + c.ungelesen + "</span>" : ""}</div></div>`).join("")
       : '<div class="leer">Hier gibt es noch niemanden zum Schreiben. (Der Chat ist im Test – nur für freigeschaltete Personen.)</div>';
     document.querySelectorAll(".z").forEach(z => z.onclick = () => verlauf(z.dataset.id));
@@ -84,8 +84,8 @@ async function listeLaden() {
 async function verlauf(id) {
   mit = id; letzteAnzahl = -1; clearInterval(takt);
   history.replaceState(null, "", location.pathname + "?mit=" + encodeURIComponent(id) + (q.get("glas") ? "&glas=1" : ""));
-  $("kopf").innerHTML = '<button id="zurueck" aria-label="Zurück">←</button><h1 id="mitName">…</h1>';
-  $("zurueck").onclick = liste;
+  $("kopf").innerHTML = '<button id="zurueck" aria-label="Zurück">←</button><h1 id="mitName">…</h1><button id="anrufen" aria-label="Anrufen" title="Anrufen">📞</button>';
+  $("zurueck").onclick = liste; $("anrufen").onclick = anrufen;
   $("inhalt").innerHTML = '<div id="verlauf"><div class="leer">Lädt …</div></div>'; $("fuss").style.display = "flex";
   await verlaufLaden(true); takt = setInterval(() => verlaufLaden(false), 3000);
   if (!/Mobi|iPhone|Android/i.test(navigator.userAgent)) $("txt").focus();
@@ -106,6 +106,12 @@ async function verlaufLaden(erstes) {
   } catch (e) { clearInterval(takt); fehler(e); }
 }
 function lesestand(d) { for (const n of d.nachrichten) if (n.vonMir && n.gelesen) { const el = document.querySelector(`.sb[data-id="${CSS.escape(n.id)}"] small`); if (el && !/✓✓/.test(el.textContent)) el.textContent = uhr(n.zeit) + " ✓✓"; } }
+// 📞 Anrufen (23.10.2026): Anruf starten → Klingel-Bildschirm (anruf.html), der leitet nach dem Annehmen in den Gesprächsraum
+async function anrufen() {
+  try { const r = await fetch("https://swdigitaltest.de/buero-praesenz/anruf/start", { method: "POST", headers: H(), body: JSON.stringify({ an: mit }) }); const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.error || "Anruf geht gerade nicht"); clearInterval(takt); location.href = "anruf.html?id=" + encodeURIComponent(d.id); }
+  catch (e) { const f = document.createElement("div"); f.className = "fehler"; f.textContent = "📞 " + e.message; $("verlauf").appendChild(f); $("inhalt").scrollTop = $("inhalt").scrollHeight; }
+}
 async function senden() {
   const t = $("txt").value.trim(); if (!t || !mit) return;
   $("los").disabled = true;

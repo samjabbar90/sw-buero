@@ -85,7 +85,8 @@ async function melden(event) {
     gestartet = true;
     const d = await r.json().catch(() => ({}));
     if (d.abgeloest) { meldungen.unshift({ von: "System", text: "Du bist jetzt an einem anderen Gerät im Büro – hier ruht das Handy-Büro.", zeit: Date.now() }); clearInterval(takt); takt = null; zeichnen(); return; }
-    if (Array.isArray(d.nachrichten) && d.nachrichten.length) { meldungen = [...d.nachrichten.reverse(), ...meldungen].slice(0, 10); try { navigator.vibrate && navigator.vibrate(150); } catch {} }
+    if (Array.isArray(d.nachrichten) && d.nachrichten.length) { meldungen = [...d.nachrichten.reverse(), ...meldungen].slice(0, 10); try { navigator.vibrate && navigator.vibrate(150); } catch {}
+      const anruf = d.nachrichten.find(x => x.anruf && Date.now() - x.zeit < 45000); if (anruf) { location.href = "anruf.html?id=" + encodeURIComponent(anruf.anruf); return; } } // 23.10.2026: es klingelt → Anruf-Bildschirm
     if (Array.isArray(d.termine)) termine = d.termine;
   } catch { /* später nochmal */ }
 }
@@ -108,7 +109,7 @@ function zeichnen() {
   const jetzt = new Date().toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
   let h = IM ? `<button class="gross" id="karte">⬅ Zurück zum Grundriss</button>` : `<button class="gross" id="karte">🗺 Ins Büro gehen (Karte)</button>`;
   h += meldungen.map((m, i) => `<div class="meldung${m.klopfen ? " klopfen" : ""}"><div><b>${esc(String(m.von).split(" ")[0])}</b> ${esc(m.text)}</div><div class="zeile">
-    ${m.klopfen && m.raum ? `<a class="k voll" href="${BUERO}#ziel=${encodeURIComponent(m.raum)}">🚶 Hingehen</a>` : ""}${m.von !== "System" ? `<button class="k" data-antw="${i}">💬 Antworten</button>` : ""}<button class="k" data-weg="${i}">OK</button></div>
+    ${m.anruf ? `<a class="k voll" href="anruf.html?id=${encodeURIComponent(m.anruf)}">📞 Abheben</a>` : ""}${m.klopfen && m.raum ? `<a class="k voll" href="${BUERO}#ziel=${encodeURIComponent(m.raum)}">🚶 Hingehen</a>` : ""}${m.von !== "System" ? `<button class="k" data-antw="${i}">💬 Antworten</button>` : ""}<button class="k" data-weg="${i}">OK</button></div>
     ${offen === "a" + i ? `<div class="eingabe"><input id="txt" placeholder="Antwort an ${esc(String(m.von).split(" ")[0])} …" maxlength="300"><button class="k voll" data-senden="${esc(m.von)}">Senden</button></div>` : ""}</div>`).join("");
   h += termine.map(t => `<div class="meldung termin"><div>📅 <b>${esc(t.von)}${t.ende ? "–" + esc(t.ende) : ""}</b> ${esc(t.titel)}${t.ort ? " · " + esc(t.ort) : ""}${t.von <= jetzt ? " · <b>läuft</b>" : ""}</div>
     ${t.ort ? `<div class="zeile"><a class="k voll" href="${BUERO}#ziel=${encodeURIComponent(t.ort)}">🚶 Hingehen</a></div>` : ""}</div>`).join("");

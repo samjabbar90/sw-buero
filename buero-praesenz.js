@@ -53,6 +53,7 @@
     const id = Math.random().toString(36).slice(2, 9);
     mitteilungen = [{ ...m, id, t: Date.now() }, ...mitteilungen].slice(0, 5);
     if (m.art === "klopfen" || m.art === "einladung") ton("klopfen", "direkt");
+    else if (m.art === "anruf") ton("klingel", "direkt");
     else if (m.art === "nachricht") ton("klingel", "direkt");
     else if (m.art === "termin") ton("klingel", "gruppe");
     mtZeigen();
@@ -139,6 +140,11 @@
       if (m.raum) zuRaum(m.raum);
       mtWeg(m.id);
     },
+    mtAnruf: (m) => {
+      glasFenster(SEITEN + "anruf.html?id=" + encodeURIComponent(m.anruf || "") + "&t=" + Date.now());
+      mtWeg(m.id);
+    },
+    // 23.10.2026
     // Einladung (22.10.2026): annehmen = Einladenden informieren und hinlaufen; „Später“ sagt es ihm auch
     mtEinladungJa: (m) => {
       try {
@@ -168,6 +174,15 @@
   var nachrichtHinweis = null;
   var pushHinweisGezeigt = false;
   function nachrichtZeigen(m) {
+    if (m.anruf) {
+      mitteilung({ art: "anruf", von: m.von, vonId: m.vonId, anruf: m.anruf, text: "ruft an \u2026" }, 45e3);
+      let n = 0;
+      const iv = setInterval(() => {
+        if (++n > 8 || !mitteilungen.some((x) => x.anruf === m.anruf)) return clearInterval(iv);
+        ton("klingel", "direkt");
+      }, 5e3);
+      return;
+    }
     {
       mitteilung({ art: "nachricht", von: m.von, vonId: m.vonId, text: String(m.text || "").slice(0, 300) });
       return;
