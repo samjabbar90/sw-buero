@@ -56,10 +56,10 @@ let pc = null, mikro = null, sigAb = 0, sigTakt = null, iceWarte = [], holt = fa
 async function mikroHolen() { if (!mikro) mikro = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false }); return mikro; }
 const signal = d => fetch(B + "/" + encodeURIComponent(ID) + "/signal", { method: "POST", headers: H(), body: JSON.stringify({ d }) }).catch(() => {});
 function gespraechUI(a) {
-  $("inhalt").innerHTML = `<div class="gs">${esc(kuerzel(a.mit))}</div><h1>${esc(a.mit)}</h1><p id="zust">Verbinde …</p><audio id="ton" autoplay playsinline></audio>
+  $("inhalt").innerHTML = `<div class="gs">${esc(kuerzel(a.mit))}</div><h1>${esc(a.mit)}</h1><p id="zust">Verbinde …</p><div id="diagT" style="margin:-18px 0 18px;font-size:12.5px;opacity:.8"></div><audio id="ton" autoplay playsinline></audio>
     <button id="tonAn" hidden style="margin:-12px 0 20px;border:0;border-radius:12px;padding:10px 16px;font:inherit;font-weight:700;background:#fff;color:#0f766e">🔊 Tippen zum Hören</button>
     <div class="knoepfe"><div><button id="stumm" style="background:rgba(255,255,255,.2)">🎙</button><small id="stummT">Stumm</small></div><div><button class="nein" id="auflegen">📵</button><small>Auflegen</small></div></div><div class="fe" id="fe"></div>`;
-  $("tonAn").onclick = () => { $("ton").play().then(() => { $("tonAn").hidden = true; }).catch(() => {}); };
+  $("tonAn").onclick = () => { $("ton").play().then(() => { $("tonAn").hidden = true; tonFehler = ""; }).catch(() => {}); };
   $("stumm").onclick = () => { stumm = !stumm; if (mikro) mikro.getAudioTracks().forEach(t => { t.enabled = !stumm; }); $("stumm").textContent = stumm ? "🔇" : "🎙"; $("stummT").textContent = stumm ? "Stumm aus" : "Stumm"; $("stumm").style.background = stumm ? "#f59e0b" : "rgba(255,255,255,.2)"; };
   $("auflegen").onclick = async () => { gespraechEnde(); try { malen(await api("/" + ID + "/ende", { method: "POST", body: "{}" })); } catch (e) { zurueck(); } };
 }
@@ -71,13 +71,14 @@ function zustand() {
 }
 async function gespraechStarten(a) {
   if (pc) return;
-  try { await mikroHolen(); } catch (e) { gespraechUI(a); $("fe").textContent = "🎙 Kein Zugriff aufs Mikrofon – bitte im Browser erlauben."; }
+  AKTUELL = a;
+  try { await mikroHolen(); } catch (e) { mikroFehler = String(e && e.name || e).slice(0, 60); $("fe").textContent = "🎙 Kein Zugriff aufs Mikrofon – bitte im Browser erlauben."; }
   pc = new RTCPeerConnection({ iceServers: STUN });
   if (mikro) mikro.getTracks().forEach(t => pc.addTrack(t, mikro)); else pc.addTransceiver("audio", { direction: "recvonly" });
-  pc.ontrack = e => { const el = $("ton"); if (!el) return; el.srcObject = e.streams[0] || new MediaStream([e.track]); el.play().then(() => { $("tonAn").hidden = true; }).catch(() => { $("tonAn").hidden = false; }); };
+  pc.ontrack = e => { const el = $("ton"); if (!el) return; el.srcObject = e.streams[0] || new MediaStream([e.track]); el.play().then(() => { $("tonAn").hidden = true; tonFehler = ""; }).catch(e => { tonFehler = "blockiert:" + (e && e.name); $("tonAn").hidden = false; }); };
   pc.onicecandidate = e => { if (e.candidate) signal({ ice: e.candidate.toJSON() }); };
   pc.onconnectionstatechange = zustand;
-  sigTakt = setInterval(abholen, 700);
+  sigTakt = setInterval(abholen, 700); diagN = 0; diagTakt = setInterval(diag, 4000);
   if (a.rolle === "von") { const o = await pc.createOffer(); await pc.setLocalDescription(o); signal({ sdp: pc.localDescription.toJSON() }); }
   abholen();
   try { sperre = await navigator.wakeLock.request("screen"); } catch (e) { /* nicht überall */ } // Bildschirm bleibt an – sonst bricht iOS ab
@@ -94,7 +95,24 @@ async function abholen() {
   } catch (e) { /* nächstes Mal */ }
   holt = false;
 }
-function gespraechEnde() {
+// Diagnose (23.10.2026, „wir hören uns nicht“): alle 4 s die ersten 2 Minuten Zustand + Netzwege + Bytes an den Server (pm2-Log)
+let diagTakt = null, diagN = 0, mikroFehler = "", tonFehler = "", bytesVorher = 0;
+async function diag() {
+  if (!pc || ++diagN > 30) { clearInterval(diagTakt); diagTakt = null; return; }
+  const d = { rolle: AKTUELL && AKTUELL.rolle, handy: /iPhone|Android|Mobile/i.test(navigator.userAgent), mikro: mikro ? "ok" : (mikroFehler || "fehlt"), ton: tonFehler || "ok",
+    pc: pc.connectionState, ice: pc.iceConnectionState, sig: pc.signalingState, lokal: [], fern: [], paar: "", rein: 0, raus: 0 };
+  try { const st = await pc.getStats(); const kand = {};
+    st.forEach(r => { if (r.type === "local-candidate") { kand[r.id] = r.candidateType + "/" + r.protocol; d.lokal.push(r.candidateType + "/" + r.protocol); }
+      if (r.type === "remote-candidate") { kand[r.id] = r.candidateType + "/" + r.protocol; d.fern.push(r.candidateType + "/" + r.protocol); }
+      if (r.type === "inbound-rtp" && r.kind === "audio") d.rein = r.bytesReceived || 0; if (r.type === "outbound-rtp" && r.kind === "audio") d.raus = r.bytesSent || 0; });
+    st.forEach(r => { if (r.type === "candidate-pair" && r.state === "succeeded" && r.nominated) d.paar = (kand[r.localCandidateId] || "?") + " ↔ " + (kand[r.remoteCandidateId] || "?"); });
+  } catch (e) { d.stats = String(e).slice(0, 80); }
+  d.lokal = [...new Set(d.lokal)]; d.fern = [...new Set(d.fern)];
+  if ($("zust") && pc.connectionState === "connected") { const kommt = d.rein > bytesVorher; bytesVorher = d.rein; const t = $("diagT"); if (t) t.textContent = kommt ? "Ton kommt an ✓" : "⚠️ Es kommt kein Ton an"; }
+  fetch(B + "/" + encodeURIComponent(ID) + "/diag", { method: "POST", headers: H(), body: JSON.stringify(d) }).catch(() => {});
+}
+let AKTUELL = null;
+function gespraechEnde() { if (diagTakt) { diag(); clearInterval(diagTakt); diagTakt = null; }
   clearInterval(sigTakt); clearInterval(uhrTakt); sigTakt = uhrTakt = null;
   try { pc && pc.close(); } catch (e) {} pc = null;
   try { mikro && mikro.getTracks().forEach(t => t.stop()); } catch (e) {} mikro = null;

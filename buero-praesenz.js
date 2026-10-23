@@ -173,8 +173,11 @@
   };
   var nachrichtHinweis = null;
   var pushHinweisGezeigt = false;
+  var anrufGezeigt = /* @__PURE__ */ new Set();
   function nachrichtZeigen(m) {
+    if (m.anruf && (anrufGezeigt.has(m.anruf) || mitteilungen.some((x) => x.anruf === m.anruf))) return;
     if (m.anruf) {
+      anrufGezeigt.add(m.anruf);
       mitteilung({ art: "anruf", von: m.von, vonId: m.vonId, anruf: m.anruf, text: "ruft an \u2026" }, 45e3);
       let n = 0;
       const iv = setInterval(() => {
@@ -4003,6 +4006,15 @@
       });
     } catch {
     }
+    setInterval(async () => {
+      try {
+        const r = await fetch(ENDPOINT.replace(/melden$/, "anruf/eingang"), { headers: { "X-Buero-Key": BUERO_KEY, "X-Buero-Sitzung": SITZUNG } });
+        if (!r.ok) return;
+        const d = await r.json();
+        if (d && d.id) nachrichtZeigen({ von: d.von, vonId: d.vonId, anruf: d.id, text: "\u{1F4DE} ruft an" });
+      } catch {
+      }
+    }, 3e3);
     setInterval(() => melden("heartbeat"), 3e4);
     window.addEventListener("pagehide", (e) => {
       if (!HANDY || !e.persisted) melden("verlassen");
