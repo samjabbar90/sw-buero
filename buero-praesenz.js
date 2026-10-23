@@ -3846,6 +3846,7 @@
         if (v.was === "leisteProfil") return profilOeffnen(String(v.name || ""));
         if (v.was === "anrufOeffnen") return glasFenster(SEITEN + "anruf.html?id=" + encodeURIComponent(String(v.id || "")) + "&s=" + SITZUNG + "&t=" + Date.now());
         if (v.was === "pushFertig" || v.was === "pushSpaeter") return pushPflichtFertig();
+        if (v.was === "freiton") return ton("freiton", "direkt");
         if (v.was === "tonProbe") return ton(v.art === "direkt" ? "klopfen" : "klingel", String(v.art || "gruppe"));
         if (v.was === "toene") {
           menueZu();

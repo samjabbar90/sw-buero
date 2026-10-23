@@ -35,15 +35,22 @@ const H = () => SITZ && !ausweis() ? { "X-Buero-Key": KEY, "X-Buero-Sitzung": SI
 // im VBüro als Fenster geöffnet (Eltern-Seite ist WorkAdventure) – im Handy-Büro-Blatt dagegen nicht
 const imBuero = window.top !== window && (location.ancestorOrigins ? [...location.ancestorOrigins].some(o => /workadventu/.test(o)) : /workadventu/.test(document.referrer));
 const kuerzel = n => String(n || "?").split(/\s+/).map(t => t[0] || "").join("").slice(0, 2).toUpperCase();
-let takt = null, weg = false;
+let takt = null, weg = false, freiTakt = null;
+// Freiton beim Anrufer (23.10.2026, Sam: „kein Geräusch, dass ich weiß, es klingelt“): 425 Hz, 1 s Ton alle 5 s wie im Telefonnetz.
+// Im VBüro spielt ihn das Büro-Skript (swAktion „freiton“, wie die Klingel beim Angerufenen), im Handy-Büro diese Seite selbst.
+let freiAudio = null;
+function freiEinmal() { if (imBuero) { try { WA.player.state.saveVariable("swAktion", { was: "freiton", t: Date.now() }, { public: false, persist: false }); } catch (e) {} return; }
+  try { freiAudio = freiAudio || new Audio("toene/freiton.wav"); freiAudio.currentTime = 0; freiAudio.play().catch(() => {}); } catch (e) {} }
+function freiton(an) { if (an && !freiTakt) { freiEinmal(); freiTakt = setInterval(freiEinmal, 5000); } else if (!an && freiTakt) { clearInterval(freiTakt); freiTakt = null; try { freiAudio && freiAudio.pause(); } catch (e) {} } }
 async function api(pfad, opt = {}) { const r = await fetch(B + pfad, { ...opt, headers: H() }); const d = await r.json().catch(() => ({})); if (r.status === 401) throw new Error("Bitte zuerst im Handy-Büro anmelden."); if (!r.ok) throw new Error(d.error || "Fehler"); return d; }
 function ziel(a) { return a.raum + "&zurueck=" + (imBuero ? "buero" : "handy"); }
-function gehe(url) { if (weg) return; weg = true; clearInterval(takt);
+function gehe(url) { if (weg) return; weg = true; clearInterval(takt); freiton(false);
   try { if (imBuero && typeof WA !== "undefined" && WA.nav) return WA.nav.goToPage(url); } catch (e) { /* weiter unten */ }
   try { window.top.location.href = url; } catch (e) { location.href = url; } }
-function zurueck() { if (imBuero) { try { WA.player.state.saveVariable("swAktion", { was: "allesZu", t: Date.now() }, { public: false, persist: false }); } catch (e) {} } else location.href = "handy.html"; }
+function zurueck() { freiton(false); if (imBuero) { try { WA.player.state.saveVariable("swAktion", { was: "allesZu", t: Date.now() }, { public: false, persist: false }); } catch (e) {} } else location.href = "handy.html"; }
 function malen(a) {
   document.body.className = a.status === "klingelt" ? "klingelt" : "";
+  freiton(a.status === "klingelt" && a.rolle !== "an" && !weg);
   const kopf = `<div class="gs">${esc(kuerzel(a.mit))}</div>`;
   if (a.status === "laeuft") { $("inhalt").innerHTML = kopf + `<h1>${esc(a.mit)}</h1><p>Verbinde mit dem Gesprächsraum …</p>`; return gehe(ziel(a)); }
   if (a.status === "klingelt" && a.rolle === "an") $("inhalt").innerHTML = kopf + `<h1>${esc(a.von)}</h1><p>ruft an …</p><div class="knoepfe"><div><button class="nein" id="nein">✕</button><small>Ablehnen</small></div><div><button class="ja" id="ja">📞</button><small>Annehmen</small></div></div><div class="fe" id="fe"></div>`;
