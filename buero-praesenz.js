@@ -3816,6 +3816,14 @@
           return leisteRechtsAuf();
         }
         if (v.was === "leisteChat") return glasFenster(SEITEN + "chat.html?mit=" + encodeURIComponent(String(v.id || "")) + "&s=" + SITZUNG + "&t=" + Date.now());
+        if (v.was === "glasZu") {
+          try {
+            glasOffen && glasOffen.handle && glasOffen.handle.close();
+          } catch {
+          }
+          glasOffen = null;
+          return;
+        }
         if (v.was === "leisteProfil") return profilOeffnen(String(v.name || ""));
         if (v.was === "anrufOeffnen") return glasFenster(SEITEN + "anruf.html?id=" + encodeURIComponent(String(v.id || "")) + "&s=" + SITZUNG + "&t=" + Date.now());
         if (v.was === "pushFertig" || v.was === "pushSpaeter") return pushPflichtFertig();

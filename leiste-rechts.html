@@ -54,7 +54,7 @@ function malen() {
     const zeit = (p.gruppe === "gespraech" || p.gruppe === "besprechung") && p.seit ? dauer(p.seit, daten.jetzt) : "";
     h += `<div class="p" data-id="${esc(p.id)}" title="${esc(p.name + " – " + p.text)}"><span class="av" style="${p.foto ? `background-image:url('${esc(p.foto)}')` : ""}">${p.foto ? "" : esc(p.vorname.slice(0, 2).toUpperCase())}<i style="background:${farbe(p)}"></i></span>
       <div style="min-width:0"><div class="n">${esc(p.vorname)}${p.ich ? " (du)" : ""}</div><div class="s">${esc(p.text)}${zeit}</div></div></div>`;
-    if (offen === p.id && !p.ich) h += `<div class="menue">${daten.chat ? `<button data-a="chat">💬 Chat</button><button data-a="anruf">📞 Anrufen</button>` : ""}<button data-a="hin">🚶 Hin</button><button data-a="profil">👤 Profil</button></div>`;
+    if (offen === p.id && !p.ich) h += `<div class="menue">${daten.chat && p.chat ? `<button data-a="chat">💬 Chat</button><button data-a="anruf">📞 Anrufen</button>` : ""}<button data-a="hin">🚶 Hin</button><button data-a="profil">👤 Profil</button></div>`;
   }
   $("inh").innerHTML = h || '<div class="leer">Gerade ist niemand online.</div>';
   document.querySelectorAll(".p").forEach(el => el.onclick = () => { if (schmal) { schmal = false; aktion("leisteRechts", { schmal: false }); } offen = offen === el.dataset.id ? "" : el.dataset.id; malen(); });

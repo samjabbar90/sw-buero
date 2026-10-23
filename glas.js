@@ -37,13 +37,14 @@ if (/\/(info|blick)\.html$/.test(location.pathname)) window.addEventListener("be
   const durchsicht = () => html.style.setProperty("--glas-a", String(ein.d || .55));
   const schrift = () => { durchsicht(); html.classList.remove("glas-mint", "glas-gelb"); if (ein.schrift && ein.schrift !== "weiss") html.classList.add("glas-" + ein.schrift); };
   let api = null, ich = null;
+  const START = location.href.split("#")[0]; // 23.10.2026: Adresse beim Öffnen merken – Seiten wie chat.html ändern sie später (sonst findet ✕ das Fenster nicht)
   const bereit = (async () => {
     for (let i = 0; i < 50 && typeof WA === "undefined"; i++) await new Promise(r => setTimeout(r, 100));
     if (typeof WA === "undefined") return;
     await WA.onInit(); api = WA;
     try { const v = WA.player.state.swFenster; if (v && typeof v === "object") ein = Object.assign(STANDARD(), v); } catch { /* neu */ }
     schrift();
-    try { const alle = await WA.ui.website.getAll(); ich = alle.find(w => String(w.url || "").split("#")[0] === location.href.split("#")[0]) || null; } catch { /* egal */ }
+    try { const alle = await WA.ui.website.getAll(); ich = alle.find(w => String(w.url || "").split("#")[0] === START) || null; } catch { /* egal */ }
   })();
   const speichern = (neuOeffnen) => { if (!api) return; try { api.player.state.saveVariable("swFenster", Object.assign({}, ein, { neu: neuOeffnen ? Date.now() : (ein.neu || 0) }), { public: false, persist: true }); } catch (e) { console.warn("swFenster", e); } };
   // live mitwachsen versuchen (einzelne Felder, wie in der WA-Doku); wenn WA das nicht übernimmt, gilt es beim Loslassen
@@ -88,7 +89,7 @@ if (/\/(info|blick)\.html$/.test(location.pathname)) window.addEventListener("be
         const i = stufen.findIndex(w => (ein.b || 780) < w - 20); const n = i < 0 ? 0 : i; ein.voll = false; ein.b = Math.min(stufen[n], SW - 40); ein.hv = hoehe[n]; ein.r = Math.min(ein.r ?? 14, 40); speichern(true); }),
       knopf("↺", "Größe und Platz zurücksetzen", () => { const sch = ein.schrift, d = ein.d; ein = STANDARD(); ein.schrift = sch; ein.d = d; speichern(true); }),
       knopf("⛶", "Vollbild an/aus", () => { ein.voll = !ein.voll; speichern(true); }),
-      knopf("×", "Schließen", async () => { await bereit; if (ich) ich.close(); }),
+      knopf("×", "Schließen", async () => { await bereit; if (ich) ich.close(); else if (api) try { api.player.state.saveVariable("swAktion", { was: "glasZu", t: Date.now() }, { public: false, persist: false }); } catch { /* alt */ } }), // ohne Treffer: Büro-Skript schließt das Glas-Fenster
     );
     const rand = document.createElement("div"); rand.id = "glas-rand"; rand.title = "Ziehen: breiter / schmaler";
     const ecke = document.createElement("div"); ecke.id = "glas-ecke"; ecke.title = "Ziehen: größer / kleiner";
