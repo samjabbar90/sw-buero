@@ -5,7 +5,7 @@
 <meta name="color-scheme" content="dark">
 <title>Mein Menü</title>
 <!-- Mini-Profilkarte (23.10.2026, Sam: Layout 3): Klick auf den eigenen Namen in der Leiste rechts öffnet links daneben diese Karte –
-     oben Bild, Name, „online seit … · Tür …“, darunter 6 Kacheln: Kalender, Sammlungen, Zeit, Ideen, Profil, Feierabend.
+     oben Bild, Name, „online seit … · Tür …“, darunter 8 Kacheln: Kalender, Sammlungen, Zeit, Ideen, Reise, Profil, Töne, Feierabend.
      Die Knöpfe melden über swAktion ans Büro-Skript (gleiche Aktionen wie früher die Knöpfe oben); danach geht die Karte zu.
      ?name=&foto=&seit=<ms>&tuer=frei|zu|fokus -->
 <script src="https://play.workadventu.re/iframe_api.js"></script>
@@ -17,8 +17,8 @@
   .bild { width:38px; height:38px; border-radius:50%; background:#5DCAA5 center/cover no-repeat; color:#04342C; font-size:13px; font-weight:700; display:flex; align-items:center; justify-content:center; flex:none; }
   .n { font-size:13.5px; font-weight:600; } .s { font-size:11px; color:rgba(255,255,255,.7); margin-top:1px; }
   .zu { margin-left:auto; border:0; background:rgba(255,255,255,.12); color:#fff; border-radius:8px; width:24px; height:24px; cursor:pointer; font-size:12px; align-self:flex-start; }
-  .g { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-top:10px; }
-  .g button { border:0; background:rgba(255,255,255,.08); color:#fff; border-radius:10px; padding:9px 0 7px; font:inherit; font-size:11px; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:4px; }
+  .g { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-top:10px; }
+  .g button { border:0; background:rgba(255,255,255,.08); color:#fff; border-radius:10px; padding:9px 0 7px; font:inherit; font-size:10.5px; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:4px; }
   .g button:hover { background:rgba(255,255,255,.18); }
   .g svg { width:20px; height:20px; fill:none; stroke:#fff; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
 </style>
@@ -38,8 +38,10 @@ const TUER = { frei: "🟢 Tür frei", zu: "🔴 Tür zu", fokus: "🟣 Fokus" }
 $("status").textContent = [seit ? "online seit " + uhr(seit) : "", TUER[tuer] || ""].filter(Boolean).join(" · ");
 const SYM = { kalender: '<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 10h16"/>', pokedex: '<rect x="3" y="7" width="13" height="13" rx="2"/><path d="M8 4h11a2 2 0 0 1 2 2v11"/>',
   arbeitszeit: '<circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/>', ideen: '<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.8.8 1 1.5 1 2.5h6c0-1 .2-1.7 1-2.5A6 6 0 0 0 12 3z"/>',
-  meinProfil: '<circle cx="12" cy="8" r="4"/><path d="M5 21v-1a6 6 0 0 1 6-6h2a6 6 0 0 1 6 6v1"/>', feierabend: '<path d="M14 4h5v16h-5M10 8l-4 4 4 4M6 12h10"/>' };
-const KNOEPFE = [["kalender", "Kalender"], ["pokedex", "Sammlungen"], ["arbeitszeit", "Zeit"], ["ideen", "Ideen"], ["meinProfil", "Profil"], ["feierabend", "Feierabend"]];
+  meinProfil: '<circle cx="12" cy="8" r="4"/><path d="M5 21v-1a6 6 0 0 1 6-6h2a6 6 0 0 1 6 6v1"/>', reise: '<path d="M5 15c-1 2-1 4-1 4s2 0 4-1M14 4c3-1 6 0 6 0s1 3 0 6l-6 6-6-6 6-6z"/><circle cx="15" cy="9" r="1.5"/>', toene: '<path d="M4 9v6h4l5 4V5L8 9H4zM17 9a4 4 0 0 1 0 6M19.5 6.5a8 8 0 0 1 0 11"/>',
+  feierabend: '<path d="M14 4h5v16h-5M10 8l-4 4 4 4M6 12h10"/>' };
+// 24.10.2026 (Sam: Layout A): 8 Kacheln in 4 Spalten – Reise und Töne aus der oberen Leiste dazu
+const KNOEPFE = [["kalender", "Kalender"], ["pokedex", "Sammlungen"], ["arbeitszeit", "Zeit"], ["ideen", "Ideen"], ["reise", "Reise"], ["meinProfil", "Profil"], ["toene", "Töne"], ["feierabend", "Feierabend"]];
 $("g").innerHTML = KNOEPFE.map(([a, t]) => `<button data-a="${a}"><svg viewBox="0 0 24 24">${SYM[a]}</svg>${t}</button>`).join("");
 const aktion = was => { try { WA.player.state.saveVariable("swAktion", { was, t: Date.now() }, { public: false, persist: false }); } catch (e) { console.warn(e); } };
 document.querySelectorAll("[data-a]").forEach(b => b.onclick = () => aktion(b.dataset.a)); // das Büro-Skript schließt die Karte dabei selbst

@@ -3837,14 +3837,12 @@
         const KNOEPFE = [
           ["sw-uebersicht", "\xDCbersicht", "karte", () => uebersichtAn ? zuMir() : uebersicht()],
           /* 23.10.2026 (Sam): „Zu mir“ sitzt jetzt in der Leiste rechts neben dem eigenen Namen */
-          ["sw-schnellreise", "Reise", "reise", schnellreise],
+          /* 24.10.2026: Reise und Töne sind jetzt in der Mini-Profilkarte */
           // 23.10.2026 (Sam, Layout 3): Ideen, Kalender, Sammlungen, Profil, Arbeitszeit → Mini-Profilkarte (Klick auf den eigenen Namen in der Leiste rechts); „Wer ist da“ = Leiste rechts
           ...tcAktiv ? [["sw-tagescheck", "Tages-Check", "tagescheck", () => glasFenster(SEITEN + "tagescheck.html?t=" + Date.now())]] : [],
           ...kzAktiv ? [["sw-feierabend", "Feierabend", "feierabend", feierabendOeffnen]] : [],
           ...chatDarf ? [["sw-chat", "Chats", "chat", () => glasFenster(SEITEN + "chat.html?s=" + SITZUNG + "&t=" + Date.now())]] : [],
           // 23.10.2026 Chat (seit abends für alle)
-          ["sw-toene", "T\xF6ne", "toene", () => glasFenster(SEITEN + "toene.html?t=" + Date.now())],
-          // 22.10.2026: Lautstärke je Art
           ["sw-alles-zu", "Alles zu", "alleszu", allesZu]
           // 20.10.2026 (Sam): ein Klick schließt jedes offene Fenster
         ];
@@ -3983,7 +3981,7 @@
               allowApi: true,
               visible: true,
               position: { vertical: "top", horizontal: "right" },
-              size: { width: "232px", height: "196px" },
+              size: { width: "284px", height: "200px" },
               margin: { top: leisteOben() + 40 + "px", right: leisteR + leisteBreiteVoll() + 10 + "px" }
             });
           } catch {
@@ -4032,6 +4030,7 @@
         if (v.was === "toene") {
           menueZu();
           handyMenueZu();
+          meinMenueZu();
           return glasFenster(SEITEN + "toene.html?t=" + Date.now());
         }
         if (HANDY && v.was !== "hinweisTipp") chatZu();
