@@ -2223,7 +2223,8 @@
     const pruefen = () => {
       let andere = [];
       try {
-        andere = [...WA.players.list()];
+        const ich = String(WA.player.name || "").trim().toLowerCase();
+        andere = [...WA.players.list()].filter((p) => String(p.name || "").trim().toLowerCase() !== ich);
       } catch {
       }
       for (const o of raeume) {
