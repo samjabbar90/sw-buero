@@ -2219,9 +2219,9 @@
         url: SEITEN + "leiste-rechts.html?s=" + SITZUNG + (leisteSchmal ? "&schmal=1" : "") + "&t=" + Date.now(),
         allowApi: true,
         visible: true,
-        position: { vertical: "middle", horizontal: "right" },
-        size: { width: (leisteSchmal ? LEISTE_SCHMAL : LEISTE_BREIT) + "px", height: "64vh" },
-        margin: { right: "8px" }
+        position: { vertical: "top", horizontal: "right" },
+        size: { width: (leisteSchmal ? LEISTE_SCHMAL : LEISTE_BREIT) + "px", height: "58vh" },
+        margin: { top: "72px", right: "8px" }
       });
     } catch {
     }
