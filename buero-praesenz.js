@@ -3770,13 +3770,20 @@
       } catch {
       }
     };
-    const zuMir = () => {
+    const zuMir = async () => {
       blick = 0;
       uebersichtAn = false;
       try {
-        WA.camera.followPlayer(true);
+        const p = await WA.player.getPosition();
+        WA.camera.set(p.x, p.y, void 0, void 0, false, true);
       } catch {
       }
+      setTimeout(() => {
+        try {
+          WA.camera.followPlayer(true);
+        } catch {
+        }
+      }, 700);
     };
     const blicken = async (felder) => {
       try {
