@@ -113,7 +113,7 @@ function zeichnen() {
   const jetzt = new Date().toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
   let h = IM ? `<button class="gross" id="karte">⬅ Zurück zum Grundriss</button>` : ""; // 23.10.2026: kein großer Karten-Knopf mehr am Handy – nur unten der kleine Notfall-Knopf
   h += meldungen.map((m, i) => `<div class="meldung${m.klopfen ? " klopfen" : ""}"><div><b>${esc(String(m.von).split(" ")[0])}</b> ${esc(m.text)}</div><div class="zeile">
-    ${m.anruf ? `<a class="k voll" href="anruf.html?id=${encodeURIComponent(m.anruf)}">📞 Abheben</a>` : ""}${IM && m.klopfen && m.raum ? `<a class="k voll" href="${BUERO}#ziel=${encodeURIComponent(m.raum)}">🚶 Hingehen</a>` : ""}${m.von !== "System" ? `<button class="k" data-antw="${i}">💬 Antworten</button>` : ""}<button class="k" data-weg="${i}">OK</button></div>
+    ${(m.rueckruf || m.frei) && m.vonId ? `<button class="k voll" data-rranruf="${esc(m.vonId)}">📞 Anrufen</button>` : ""}${m.anruf ? `<a class="k voll" href="anruf.html?id=${encodeURIComponent(m.anruf)}">📞 Abheben</a>` : ""}${IM && m.klopfen && m.raum ? `<a class="k voll" href="${BUERO}#ziel=${encodeURIComponent(m.raum)}">🚶 Hingehen</a>` : ""}${m.von !== "System" ? `<button class="k" data-antw="${i}">💬 Antworten</button>` : ""}<button class="k" data-weg="${i}">OK</button></div>
     ${offen === "a" + i ? `<div class="eingabe"><input id="txt" placeholder="Antwort an ${esc(String(m.von).split(" ")[0])} …" maxlength="300"><button class="k voll" data-senden="${esc(m.von)}">Senden</button></div>` : ""}</div>`).join("");
   h += termine.map(t => `<div class="meldung termin"><div>📅 <b>${esc(t.von)}${t.ende ? "–" + esc(t.ende) : ""}</b> ${esc(t.titel)}${t.ort ? " · " + esc(t.ort) : ""}${t.von <= jetzt ? " · <b>läuft</b>" : ""}</div>
     ${IM && t.ort ? `<div class="zeile"><a class="k voll" href="${BUERO}#ziel=${encodeURIComponent(t.ort)}">🚶 Hingehen</a></div>` : ""}</div>`).join("");
@@ -135,12 +135,29 @@ function zeichnen() {
   document.querySelectorAll("[data-weg]").forEach(b => b.onclick = () => { meldungen.splice(+b.dataset.weg, 1); offen = ""; zeichnen(); });
   document.querySelectorAll("[data-antw]").forEach(b => b.onclick = () => { offen = offen === "a" + b.dataset.antw ? "" : "a" + b.dataset.antw; zeichnen(); $("txt") && $("txt").focus(); });
   // 📞 Anrufen (23.10.2026, Sam: „warum kann ich Emre nicht anrufen?“) – 💬 öffnet den Chat mit der Person
+  // 24.10.2026 (Idee 2): „bittet um Rückruf“ / „ist wieder frei“ → direkt anrufen
+  document.querySelectorAll("[data-rranruf]").forEach(x => x.onclick = async () => { x.disabled = true;
+    try { const r = await fetch(B + "/anruf/start", { method: "POST", headers: H(), body: JSON.stringify({ an: x.dataset.rranruf }) }); const d = await r.json().catch(() => ({}));
+      if (d.besetzt) { x.disabled = false; if ($("fe")) { $("fe").innerHTML = ""; rueckrufAngebot($("fe"), d.an, d.error); } return; }
+      if (!r.ok) throw new Error(d.error || "Anruf geht gerade nicht"); location.href = "anruf.html?id=" + encodeURIComponent(d.id); }
+    catch (e) { x.disabled = false; if ($("fe")) $("fe").textContent = "📞 " + e.message; } });
   document.querySelectorAll("[data-anruf]").forEach(b => b.onclick = async () => { const p = leute[+b.dataset.anruf]; b.disabled = true;
-    try { const r = await fetch(B + "/anruf/start", { method: "POST", headers: H(), body: JSON.stringify({ an: p.id }) }); const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || "Anruf geht gerade nicht"); location.href = "anruf.html?id=" + encodeURIComponent(d.id); }
+    try { const r = await fetch(B + "/anruf/start", { method: "POST", headers: H(), body: JSON.stringify({ an: p.id }) }); const d = await r.json().catch(() => ({}));
+      if (d.besetzt) { b.disabled = false; if ($("fe")) { $("fe").innerHTML = ""; rueckrufAngebot($("fe"), d.an, d.error); } return; }
+      if (!r.ok) throw new Error(d.error || "Anruf geht gerade nicht"); location.href = "anruf.html?id=" + encodeURIComponent(d.id); }
     catch (e) { b.disabled = false; if ($("fe")) $("fe").textContent = "📞 " + e.message; } });
   if (chatDarf) document.querySelectorAll("[data-nachricht]").forEach(b => { const p = leute[+b.dataset.nachricht]; if (p && p.id) b.dataset.chat = p.id; });
   document.querySelectorAll("[data-nachricht]").forEach(b => b.onclick = () => { if (b.dataset.chat) return blatt(["💬", "Chats", "chat.html?mit=" + encodeURIComponent(b.dataset.chat)]); offen = offen === "n" + b.dataset.nachricht ? "" : "n" + b.dataset.nachricht; zeichnen(); $("txt") && $("txt").focus(); });
   document.querySelectorAll("[data-senden]").forEach(b => b.onclick = () => senden(b.dataset.senden));
+}
+// 🔔 Besetzt → um Rückruf bitten (24.10.2026, Idee 2): kleine Leiste mit Knopf und ✕
+function rueckrufAngebot(ziel, an, text) {
+  const d = document.createElement("div"); d.style.cssText = "display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:8px 0;padding:8px 10px;border-radius:10px;background:rgba(234,88,12,.15);font-size:13px";
+  d.innerHTML = '<span style="flex:1 1 100%">📞 ' + esc(text) + '</span><button style="border:0;border-radius:8px;padding:6px 10px;background:#0f766e;color:#fff;font:inherit;font-size:13px;cursor:pointer">🔔 Bitte zurückrufen</button><button style="margin-left:auto;border:0;border-radius:8px;padding:6px 10px;background:rgba(127,127,127,.25);color:inherit;font:inherit;cursor:pointer" title="Schließen">✕</button>';
+  const [rr, zu] = d.querySelectorAll("button");
+  rr.onclick = async () => { rr.disabled = true; try { await fetch(B + "/anruf/rueckruf", { method: "POST", headers: H(), body: JSON.stringify({ an }) }); rr.outerHTML = "<b>✓ Du bekommst Bescheid, sobald frei</b>"; setTimeout(() => d.remove(), 5000); } catch (e) { rr.disabled = false; } };
+  zu.onclick = () => d.remove();
+  ziel.appendChild(d); return d;
 }
 async function senden(an) {
   const t = ($("txt") || {}).value || ""; if (!t.trim()) return;

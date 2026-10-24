@@ -15,7 +15,7 @@
   #l { display:flex; flex-direction:column; gap:8px; padding:4px; }
   .m { background:#fff; border-radius:12px; padding:9px 11px; box-shadow:0 4px 14px rgba(0,0,0,.25); border-left:5px solid #0f766e; font-size:13.5px; height:96px; display:flex; flex-direction:column; animation:rein .25s ease-out; }
   @keyframes rein { from { transform:translateX(30px); opacity:0; } to { transform:none; opacity:1; } }
-  .m.klopfen { border-left-color:#ea580c; } .m.termin { border-left-color:#2563eb; } .m.nachricht { border-left-color:#16a34a; } .m.info { border-left-color:#64748b; }
+  .m.klopfen { border-left-color:#ea580c; } .m.rueckruf, .m.frei { border-left-color:#16a34a; } .m.termin { border-left-color:#2563eb; } .m.nachricht { border-left-color:#16a34a; } .m.info { border-left-color:#64748b; }
   .kopf { display:flex; align-items:center; gap:6px; } .kopf b { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .zu { border:0; background:none; color:#6b7280; font-size:16px; cursor:pointer; padding:0 2px; line-height:1; }
   .text { color:#374151; overflow:hidden; display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical; margin:2px 0 6px; }
@@ -33,17 +33,18 @@
 <script>
 const KEY = "a21b2aa2a42fe6189b05773c07bbc9ad78e38b34ba3bb6fe";
 const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-const ICON = { klopfen: "✊", termin: "📅", nachricht: "💬", info: "🔔", push: "🔔" };
+const ICON = { klopfen: "✊", termin: "📅", nachricht: "💬", info: "🔔", push: "🔔", rueckruf: "🔔", frei: "✅" };
 let liste = [], antwortAuf = "";
 const aktion = (was, id, extra) => { try { WA.player.state.saveVariable("swAktion", { was, id, ...(extra || {}), t: Date.now() }, { public: false, persist: false }); } catch (e) { console.warn(e); } };
 function zeichnen() {
   document.getElementById("l").innerHTML = liste.map(m => {
     const vn = String(m.von || "").split(/\s+/)[0], zeit = new Date(m.t).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
-    const titel = m.art === "klopfen" ? vn + " klopft an" : m.art === "einladung" ? vn + " lädt dich ein" : m.art === "anruf" ? "📞 " + vn + " ruft an" : m.art === "nachricht" ? (m.konv && m.konv.startsWith("g:") ? m.von : vn) + " schreibt" : m.art === "termin" ? m.titel || "Termin" : m.art === "info" ? "Mitteilung" : (vn ? vn + " " : "") + (m.kurz || "");
+    const titel = m.art === "klopfen" ? vn + " klopft an" : m.art === "einladung" ? vn + " lädt dich ein" : m.art === "anruf" ? "📞 " + vn + " ruft an" : m.art === "rueckruf" ? vn + " bittet um Rückruf" : m.art === "frei" ? vn + " ist wieder frei" : m.art === "nachricht" ? (m.konv && m.konv.startsWith("g:") ? m.von : vn) + " schreibt" : m.art === "termin" ? m.titel || "Termin" : m.art === "info" ? "Mitteilung" : (vn ? vn + " " : "") + (m.kurz || "");
     let k = "";
     if (m.art === "klopfen") k = `<button class="voll" data-a="mtReinlassen" data-id="${m.id}">Reinlassen</button><button data-a="mtGleich" data-id="${m.id}">Komme gleich</button>`;
     if (m.art === "nachricht") k = antwortAuf === m.id ? `<input id="ant" placeholder="Antwort an ${esc(vn)} …" maxlength="300"><button class="voll" data-senden="${m.id}">Senden</button>`
       : `<button class="voll" data-antw="${m.id}">Antworten</button><button data-a="mtChat" data-id="${m.id}">Chat öffnen</button>`;
+    if (m.art === "rueckruf" || m.art === "frei") k = `<button class="voll" data-a="mtRueckruf" data-id="${m.id}" style="background:#16a34a;border-color:#16a34a">📞 Anrufen</button><button data-a="mtWeg" data-id="${m.id}">Später</button>`; // 24.10.2026
     if (m.art === "anruf") k = `<button class="voll" data-a="mtAnruf" data-id="${m.id}" style="background:#16a34a;border-color:#16a34a">📞 Annehmen</button><button data-a="mtAnrufNein" data-id="${m.id}" style="color:#b91c1c;border-color:#b91c1c">Ablehnen</button>`; // 23.10.2026 (Layout A: direkt in der Karte)
     if (m.art === "einladung") k = `<button class="voll" data-a="mtEinladungJa" data-id="${m.id}">✓ Annehmen & hingehen</button><button data-a="mtEinladungNein" data-id="${m.id}">Später</button>`; // 22.10.2026
     if (m.art === "push") k = `<button class="voll" data-a="mtPush" data-id="${m.id}">🔔 Aktivieren</button><button data-a="mtWeg" data-id="${m.id}">Später</button>`; // 16.10.2026

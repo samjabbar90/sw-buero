@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="color-scheme" content="dark">
+<title>Guten Morgen</title>
+<!-- Morgen-Übersicht (24.10.2026, Sam: Idee 8): einmal am Tag beim ersten Betreten des Büros (am PC) mittig oben – Termine, offene Aufgaben
+     und Fristen von heute, darunter die nächsten Termine und Fristen. Geht nach 10 s von selbst zu (Maus drauf = bleibt), ✕/Esc schließt.
+     Daten: /buero-praesenz/heute (Büro-Sitzung ?s=). Öffnet das Büro-Skript (main.ts › morgenZeigen). -->
+<script src="https://play.workadventu.re/iframe_api.js"></script>
+<style>
+  * { box-sizing:border-box; }
+  html, body { margin:0; background:transparent !important; color-scheme:dark; overflow:hidden; font-family:system-ui,-apple-system,"Segoe UI",sans-serif; color:#fff; }
+  .k { background:rgba(31,35,41,.97); border:1px solid rgba(255,255,255,.14); border-radius:16px; padding:14px; box-shadow:0 8px 24px rgba(0,0,0,.45); }
+  .kopf { display:flex; align-items:center; gap:8px; } h1 { margin:0; font-size:16px; font-weight:600; flex:1; }
+  .zu { border:0; background:rgba(255,255,255,.12); color:#fff; border-radius:8px; width:26px; height:26px; cursor:pointer; }
+  .z { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:12px 0 10px; }
+  .z div { background:rgba(255,255,255,.08); border-radius:10px; padding:8px 4px; text-align:center; font-size:11.5px; color:rgba(255,255,255,.8); }
+  .z b { display:block; font-size:20px; color:#fff; margin:2px 0 0; } .z .rot b { color:#fca5a5; }
+  .l { font-size:12.5px; line-height:1.6; color:rgba(255,255,255,.88); } .l span { color:rgba(255,255,255,.55); }
+  .fuss { text-align:right; font-size:11px; color:rgba(255,255,255,.5); margin-top:8px; }
+</style>
+</head>
+<body>
+<div class="k" id="k"><div class="kopf"><h1 id="gruss">☀️ Guten Morgen</h1><button class="zu" id="zu" title="Schließen">✕</button></div>
+  <div class="z"><div>📅<b id="nT">–</b>Termine</div><div>✅<b id="nA">–</b>Aufgaben</div><div id="fBox">⏰<b id="nF">–</b>Fristen</div></div>
+  <div class="l" id="liste">Lädt …</div><div class="fuss" id="fuss">schließt in 10 s</div></div>
+<script>
+const KEY = "a21b2aa2a42fe6189b05773c07bbc9ad78e38b34ba3bb6fe", q = new URLSearchParams(location.search), $ = id => document.getElementById(id);
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const vn = String(q.get("name") || "").split(/\s+/)[0], h = new Date().getHours();
+$("gruss").textContent = (h < 11 ? "☀️ Guten Morgen" : h < 17 ? "👋 Hallo" : "🌙 Guten Abend") + (vn ? ", " + vn : "");
+const zu = () => { try { WA.player.state.saveVariable("swAktion", { was: "morgenZu", t: Date.now() }, { public: false, persist: false }); } catch (e) {} };
+$("zu").onclick = zu; document.addEventListener("keydown", e => { if (e.key === "Escape") zu(); });
+// 10 s, solange die Maus nicht auf der Karte ist
+let rest = 10, halt = false; $("k").onmouseenter = () => { halt = true; $("fuss").textContent = "bleibt offen, solange die Maus drauf ist"; }; $("k").onmouseleave = () => { halt = false; };
+setInterval(() => { if (halt) return; rest--; $("fuss").textContent = "schließt in " + rest + " s"; if (rest <= 0) zu(); }, 1000);
+(async () => {
+  try {
+    const r = await fetch("https://swdigitaltest.de/buero-praesenz/heute", { headers: { "X-Buero-Key": KEY, "X-Buero-Sitzung": q.get("s") || "", "X-Buero-Ausweis": (() => { try { return localStorage.getItem("swBueroAusweis") || ""; } catch (e) { return ""; } })() } });
+    const d = await r.json(); if (!r.ok) throw new Error(d.error || "Fehler");
+    const t = d.termine || [], a = d.aufgaben || { offen: 0, fristen: 0, fristListe: [] };
+    $("nT").textContent = t.length; $("nA").textContent = a.offen; $("nF").textContent = a.fristen; if (a.fristen) $("fBox").classList.add("rot");
+    const zeilen = [...t.slice(0, 3).map(x => `📅 <b>${esc(x.ganztag ? "ganztägig" : x.von)}</b> ${esc(x.titel)}${x.ort ? " <span>· " + esc(x.ort) + "</span>" : ""}`),
+      ...a.fristListe.slice(0, 2).map(x => `⏰ Frist ${x.frist < new Date().toLocaleDateString("sv-SE") ? "überfällig" : "heute"}: ${esc(x.betreff)}`)];
+    $("liste").innerHTML = zeilen.length ? zeilen.join("<br>") : "Heute steht nichts Besonderes an – einen guten Tag! 🙂";
+  } catch (e) { $("liste").textContent = "Übersicht gerade nicht verfügbar."; }
+})();
+</script>
+</body>
+</html>

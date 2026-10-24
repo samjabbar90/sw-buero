@@ -121,6 +121,21 @@
     void mtAnzahl;
   }
   var anrufFenster = null;
+  async function anrufStarten(an) {
+    if (!an) return;
+    try {
+      const r = await fetch(ENDPOINT.replace(/melden$/, "anruf/start"), { method: "POST", headers: { "Content-Type": "application/json", "X-Buero-Key": BUERO_KEY, "X-Buero-Sitzung": SITZUNG }, body: JSON.stringify({ an }) });
+      const d = await r.json().catch(() => ({}));
+      if (r.ok && d.id) return HANDY ? glasFenster(SEITEN + "anruf.html?id=" + encodeURIComponent(d.id) + "&s=" + SITZUNG + "&t=" + Date.now()) : anrufPille(d.id, false);
+      if (d.besetzt) {
+        fetch(ENDPOINT.replace(/melden$/, "anruf/rueckruf"), { method: "POST", headers: { "Content-Type": "application/json", "X-Buero-Key": BUERO_KEY, "X-Buero-Sitzung": SITZUNG }, body: JSON.stringify({ an }) }).catch(() => {
+        });
+        return mitteilung({ art: "info", kurz: "\u{1F4DE} " + (d.error || "besetzt") + " \u2013 du bekommst Bescheid, sobald er frei ist", text: "" }, 1e4);
+      }
+      mitteilung({ art: "info", kurz: "\u{1F4DE} " + (d.error || "Anruf geht gerade nicht"), text: "" }, 8e3);
+    } catch {
+    }
+  }
   async function anrufPille(id, annehmen) {
     try {
       anrufFenster && anrufFenster.close();
@@ -165,6 +180,11 @@
       mtWeg(m.id);
     },
     // 23.10.2026: am PC Annehmen direkt in der Karte → Pille
+    mtRueckruf: (m) => {
+      anrufStarten(m.vonId || "");
+      mtWeg(m.id);
+    },
+    // 24.10.2026: aus „bittet um Rückruf“ / „ist wieder frei“
     mtAnrufNein: (m) => {
       fetch(ENDPOINT.replace(/melden$/, "anruf/" + encodeURIComponent(m.anruf || "") + "/ablehnen"), { method: "POST", headers: { "Content-Type": "application/json", "X-Buero-Key": BUERO_KEY, "X-Buero-Sitzung": SITZUNG }, body: "{}" }).catch(() => {
       });
@@ -200,6 +220,11 @@
   var pushHinweisGezeigt = false;
   var anrufGezeigt = /* @__PURE__ */ new Set();
   function nachrichtZeigen(m) {
+    if (m.rueckruf || m.frei) {
+      mitteilung({ art: m.rueckruf ? "rueckruf" : "frei", von: m.von, vonId: m.vonId, text: m.rueckruf ? "bittet um R\xFCckruf" : "ist wieder frei \u2013 jetzt anrufen?" }, 12e4);
+      ton("klopfen", "direkt");
+      return;
+    }
     if (m.anruf && (anrufGezeigt.has(m.anruf) || mitteilungen.some((x) => x.anruf === m.anruf))) return;
     if (m.anruf) {
       anrufGezeigt.add(m.anruf);
@@ -2255,6 +2280,35 @@
   var leisteO = 72;
   var meinMenue = null;
   var zuMirZuletzt = 0;
+  var morgenFenster = null;
+  async function morgenZeigen() {
+    if (HANDY || gesperrt) return;
+    const heute = (/* @__PURE__ */ new Date()).toLocaleDateString("sv-SE", { timeZone: "Europe/Berlin" });
+    try {
+      if (WA.player.state.swMorgenTag === heute) return;
+      WA.player.state.saveVariable("swMorgenTag", heute, { public: false, persist: true });
+    } catch {
+    }
+    try {
+      morgenFenster = await WA.ui.website.open({
+        url: SEITEN + "morgen.html?name=" + encodeURIComponent(String(WA.player.name || "")) + "&s=" + SITZUNG + "&t=" + Date.now(),
+        allowApi: true,
+        visible: true,
+        position: { vertical: "top", horizontal: "middle" },
+        size: { width: "330px", height: "250px" },
+        margin: { top: "70px" }
+      });
+    } catch {
+      morgenFenster = null;
+    }
+  }
+  function morgenZu() {
+    try {
+      morgenFenster && morgenFenster.close();
+    } catch {
+    }
+    morgenFenster = null;
+  }
   function meinMenueZu() {
     try {
       meinMenue && meinMenue.close();
@@ -3286,15 +3340,7 @@
       platzhalterHinweis && platzhalterHinweis.remove();
     } catch {
     }
-    platzhalterHinweis = klickHinweis({ message: "\u{1F4DE} Mit " + String(p.kurz || p.name).split(" ")[0] + " sprechen", callback: async () => {
-      try {
-        const r = await fetch(ENDPOINT.replace(/melden$/, "anruf/start"), { method: "POST", headers: { "Content-Type": "application/json", "X-Buero-Key": BUERO_KEY, "X-Buero-Sitzung": SITZUNG }, body: JSON.stringify({ an: p.id }) });
-        const d = await r.json().catch(() => ({}));
-        if (r.ok && d.id) anrufPille(d.id, false);
-        else mitteilung({ art: "info", kurz: "\u{1F4DE} " + (d.error || "Anruf geht gerade nicht"), text: "" }, 8e3);
-      } catch {
-      }
-    } });
+    platzhalterHinweis = klickHinweis({ message: "\u{1F4DE} Mit " + String(p.kurz || p.name).split(" ")[0] + " sprechen", callback: () => anrufStarten(p.id) });
   }
   function platzhalterVerlassen(raum) {
     if (platzhalterListe.some((x) => x.raum === raum)) {
@@ -3990,6 +4036,7 @@
           return;
         }
         if (v.was === "meinMenueZu") return meinMenueZu();
+        if (v.was === "morgenZu") return morgenZu();
         if (v.was === "leisteLage") {
           try {
             WA.player.state.saveVariable("swLeisteRechtsLage", { r: Number(v.r) || 0, o: Number(v.o) || 0 }, { public: false, persist: true });
@@ -4171,6 +4218,7 @@
     } catch {
     }
     setTimeout(() => wokaSenden(), 8e3);
+    setTimeout(() => morgenZeigen(), 7e3);
     setInterval(async () => {
       try {
         const r = await fetch(ENDPOINT.replace(/melden$/, "anruf/eingang"), { headers: { "X-Buero-Key": BUERO_KEY, "X-Buero-Sitzung": SITZUNG } });

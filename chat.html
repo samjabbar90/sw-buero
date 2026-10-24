@@ -324,9 +324,19 @@ function leisteZu() { if (bearbeiten) { $("txt").value = ""; groesse(); } antwor
 $("leisteZu").onclick = leisteZu;
 
 // 📞 Anrufen (23.10.2026): Anruf starten → Klingel-Bildschirm (anruf.html), der leitet nach dem Annehmen in den Gesprächsraum
+// 🔔 Besetzt → um Rückruf bitten (24.10.2026, Idee 2): kleine Leiste mit Knopf und ✕
+function rueckrufAngebot(ziel, an, text) {
+  const d = document.createElement("div"); d.style.cssText = "display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:8px 0;padding:8px 10px;border-radius:10px;background:rgba(234,88,12,.15);font-size:13px";
+  d.innerHTML = '<span style="flex:1 1 100%">📞 ' + esc(text) + '</span><button style="border:0;border-radius:8px;padding:6px 10px;background:#0f766e;color:#fff;font:inherit;font-size:13px;cursor:pointer">🔔 Bitte zurückrufen</button><button style="margin-left:auto;border:0;border-radius:8px;padding:6px 10px;background:rgba(127,127,127,.25);color:inherit;font:inherit;cursor:pointer" title="Schließen">✕</button>';
+  const [rr, zu] = d.querySelectorAll("button");
+  rr.onclick = async () => { rr.disabled = true; try { await fetch("https://swdigitaltest.de/buero-praesenz" + "/anruf/rueckruf", { method: "POST", headers: H(), body: JSON.stringify({ an }) }); rr.outerHTML = "<b>✓ Du bekommst Bescheid, sobald frei</b>"; setTimeout(() => d.remove(), 5000); } catch (e) { rr.disabled = false; } };
+  zu.onclick = () => d.remove();
+  ziel.appendChild(d); return d;
+}
 async function anrufen() {
   if (!daten || !daten.mit) return;
   try { const r = await fetch("https://swdigitaltest.de/buero-praesenz/anruf/start", { method: "POST", headers: H(), body: JSON.stringify({ an: daten.mit.id }) }); const d = await r.json().catch(() => ({}));
+    if (d.besetzt) { rueckrufAngebot($("verlauf") || $("inhalt"), d.an, d.error); $("inhalt").scrollTop = $("inhalt").scrollHeight; return; }
     if (!r.ok) throw new Error(d.error || "Anruf geht gerade nicht"); clearInterval(takt); location.href = "anruf.html?id=" + encodeURIComponent(d.id) + mitS(); }
   catch (e) { hinweis("📞 " + e.message); }
 }
