@@ -28,9 +28,37 @@
   html.klein .mitte { flex:1; min-width:0; } html.klein .mitte h1, html.klein .mitte p { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   html.klein .kn { width:40px; height:40px; border-radius:50%; border:0; font-size:17px; cursor:pointer; color:#fff; flex:none; background:rgba(255,255,255,.16); }
   html.klein .kn.nein { background:#ef4444; } html.klein .kn.ja { background:#22c55e; }
+  html.klein .kn { width:36px; height:36px; font-size:15px; } html.klein .kn.an { background:#fff; color:#0f766e; } html.klein .kn.gelb { background:#f59e0b; }
+  /* 📷 Video + 🖥 Bildschirm (24.10.2026, Ideen 1 + 2): Bühne über der Pille bzw. oben auf der Anruf-Seite */
+  #buehne { display:none; }
+  html.video #buehne { display:flex; flex-direction:column; gap:6px; position:relative; width:100%; flex:1; min-height:0; margin-bottom:12px; }
+  html.video body { justify-content:flex-start; padding:12px; } html.video:not(.klein) #inhalt .gs { display:none; } html.video:not(.klein) #inhalt h1 { font-size:18px; } html.video:not(.klein) #inhalt p { margin-bottom:10px; }
+  html.klein.video #buehne { position:fixed; left:0; right:0; top:0; bottom:70px; margin:0; background:rgba(22,24,29,.96); border:1px solid rgba(255,255,255,.14); border-radius:16px; padding:6px; }
+  #schirme { flex:1; min-height:0; display:grid; gap:6px; } #schirme:empty { display:none; }
+  #kams { display:grid; gap:6px; grid-auto-flow:column; grid-auto-columns:minmax(0,1fr); flex:1; min-height:0; } #kams:empty { display:none; }
+  #schirme:not(:empty) + #kams { flex:none; height:92px; grid-auto-columns:128px; }
+  .kachel { position:relative; background:#000; border-radius:10px; overflow:hidden; min-height:0; }
+  .kachel video { width:100%; height:100%; object-fit:contain; display:block; } .kachel.kam video { object-fit:cover; }
+  .kachel span { position:absolute; left:6px; bottom:5px; font-size:12px; background:rgba(0,0,0,.55); padding:1px 7px; border-radius:8px; }
+  .kachel button { position:absolute; right:6px; top:6px; border:0; border-radius:8px; background:rgba(0,0,0,.55); color:#fff; font-size:14px; padding:3px 8px; cursor:pointer; }
+  #ichVideo { position:absolute; right:10px; bottom:10px; width:104px; height:74px; border-radius:8px; object-fit:cover; transform:scaleX(-1); border:2px solid rgba(255,255,255,.6); display:none; background:#000; z-index:2; }
+  #schirmHinweis { position:absolute; left:10px; top:10px; font-size:12.5px; background:#0f766e; padding:4px 10px; border-radius:10px; display:none; z-index:2; } #schirmHinweis button { margin-left:6px; border:0; border-radius:6px; padding:1px 7px; cursor:pointer; }
+  /* 📝 Mitschreiben-Band + 🗒 Notiz */
+  #msBand { display:none; font-size:13px; background:#fef3c7; color:#78350f; border-radius:12px; padding:7px 10px; margin:0 0 12px; text-align:left; align-items:center; gap:8px; flex-wrap:wrap; }
+  #msBand.da { display:flex; } #msBand b { font-weight:700; } #msBand button { border:0; border-radius:8px; padding:4px 10px; font:inherit; font-size:12.5px; cursor:pointer; background:rgba(0,0,0,.08); color:inherit; } #msBand button.ja { background:#0f766e; color:#fff; }
+  html.klein #msBand { position:fixed; left:0; right:0; bottom:70px; margin:0; } html.klein.video #msBand { bottom:auto; top:8px; left:8px; right:8px; z-index:3; }
+  .notiz { width:100%; max-width:380px; text-align:left; } .notiz h1 { font-size:16px !important; margin:0 0 6px !important; display:flex; gap:8px; align-items:center; white-space:normal !important; }
+  .notiz textarea, .notiz input[type=text] { width:100%; font:inherit; font-size:14px; border-radius:10px; border:1px solid rgba(255,255,255,.25); background:rgba(0,0,0,.25); color:#fff; padding:8px 10px; resize:none; }
+  .notiz textarea { height:74px; } .notiz label { display:flex; align-items:center; gap:6px; font-size:13px; margin:6px 0; }
+  .notiz .zeile { display:flex; gap:8px; justify-content:flex-end; margin-top:6px; } .notiz .zeile button { border:0; border-radius:10px; padding:7px 14px; font:inherit; font-size:13.5px; font-weight:700; cursor:pointer; background:rgba(255,255,255,.16); color:#fff; } .notiz .zeile button.ja { background:#22c55e; }
+  .notiz .vor { background:rgba(22,24,29,.98); border-radius:10px; margin-top:3px; max-height:120px; overflow:auto; } .notiz .vor div { padding:6px 10px; font-size:13px; cursor:pointer; } .notiz .vor div:hover { background:rgba(94,234,212,.15); }
+  .notiz .klein2 { font-size:12px; opacity:.75; margin:3px 0; }
+  html.klein.notizM #inhalt { height:auto; display:block; border-radius:18px; padding:10px 12px; } html.klein.notizM .notiz { max-width:none; }
 </style>
 </head>
 <body>
+<div id="msBand"></div>
+<div id="buehne"><div id="schirme"></div><div id="kams"></div><video id="ichVideo" autoplay playsinline muted></video><div id="schirmHinweis">🖥 Du teilst deinen Bildschirm<button id="schirmStop">Beenden</button></div></div>
 <div id="inhalt"><div class="gs">📞</div><h1>Einen Moment …</h1></div>
 <script src="https://play.workadventu.re/iframe_api.js"></script>
 <script>
@@ -90,17 +118,23 @@ const tnText = () => { const andere = TN.filter(t => !t.ich && (t.status === "dr
 function gespraechUI(a) {
   laeuftUI = true;
   if (KLEIN) $("inhalt").innerHTML = `<div class="gs" id="gsK">${a.gruppe ? "👥" : esc(kuerzel(a.mit))}</div><div class="mitte"><h1><span id="tnK">${esc(a.mit)}</span> · <span id="zust">verbinde …</span></h1><p id="diagT"></p></div><div id="toene" hidden></div>
-      <button class="kn" id="tonAn" hidden title="Tippen zum Hören">🔊</button><button class="kn" id="dazu" title="Jemanden dazuholen">＋</button><button class="kn" id="stumm" title="Stumm">🎙</button><button class="kn nein" id="auflegen" title="Auflegen">📵</button><div class="fe" id="fe" hidden></div>`;
+      <button class="kn" id="tonAn" hidden title="Tippen zum Hören">🔊</button><button class="kn" id="kamera" title="Kamera an/aus">📷</button>${KANN_TEILEN ? '<button class="kn" id="teilen" title="Bildschirm teilen">🖥</button>' : ""}<button class="kn" id="mitschreiben" title="Mitschreiben (alle müssen zustimmen)">📝</button><button class="kn" id="dazu" title="Jemanden dazuholen">＋</button><button class="kn" id="stumm" title="Stumm">🎙</button><button class="kn nein" id="auflegen" title="Auflegen">📵</button><div class="fe" id="fe" hidden></div>`;
   else $("inhalt").innerHTML = `<div class="gs">${a.gruppe ? "👥" : esc(kuerzel(a.mit))}</div><h1 id="tnG">${esc(a.gruppe || a.mit)}</h1><p id="zust">Verbinde …</p><div id="diagT" style="margin:-18px 0 6px;font-size:12.5px;opacity:.8"></div>
     <div id="tnListe" style="font-size:13px;opacity:.9;margin:0 0 18px"></div><div id="toene" hidden></div>
     <button id="tonAn" hidden style="margin:-6px 0 20px;border:0;border-radius:12px;padding:10px 16px;font:inherit;font-weight:700;background:#fff;color:#0f766e">🔊 Tippen zum Hören</button>
-    <div class="knoepfe"><div><button id="stumm" style="background:rgba(255,255,255,.2)">🎙</button><small id="stummT">Stumm</small></div><div><button id="dazu" style="background:rgba(255,255,255,.2)">＋</button><small>Dazuholen</small></div><div><button id="laut" style="background:rgba(255,255,255,.2)">🔈</button><small>Lautsprecher</small></div><div><button class="nein" id="auflegen">📵</button><small>Auflegen</small></div></div><div class="fe" id="fe"></div>`;
+    <div class="knoepfe" style="gap:14px;flex-wrap:wrap;justify-content:center"><div><button id="stumm" style="background:rgba(255,255,255,.2)">🎙</button><small id="stummT">Stumm</small></div><div><button id="kamera" style="background:rgba(255,255,255,.2)">📷</button><small>Kamera</small></div>${KANN_TEILEN ? '<div><button id="teilen" style="background:rgba(255,255,255,.2)">🖥</button><small>Teilen</small></div>' : ""}<div><button id="mitschreiben" style="background:rgba(255,255,255,.2)">📝</button><small>Mitschreiben</small></div><div><button id="dazu" style="background:rgba(255,255,255,.2)">＋</button><small>Dazuholen</small></div><div><button id="laut" style="background:rgba(255,255,255,.2)">🔈</button><small>Lautsprecher</small></div><div><button class="nein" id="auflegen">📵</button><small>Auflegen</small></div></div><div class="fe" id="fe"></div>`;
   if ($("laut")) $("laut").onclick = () => { laut = !laut; ausgabe(); $("laut").textContent = laut ? "🔊" : "🔈"; $("laut").style.background = laut ? "#fff" : "rgba(255,255,255,.2)"; $("laut").style.color = laut ? "#0f766e" : "#fff"; };
   $("tonAn").onclick = () => { Promise.all([...peers.values()].map(p => p.ton.play())).then(() => { $("tonAn").hidden = true; tonFehler = ""; }).catch(() => {}); };
   $("stumm").onclick = () => { stumm = !stumm; if (mikro) mikro.getAudioTracks().forEach(t => { t.enabled = !stumm; }); $("stumm").textContent = stumm ? "🔇" : "🎙"; if ($("stummT")) $("stummT").textContent = stumm ? "Stumm aus" : "Stumm"; $("stumm").style.background = stumm ? "#f59e0b" : "rgba(255,255,255,.2)"; };
   $("auflegen").onclick = async () => { gespraechEnde(); try { malen(await api("/" + ID + "/ende", { method: "POST", body: "{}" })); } catch (e) { zurueck(); } };
   $("dazu").onclick = dazuAuswahl;
-  tnZeigen();
+  $("kamera").onclick = kameraUm; if ($("teilen")) $("teilen").onclick = teilenUm; $("mitschreiben").onclick = () => msAktion("start");
+  if (!SPRACHE) $("mitschreiben").title = "Mitschreiben – dein Browser kann keine Spracherkennung, mitgeschrieben werden dann nur die anderen";
+  knoepfeMalen(); tnZeigen(); fensterAnpassen();
+}
+function knoepfeMalen() {
+  const an = (id, ja) => { const b = $(id); if (!b) return; if (KLEIN) b.classList.toggle("an", !!ja); else { b.style.background = ja ? "#fff" : "rgba(255,255,255,.2)"; b.style.color = ja ? "#0f766e" : "#fff"; } };
+  an("kamera", kamTrack); an("teilen", schirmTrack); const ms = (AKTUELL && AKTUELL.mitschrift) || {}; an("mitschreiben", ms.status === "laeuft");
 }
 function tnZeigen() {
   const t = tnText(); if ($("tnK")) $("tnK").textContent = t;
@@ -109,7 +143,17 @@ function tnZeigen() {
 }
 // ＋ Dazuholen: Liste der Kollegen (ohne die, die schon dabei sind); in der Pille wird das Fenster dafür größer
 let dazuOffen = false;
-async function fensterHoehe(px) { if (!KLEIN) return; try { const w = (await WA.ui.website.getAll()).find(x => String(x.url || "").split("#")[0] === START); if (w && w.size) w.size.height = px + "px"; } catch (e) { /* alt */ } }
+// Größe der Pille: schmal (Klingeln), breiter im Gespräch, groß mit Video, ganz groß mit ⤢; Notiz/＋/📝 brauchen Höhe
+let notizOffen = false, msBandDa = false, gross = false, fensterVorher = "";
+async function fensterAnpassen() { if (!KLEIN) return;
+  const vid = document.documentElement.classList.contains("video");
+  let w = laeuftUI ? 470 : 380, h = 64;
+  if (vid) { w = gross ? Math.round(Math.min(screen.availWidth * 0.9, 1500)) : 600; h = gross ? Math.round(screen.availHeight * 0.75) : 420; }
+  else if (notizOffen) { w = 400; h = notizHoehe(); }
+  else { if (dazuOffen) h = 300; if (msBandDa) h = Math.max(h, 64 + 58); }
+  const neu = w + "x" + h; if (neu === fensterVorher) return; fensterVorher = neu;
+  try { const x = (await WA.ui.website.getAll()).find(y => String(y.url || "").split("#")[0] === START); if (x) x.size = { width: w + "px", height: h + "px" }; } catch (e) { /* alt */ } }
+const fensterHoehe = () => fensterAnpassen();
 async function dazuAuswahl() {
   if (dazuOffen) return dazuZu(); dazuOffen = true;
   let leute = []; try { const r = await fetch("https://swdigitaltest.de/buero-praesenz/chat/personen", { headers: H() }); leute = await r.json(); if (!Array.isArray(leute)) leute = []; } catch (e) { leute = []; }
@@ -146,13 +190,57 @@ function peerHolen(id) {
   const pc = new RTCPeerConnection({ iceServers: STUN }), ton = document.createElement("audio"); ton.autoplay = true; ton.playsInline = true; ($("toene") || document.body).appendChild(ton);
   p = { pc, ton, iceWarte: [], angeboten: false }; peers.set(id, p);
   if (mikro) mikro.getTracks().forEach(t => pc.addTrack(t, mikro)); else pc.addTransceiver("audio", { direction: "recvonly" });
-  pc.ontrack = e => { ton.srcObject = e.streams[0] || new MediaStream([e.track]); ton.play().then(() => { if ($("tonAn")) $("tonAn").hidden = true; tonFehler = ""; }).catch(er => { tonFehler = "blockiert:" + (er && er.name); if ($("tonAn")) $("tonAn").hidden = false; }); };
+  // 📷/🖥: wer anbietet, legt gleich zwei Video-Spuren an (Kamera, Bildschirm) – an/aus geht dann ohne neue Verhandlung (replaceTrack)
+  if (ICH < id) { p.tKam = pc.addTransceiver("video", { direction: "sendrecv" }); p.tSchirm = pc.addTransceiver("video", { direction: "sendrecv" }); spurenSetzen(p); }
+  pc.ontrack = e => { if (e.track.kind === "video") { e.track.onunmute = videoMalen; return videoMalen(); } ton.srcObject = e.streams[0] || new MediaStream([e.track]); ton.play().then(() => { if ($("tonAn")) $("tonAn").hidden = true; tonFehler = ""; }).catch(er => { tonFehler = "blockiert:" + (er && er.name); if ($("tonAn")) $("tonAn").hidden = false; }); };
   pc.onicecandidate = e => { if (e.candidate) signal(id, { ice: e.candidate.toJSON() }); };
-  pc.onconnectionstatechange = zustand;
+  pc.onconnectionstatechange = () => { zustand(); if (pc.connectionState === "connected") signal(id, { medien: meineMedien() }); };
   if (laut) ausgabe();
   return p;
 }
-function peerWeg(id) { const p = peers.get(id); if (!p) return; try { p.pc.close(); } catch (e) {} try { p.ton.remove(); } catch (e) {} peers.delete(id); zustand(); }
+function peerWeg(id) { const p = peers.get(id); if (!p) return; try { p.pc.close(); } catch (e) {} try { p.ton.remove(); } catch (e) {} peers.delete(id); zustand(); videoMalen(); }
+// ---- 📷 Kamera + 🖥 Bildschirm teilen (24.10.2026, Ideen 1 + 2) – direkt zwischen den Geräten wie der Ton; Kamera nur auf Knopfdruck ----
+const KANN_TEILEN = !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) && !/iPhone|iPad|Android|Mobile/i.test(navigator.userAgent);
+let kamTrack = null, schirmTrack = null;
+const vTrans = pc => pc.getTransceivers().filter(t => t.receiver && t.receiver.track && t.receiver.track.kind === "video" && t.mid != null).sort((x, y) => Number(x.mid) - Number(y.mid));
+const meineMedien = () => ({ kamera: !!kamTrack, schirm: !!schirmTrack });
+function spurenSetzen(p) { if (p.tKam) p.tKam.sender.replaceTrack(kamTrack).catch(() => {}); if (p.tSchirm) p.tSchirm.sender.replaceTrack(schirmTrack).catch(() => {}); }
+function medienSenden() { for (const [id, p] of peers) { spurenSetzen(p); signal(id, { medien: meineMedien() }); } knoepfeMalen(); videoMalen(); }
+function fehlerZeigen(t) { const f = $("fe"); if (!f) return; f.hidden = false; f.textContent = t; setTimeout(() => { if (f.textContent === t) { f.textContent = ""; if (KLEIN) f.hidden = true; } }, 6000); }
+async function kameraUm() {
+  if (kamTrack) { kamTrack.stop(); kamTrack = null; return medienSenden(); }
+  try { const st = await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 640 }, height: { ideal: 360 }, facingMode: "user" }, audio: false }); kamTrack = st.getVideoTracks()[0]; }
+  catch (e) { return fehlerZeigen("📷 Kein Zugriff auf die Kamera – bitte im Browser erlauben."); }
+  medienSenden();
+}
+async function teilenUm() {
+  if (schirmTrack) return schirmAus();
+  try { const st = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: { ideal: 10, max: 15 } }, audio: false }); schirmTrack = st.getVideoTracks()[0]; try { schirmTrack.contentHint = "detail"; } catch (e) {} schirmTrack.onended = schirmAus; }
+  catch (e) { if (e && e.name !== "NotAllowedError") fehlerZeigen("🖥 Teilen geht gerade nicht."); return; }
+  medienSenden();
+}
+function schirmAus() { if (!schirmTrack) return; try { schirmTrack.stop(); } catch (e) {} schirmTrack = null; medienSenden(); }
+$("schirmStop").onclick = schirmAus;
+const kacheln = new Map(); // key → div
+function videoMalen() {
+  const sch = [], kam = [];
+  for (const [id, p] of peers) { const m = p.medien || {}, n = vname((TN.find(t => t.id === id) || {}).name) || "?";
+    if (m.schirm && p.tSchirm) sch.push({ key: id + ":s", track: p.tSchirm.receiver.track, name: "🖥 " + n, schirm: true });
+    if (m.kamera && p.tKam) kam.push({ key: id + ":k", track: p.tKam.receiver.track, name: n }); }
+  const da = !!(sch.length || kam.length || kamTrack || schirmTrack);
+  document.documentElement.classList.toggle("video", da); if (!da && gross) gross = false;
+  const alle = new Set([...sch, ...kam].map(k => k.key));
+  for (const [k, el] of kacheln) if (!alle.has(k)) { el.remove(); kacheln.delete(k); }
+  for (const k of [...sch, ...kam]) { let el = kacheln.get(k.key);
+    if (!el) { el = document.createElement("div"); el.className = "kachel" + (k.schirm ? "" : " kam"); el.innerHTML = '<video autoplay playsinline muted></video><span></span>' + (k.schirm && KLEIN ? '<button title="Größer/kleiner">⤢</button>' : "");
+      const b = el.querySelector("button"); if (b) b.onclick = () => { gross = !gross; fensterAnpassen(); }; kacheln.set(k.key, el); }
+    const v = el.querySelector("video"); if (!v.srcObject || v.srcObject.getVideoTracks()[0] !== k.track) { v.srcObject = new MediaStream([k.track]); v.play().catch(() => {}); }
+    el.querySelector("span").textContent = k.name; (k.schirm ? $("schirme") : $("kams")).appendChild(el); }
+  $("schirme").style.gridTemplateColumns = sch.length > 1 ? "1fr 1fr" : "1fr";
+  const iv = $("ichVideo"); if (kamTrack) { if (!iv.srcObject || iv.srcObject.getVideoTracks()[0] !== kamTrack) iv.srcObject = new MediaStream([kamTrack]); iv.style.display = "block"; } else { iv.srcObject = null; iv.style.display = "none"; }
+  $("schirmHinweis").style.display = schirmTrack ? "block" : "none";
+  fensterAnpassen();
+}
 // mit allen verbinden, die drin sind; wer gegangen ist, wird getrennt
 async function peersAbgleichen() {
   if (!sigTakt) return;
@@ -177,7 +265,9 @@ async function abholen() {
     if (Array.isArray(d.teilnehmer)) { const namen = {}; TN.forEach(t => { namen[t.id] = t.name; }); TN = d.teilnehmer.map(t => ({ ...t, name: namen[t.id] || t.name || "?", ich: t.id === ICH })); }
     for (const m of d.neu || []) { if (!m || !m.d || !sigTakt) continue; const von = m.von, x = m.d;
       if (!von) continue; const p = peerHolen(von);
+      if (x.medien) { p.medien = x.medien; videoMalen(); continue; }
       if (x.sdp) { await p.pc.setRemoteDescription(x.sdp); for (const c of p.iceWarte.splice(0)) await p.pc.addIceCandidate(c).catch(() => {});
+        if (x.sdp.type === "offer" && !p.tKam) { const v = vTrans(p.pc); if (v[0]) { v[0].direction = "sendrecv"; p.tKam = v[0]; } if (v[1]) { v[1].direction = "sendrecv"; p.tSchirm = v[1]; } spurenSetzen(p); }
         if (x.sdp.type === "offer") { const an = await p.pc.createAnswer(); await p.pc.setLocalDescription(an); signal(von, { sdp: p.pc.localDescription.toJSON() }); } }
       else if (x.ice) { if (p.pc.remoteDescription) await p.pc.addIceCandidate(x.ice).catch(() => {}); else p.iceWarte.push(x.ice); } }
     await peersAbgleichen();
@@ -204,12 +294,17 @@ function gespraechEnde() { if (diagTakt) { diag(); clearInterval(diagTakt); diag
   clearInterval(sigTakt); clearInterval(uhrTakt); sigTakt = uhrTakt = null; laeuftUI = false;
   for (const id of [...peers.keys()]) peerWeg(id);
   try { mikro && mikro.getTracks().forEach(t => t.stop()); } catch (e) {} mikro = null;
+  try { kamTrack && kamTrack.stop(); schirmTrack && schirmTrack.stop(); } catch (e) {} kamTrack = schirmTrack = null; gross = false;
+  erkennungStopp(); msBandSetzen(""); kacheln.forEach(el => el.remove()); kacheln.clear(); document.documentElement.classList.remove("video");
   try { sperre && sperre.release(); } catch (e) {} sperre = null;
 }
 let letzterStatus = "";
 const ENDE = ["beendet", "abgelehnt", "verpasst"];
 function malen(a) {
+  if (notizOffen) return; // Notiz-Karte offen – nicht überzeichnen
   letzterStatus = a.status; if (a.teilnehmer) { TN = a.teilnehmer; ICH = a.ich || ICH; }
+  if (laeuftUI || (a.status === "laeuft" && a.meinStatus === "drin")) { AKTUELL = { ...(AKTUELL || {}), ...a }; mitschriftMalen(a.mitschrift || { status: "aus" }); knoepfeMalen(); }
+  if ((ENDE.includes(a.status) || a.meinStatus === "weg") && a.warDrin && !a.notiz && a.dauer >= NOTIZ_AB) { if (sigTakt || laeuftUI) gespraechEnde(); return notizZeigen(a); }
   const mein = a.meinStatus || (a.rolle === "an" && a.status === "klingelt" ? "klingelt" : "drin");
   // im Gespräch: ich bin drin und mindestens eine weitere Person ist drin (läuft) – Liste/Verbindungen nur auffrischen
   if (a.modus === "web" && mein === "drin" && a.status === "laeuft") { freiton(false); AKTUELL = a; if (!laeuftUI) { gespraechUI(a); gespraechStarten(a); } else { tnZeigen(); peersAbgleichen(); } return; }
@@ -242,6 +337,64 @@ function malenKlein(a, ichKlingle, ichWarte) {
     $("nein").onclick = async () => { try { malen(await api("/" + ID + "/ablehnen", { method: "POST", body: "{}" })); } catch (e) { schliessen(); } }; return; }
   $("inhalt").innerHTML = kopf + `<div class="mitte"><h1>${esc(a.mit)}</h1><p>${a.status === "abgelehnt" ? (a.rolle === "von" ? (a.gruppe ? "Keiner hat Zeit." : "hat gerade keine Zeit.") : "Abgelehnt.") : a.status === "verpasst" ? "nicht erreicht." : "Gespräch beendet."}</p></div><button class="kn" id="zu" title="Schließen">✕</button>`;
   clearInterval(takt); $("zu").onclick = schliessen; setTimeout(schliessen, 3000);
+}
+// ---- 📝 Mitschreiben (24.10.2026, Idee 4): erst wenn ALLE einverstanden sind; jeder Browser erkennt nur sein eigenes Mikrofon ----
+const SPRACHE = window.SpeechRecognition || window.webkitSpeechRecognition;
+let erkennung = null, erkennungSoll = false, msAbgelehntGezeigt = "";
+async function msAktion(aktion) { try { const r = await fetch(B + "/" + encodeURIComponent(ID) + "/mitschrift", { method: "POST", headers: H(), body: JSON.stringify({ aktion }) }); const d = await r.json().catch(() => ({}));
+  if (!r.ok) return fehlerZeigen(d.error || "Geht gerade nicht"); if (d.mitschrift) { AKTUELL = { ...(AKTUELL || {}), ...d }; mitschriftMalen(d.mitschrift); knoepfeMalen(); } } catch (e) { fehlerZeigen("Keine Verbindung"); } }
+function msBandSetzen(h) { const b = $("msBand"); if (!b) return; b.innerHTML = h; b.classList.toggle("da", !!h); msBandDa = !!h; fensterAnpassen();
+  b.querySelectorAll("[data-ms]").forEach(x => x.onclick = () => msAktion(x.dataset.ms)); }
+function mitschriftMalen(m) {
+  if (!laeuftUI) return;
+  if (m.status === "frage") msBandSetzen(m.ichJa ? `📝 Warte auf Zustimmung von <b>${esc((m.offen || []).join(", ") || "…")}</b> <button data-ms="stop">Abbrechen</button>`
+    : `📝 <b>${esc(m.von)}</b> möchte das Gespräch mitschreiben (nur Text, wird nach der Notiz gelöscht). <button class="ja" data-ms="ja">Einverstanden</button><button data-ms="nein">Nein</button>`);
+  else if (m.status === "laeuft") msBandSetzen(m.ichJa ? `<b>● Wird mitgeschrieben</b> – alle sehen das${(m.offen || []).length ? " · " + esc(m.offen.join(", ")) + " noch nicht" : ""}${SPRACHE ? "" : " · dein Browser schreibt nicht mit"} <button data-ms="stop" style="margin-left:auto">Stopp</button>`
+    : `📝 Das Gespräch wird mitgeschrieben. Du auch? <button class="ja" data-ms="ja">Einverstanden</button><button data-ms="nein">Nein (stoppt es)</button>`);
+  else { msBandSetzen(""); if (m.abgelehnt && msAbgelehntGezeigt !== m.abgelehnt) { msAbgelehntGezeigt = m.abgelehnt; fehlerZeigen("📝 " + m.abgelehnt + " möchte nicht mitschreiben."); } }
+  if (m.status === "laeuft" && m.ichJa) erkennungStart(); else erkennungStopp();
+}
+function erkennungStart() {
+  erkennungSoll = true; if (erkennung || !SPRACHE) return;
+  try { erkennung = new SPRACHE(); erkennung.lang = "de-DE"; erkennung.continuous = true; erkennung.interimResults = false;
+    erkennung.onresult = e => { for (let i = e.resultIndex; i < e.results.length; i++) if (e.results[i].isFinal) { const t = e.results[i][0].transcript.trim();
+      if (t && !stumm) fetch(B + "/" + encodeURIComponent(ID) + "/mitschrift", { method: "POST", headers: H(), body: JSON.stringify({ aktion: "zeile", text: t }) }).catch(() => {}); } };
+    erkennung.onend = () => { erkennung = null; if (erkennungSoll) setTimeout(erkennungStart, 300); }; // Chrome hört nach Pausen von selbst auf
+    erkennung.onerror = e => { if (e.error === "not-allowed") { erkennungSoll = false; fehlerZeigen("📝 Mikrofon für die Spracherkennung nicht erlaubt."); } };
+    erkennung.start(); } catch (e) { erkennung = null; }
+}
+function erkennungStopp() { erkennungSoll = false; try { erkennung && erkennung.stop(); } catch (e) {} erkennung = null; }
+// ---- 🗒 Anruf-Notiz (24.10.2026, Idee 3): nach jedem Anruf ab 1 Min „Worum ging's?“ → als Nachricht in den Chat, #Mandant, → Aufgabe ----
+const NOTIZ_AB = Number(q.get("notizab") || 60);
+let notizMdt = null;
+const notizHoehe = () => Math.min(380, ($("inhalt").scrollHeight || 260) + 16);
+function notizZeigen(a) {
+  notizOffen = true; clearInterval(takt); freiton(false); document.documentElement.classList.add("notizM"); document.body.className = "";
+  const mit = a.gruppe || a.mit, min = Math.max(1, Math.round(a.dauer / 60)), ms = a.mitschrift || {};
+  $("inhalt").innerHTML = `<div class="notiz"><h1>🗒 Worum ging's? <span style="font-weight:400;opacity:.75;font-size:13px">${esc(mit)} · ${min} Min</span><button id="nZu" style="margin-left:auto;border:0;background:none;color:#fff;font-size:18px;cursor:pointer" title="Schließen">✕</button></h1>
+    <textarea id="nText" maxlength="3000" placeholder="z. B. USt-VA Müller besprochen, Kontoauszug 11 fehlt …"></textarea>
+    ${ms.zeilen ? '<div class="klein2" id="nKi">✨ Fasse die Mitschrift zusammen …</div>' : ""}
+    <input type="text" id="nMdt" placeholder="📁 Mandant (Nummer oder Name, freiwillig)" autocomplete="off"><div class="vor" id="nVor"></div>
+    <label><input type="checkbox" id="nAufg"> 📌 auch als Aufgabe für mich (Frist 7 Tage)</label>
+    <div class="klein2">Die Notiz kommt in den Chat mit ${esc(mit)}.</div>
+    <div class="zeile"><button id="nSpaeter">Später</button><button class="ja" id="nLos">Speichern</button></div><div class="fe" id="fe" style="margin-top:6px"></div></div>`;
+  const zu = () => { notizOffen = false; document.documentElement.classList.remove("notizM"); fensterAnpassen(); if (KLEIN) schliessen(); else zurueck(); };
+  $("nZu").onclick = zu; $("nSpaeter").onclick = zu;
+  ["nText", "nMdt"].forEach(i => $(i).addEventListener("keydown", e => e.stopPropagation()));
+  let mt = 0; $("nMdt").oninput = () => { notizMdt = null; clearTimeout(mt); const v = $("nMdt").value.trim().replace(/^#/, ""); if (v.length < 2) { $("nVor").innerHTML = ""; return fensterAnpassen(); }
+    mt = setTimeout(async () => { try { const l = await (await fetch("https://swdigitaltest.de/buero-praesenz/chat/mandanten?q=" + encodeURIComponent(v), { headers: H() })).json();
+      $("nVor").innerHTML = (Array.isArray(l) ? l : []).map(m => `<div data-nr="${esc(m.nr)}" data-name="${esc(m.name)}"><b>${esc(m.nr)}</b> ${esc(m.name)}</div>`).join("");
+      $("nVor").querySelectorAll("[data-nr]").forEach(d => d.onclick = () => { notizMdt = d.dataset.nr; $("nMdt").value = d.dataset.nr + " · " + d.dataset.name; $("nVor").innerHTML = ""; fensterAnpassen(); }); fensterAnpassen(); } catch (e) { /* egal */ } }, 200); };
+  $("nLos").onclick = async () => { const t = $("nText").value.trim(); if (!t) { $("fe").textContent = "Bitte kurz notieren, worum es ging."; return; }
+    $("nLos").disabled = true;
+    try { const r = await fetch(B + "/" + encodeURIComponent(ID) + "/notiz", { method: "POST", headers: H(), body: JSON.stringify({ text: (notizMdt ? "#" + notizMdt + " " : "") + t, aufgabe: $("nAufg").checked }) }); const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.error || "Speichern ging nicht");
+      $("inhalt").innerHTML = `<div class="notiz"><h1>✓ Notiz gespeichert</h1><div class="klein2">Steht im Chat mit ${esc(mit)}${d.aufgabe ? " · 📌 Aufgabe " + esc(d.aufgabe.nummer || "") : ""}.</div></div>`; fensterAnpassen(); setTimeout(zu, 2200); }
+    catch (e) { $("nLos").disabled = false; $("fe").textContent = e.message; } };
+  fensterAnpassen(); setTimeout(() => { try { $("nText").focus(); } catch (e) {} }, 60);
+  if (ms.zeilen) fetch(B + "/" + encodeURIComponent(ID) + "/mitschrift", { method: "POST", headers: H(), body: JSON.stringify({ aktion: "zusammenfassen" }) }).then(r => r.json()).then(d => {
+    const k = d && d.ki; if (!$("nText")) return; if (!k) { if ($("nKi")) $("nKi").textContent = "Zusammenfassung ging nicht" + (d && d.error ? ": " + d.error : "") + " – bitte selbst notieren."; return; } const teile = [k.zusammenfassung, ...(k.beschluesse || []).map(b => "• " + b), ...(k.aufgaben || []).map(x => "→ " + x.text + (x.bearbeiterName ? " (" + vname(x.bearbeiterName) + ")" : ""))].filter(Boolean);
+    if (!$("nText").value.trim()) $("nText").value = teile.join("\n"); if ($("nKi")) $("nKi").textContent = "✨ Aus der Mitschrift vorausgefüllt – bitte prüfen."; }).catch(() => { if ($("nKi")) $("nKi").textContent = "Zusammenfassung ging nicht."; });
 }
 async function laden() { try { malen(await api("/" + encodeURIComponent(ID))); } catch (e) { clearInterval(takt); $("inhalt").innerHTML = `<div class="gs">📵</div><h1>${esc(e.message)}</h1><p></p><div class="knoepfe"><div><button class="nein" id="zu" style="background:rgba(255,255,255,.2)">✓</button><small>Schließen</small></div></div>`; $("zu").onclick = zurueck; } }
 // Seite weg (zurück, ✕, Fenster zu) während es klingelt oder läuft → Anruf beenden, sonst klingelt es beim anderen weiter (23.10.2026, Sam)

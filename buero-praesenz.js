@@ -146,7 +146,7 @@
       anrufFenster = await WA.ui.website.open({
         url: SEITEN + "anruf.html?id=" + encodeURIComponent(id) + "&s=" + SITZUNG + "&klein=1" + (annehmen ? "&annehmen=1" : "") + "&t=" + Date.now(),
         allowApi: true,
-        allowPolicy: "microphone; autoplay",
+        allowPolicy: "microphone; camera; display-capture; autoplay",
         visible: true,
         position: { vertical: "bottom", horizontal: "middle" },
         size: { width: "380px", height: "64px" },
@@ -1769,7 +1769,7 @@
     return { position: { vertical: "top", horizontal: "right" }, size: { width: b + "px", height: hv + "vh" }, margin: { top: Math.round(Number(e.o) || 70) + "px", right: Math.round(Number(e.r ?? 14)) + "px" } };
   }
   async function glasOeffnen(u) {
-    return await WA.ui.website.open({ url: u, allowApi: true, allowPolicy: "microphone", visible: true, ...glasLage() });
+    return await WA.ui.website.open({ url: u, allowApi: true, allowPolicy: "microphone; camera", visible: true, ...glasLage() });
   }
   async function glasFenster(url) {
     const u = url + (url.includes("?") ? "&" : "?") + "glas=1";

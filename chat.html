@@ -59,6 +59,14 @@
   footer button.k { background:transparent; color:#0f766e; font-size:21px; width:34px; }
   #aufnahme { flex:1; display:none; align-items:center; gap:8px; font-size:15px; color:#b91c1c; padding:0 6px; height:40px; }
   .fehler { color:#b91c1c; font-size:13px; padding:6px 14px; }
+  /* 📁 Mandanten-Schild + 📌 Aufgabe (24.10.2026, Ideen 5 + 6) */
+  .mdt { display:inline-block; white-space:nowrap; background:rgba(13,148,136,.16); color:inherit; border-radius:6px; padding:0 5px; text-decoration:none; font-weight:600; }
+  .meins .mdt { background:rgba(255,255,255,.22); } a.mdt { text-decoration:underline; text-underline-offset:2px; }
+  .aufg { font-size:11.5px; color:#0f766e; margin:-1px 0 4px; } .meins ~ .aufg { align-self:flex-end; } .seins ~ .aufg { align-self:flex-start; }
+  #mdtVor { flex:none; display:none; border-top:1px solid #eef0f2; max-height:190px; overflow-y:auto; background:#fff; }
+  #mdtVor div { padding:8px 14px; font-size:14px; cursor:pointer; } #mdtVor div.akt, #mdtVor div:hover { background:#f0fdfa; } #mdtVor b { display:inline-block; min-width:56px; color:#0f766e; }
+  .karte select, .karte input[type=date] { width:100%; font:inherit; font-size:15px; padding:7px 9px; border:1px solid #d1d5db; border-radius:8px; margin-bottom:8px; background:#fff; color:inherit; }
+  .karte .fl { font-size:12.5px; color:#6b7280; margin:2px 0 3px; display:block; }
   /* Menüs, Fenster, Bild groß */
   .huelle { position:fixed; inset:0; background:rgba(0,0,0,.45); display:flex; align-items:center; justify-content:center; z-index:20; padding:16px; }
   .karte { background:#fff; color:#111827; border-radius:14px; padding:12px; width:100%; max-width:340px; max-height:85vh; overflow-y:auto; box-shadow:0 10px 30px rgba(0,0,0,.35); }
@@ -85,6 +93,8 @@
   html.glas footer button.k { color:#5eead4; } html.glas #leiste { background:rgba(94,234,212,.12); border-color:rgba(255,255,255,.15); color:#fff; }
   html.glas .gs i { border-color:#1f2937; } html.glas .reak span { background:rgba(255,255,255,.12); border-color:rgba(255,255,255,.2); color:#fff; } html.glas .reak span.ich { background:rgba(94,234,212,.3); border-color:#5eead4; }
   html.glas .karte { background:#1f2937; color:#f1f5f9; } html.glas .karte .pkt:hover, html.glas .emojis span:hover { background:rgba(255,255,255,.1); } html.glas .karte input[type=text] { background:rgba(0,0,0,.35); color:#fff; border-color:rgba(255,255,255,.25); }
+  html.glas #mdtVor { background:rgba(17,24,39,.95); border-color:rgba(255,255,255,.15); color:#fff; } html.glas #mdtVor div.akt, html.glas #mdtVor div:hover { background:rgba(94,234,212,.15); } html.glas #mdtVor b { color:#5eead4; }
+  html.glas .aufg { color:#5eead4; } html.glas .karte select, html.glas .karte input[type=date] { background:rgba(0,0,0,.35); color:#fff; border-color:rgba(255,255,255,.25); color-scheme:dark; } html.glas .karte .fl { color:rgba(255,255,255,.7); }
   html.glas .karte .knopf.hell { background:rgba(255,255,255,.12); color:#fff; } html.glas .klein { color:rgba(255,255,255,.7); } html.glas .karte .pkt.rot2 { color:#fca5a5; }
 </style>
 <script src="glas.js?v=1792772000"></script>
@@ -94,6 +104,7 @@
 <div class="suche" id="sucheBox"><input id="suche" type="search" placeholder="🔍 Suchen (Namen und Nachrichten)" autocomplete="off"></div>
 <main id="inhalt"><div class="leer">Lädt …</div></main>
 <div id="tippt"></div>
+<div id="mdtVor"></div>
 <div id="leiste"><div id="leisteText"></div><button id="leisteZu" aria-label="Abbrechen">✕</button></div>
 <footer id="fuss" style="display:none">
   <button class="k" id="anhang" aria-label="Datei anhängen" title="Bild oder Datei">📎</button>
@@ -280,11 +291,17 @@ function blase(n, d) {
   let inhalt = "";
   if (n.antwort) inhalt += `<span class="zit" data-spring="${esc(n.antwort.id)}"><b>${esc(n.antwort.vonName)}</b>${esc(n.antwort.text)}</span>`;
   if (n.datei) inhalt += dateiHtml(n.datei);
-  if (n.text) inhalt += esc(n.text);
+  if (n.text) inhalt += textHtml(n.text, d.mandanten);
   if (n.geloescht) inhalt = `<b>🗑 gelöscht von ${esc(n.geloescht.von)} · ${langZeit(n.geloescht.zeit)}</b> <span class="klein">(nur du siehst das)</span><br>` + inhalt;
   if (d.admin && Array.isArray(n.bearbeitet)) inhalt += n.bearbeitet.map(b => `<span class="alt">vorher: ${esc(b.alt)}</span>`).join("");
   const reak = n.reaktionen.length ? `<div class="reak">${n.reaktionen.map(r => `<span class="${r.ich ? "ich" : ""}" data-r="${esc(r.e)}" title="${esc(r.namen.join(", "))}">${r.e}${r.anzahl > 1 ? " " + r.anzahl : ""}</span>`).join("")}</div>` : "";
-  return `<div class="sb ${n.vonMir ? "meins" : "seins"}${n.geloescht ? " weg admin" : ""}" data-m="${esc(n.id)}">${wer}${inhalt}${fuss}</div>${reak}`;
+  const aufg = n.aufgabe ? `<div class="aufg">📌 Aufgabe ${esc(n.aufgabe.nummer || "")}${n.aufgabe.an ? " · " + esc(n.aufgabe.an.split(" ")[0]) : ""} <span style="opacity:.7">(von ${esc(n.aufgabe.von)})</span></div>` : "";
+  return `<div class="sb ${n.vonMir ? "meins" : "seins"}${n.geloescht ? " weg admin" : ""}" data-m="${esc(n.id)}">${wer}${inhalt}${fuss}</div>${reak}${aufg}`;
+}
+// #10234 → Mandanten-Schild; mit Recht als Link zur Akte im SW-Mandantenportal (neuer Tab)
+function textHtml(t, mdt) {
+  return esc(t).replace(/#(\d{3,7})\b/g, (g, nr) => { const m = mdt && mdt[nr]; if (!m) return g;
+    const inn = "📁 " + nr + " " + esc(m.name); return m.akte ? `<a class="mdt" href="${esc(m.akte)}" target="_blank" rel="noopener" title="Akte öffnen">${inn}</a>` : `<span class="mdt" title="Mandant">${inn}</span>`; });
 }
 function dateiHtml(f) {
   if (f.weg || !f.url) return `<span class="datei">📎 ${esc(f.name)} – nicht mehr vorhanden (nach 90 Tagen gelöscht)</span>`;
@@ -298,6 +315,7 @@ $("inhalt").addEventListener("click", e => {
   const t = e.target;
   if (t.closest("audio, a")) return;
   if (t.matches("img.bild")) { $("grossBild").src = t.src; $("gross").style.display = "flex"; return; }
+  if (t.closest(".mdt")) return;
   const z = t.closest("[data-spring]"); if (z) { zeigeNachricht(z.dataset.spring); return; }
   const r = t.closest("[data-r]"); if (r) { const id = r.closest(".w").dataset.id; reagieren(id, r.dataset.r); return; }
   const b = t.closest(".sb[data-m]"); if (b) menue(b.dataset.m);
@@ -308,15 +326,40 @@ function menue(id) {
   const darfLoeschen = !n.geloescht && (n.vonMir || daten.admin), darfAendern = n.vonMir && !n.geloescht && !!n.text;
   const h = fenster((n.geloescht ? "" : `<div class="emo">${daten.reaktionenErlaubt.map(e => `<span data-e="${e}" class="${n.reaktionen.some(r => r.e === e && r.ich) ? "ich" : ""}">${e}</span>`).join("")}</div>`)
     + (n.geloescht ? "" : '<button class="pkt" data-a="antw">↩️ Antworten</button>') + (n.text ? '<button class="pkt" data-a="kopie">📋 Text kopieren</button>' : "")
-    + (darfAendern ? '<button class="pkt" data-a="aend">✏️ Bearbeiten</button>' : "") + (darfLoeschen ? `<button class="pkt rot2" data-a="weg">🗑 Löschen${n.vonMir ? "" : " (als Admin)"}</button>` : "")
+    + (!n.geloescht && !n.aufgabe ? '<button class="pkt" data-a="aufg">📌 Als Aufgabe</button>' : "") + (darfAendern ? '<button class="pkt" data-a="aend">✏️ Bearbeiten</button>' : "") + (darfLoeschen ? `<button class="pkt rot2" data-a="weg">🗑 Löschen${n.vonMir ? "" : " (als Admin)"}</button>` : "")
     + `<div class="klein" style="padding:6px">${esc(n.vonName)} · ${langZeit(n.zeit)}${n.reaktionen.length ? "<br>" + n.reaktionen.map(r => r.e + " " + esc(r.namen.join(", "))).join("<br>") : ""}</div>`);
   h.querySelectorAll("[data-e]").forEach(s => s.onclick = () => { zu(); reagieren(id, s.dataset.e); });
   h.querySelectorAll("[data-a]").forEach(b => b.onclick = async () => { zu();
     if (b.dataset.a === "antw") { antwort = n; bearbeiten = null; leisteZeigen("↩️ <b>" + esc(n.vonName) + "</b>: " + esc(n.text || (n.datei ? "📎 " + n.datei.name : ""))); $("txt").focus(); }
+    if (b.dataset.a === "aufg") aufgabeFenster(n);
     if (b.dataset.a === "kopie") { try { await navigator.clipboard.writeText(n.text); } catch { /* kein Zugriff */ } }
     if (b.dataset.a === "aend") { bearbeiten = n; antwort = null; leisteZeigen("✏️ Nachricht bearbeiten"); $("txt").value = n.text; groesse(); knopf(); $("txt").focus(); }
     if (b.dataset.a === "weg") { if (!confirm("Nachricht für alle löschen?")) return; try { await post("/loeschen", { id }); verlaufLaden(false); } catch (e) { hinweis(e.message); } }
   });
+}
+// 📌 Nachricht wird Aufgabe (24.10.2026, Idee 5) → Aufgaben Box
+let aufgOpt = null;
+async function aufgabeFenster(n) {
+  try { aufgOpt = aufgOpt || await api("/aufgabe-optionen"); } catch (e) { return hinweis(e.message); }
+  const frist = new Date(Date.now() + 7 * 864e5).toLocaleDateString("sv-SE");
+  const titel = String(n.text || (n.datei ? n.datei.name : "")).replace(/\s+/g, " ").trim().slice(0, 150);
+  const h = fenster(`<h3>📌 Als Aufgabe anlegen</h3>
+    <span class="fl">Was ist zu tun?</span><input type="text" id="aTitel" maxlength="150" value="${esc(titel)}">
+    <span class="fl">Bearbeiter</span><select id="aWer">${aufgOpt.personen.map(p => `<option value="${esc(p.id)}"${p.id === aufgOpt.ich ? " selected" : ""}>${esc(p.name)}${p.id === aufgOpt.ich ? " (ich)" : ""}</option>`).join("")}</select>
+    <span class="fl">Frist</span><input type="date" id="aFrist" value="${frist}">
+    <span class="fl">Box</span><select id="aBox">${aufgOpt.boxen.map(b => `<option value="${esc(b.key)}"${b.key === "direkt" ? " selected" : ""}>${esc(b.icon + " " + b.name)}</option>`).join("")}</select>
+    <div class="klein">Die Nachricht steht in der Aufgabe. Steht ein #Mandant im Text, wird er übernommen.</div>
+    <div style="display:flex;gap:8px;justify-content:flex-end"><button class="knopf hell" id="aZu">Abbrechen</button><button class="knopf" id="aLos">Anlegen</button></div>
+    <div class="fehler" id="aFehler" style="padding:6px 0 0"></div>`);
+  h.querySelector("#aZu").onclick = zu;
+  h.querySelectorAll("input,select").forEach(x => x.addEventListener("keydown", e => e.stopPropagation()));
+  h.querySelector("#aLos").onclick = async () => {
+    const b = h.querySelector("#aLos"); b.disabled = true;
+    try { const r = await post("/aufgabe", { id: n.id, titel: h.querySelector("#aTitel").value, bearbeiter: h.querySelector("#aWer").value, frist: h.querySelector("#aFrist").value, box: h.querySelector("#aBox").value });
+      zu(); hinweis("📌 Aufgabe " + (r.nummer || "") + " angelegt" + (r.an ? " für " + r.an : "")); verlaufLaden(false); }
+    catch (e) { b.disabled = false; h.querySelector("#aFehler").textContent = e.message; }
+  };
+  setTimeout(() => h.querySelector("#aTitel").focus(), 50);
 }
 async function reagieren(id, emoji) { try { await post("/reaktion", { id, emoji }); verlaufLaden(false); } catch (e) { hinweis(e.message); } }
 function leisteZeigen(h) { $("leisteText").innerHTML = h; $("leiste").style.display = "flex"; }
@@ -361,7 +404,24 @@ function knopf() { if (rec) return; $("los").textContent = $("txt").value.trim()
 function groesse() { const t = $("txt"); t.style.height = "auto"; t.style.height = Math.min(120, t.scrollHeight) + "px"; }
 let tipptGemeldet = 0;
 $("los").onclick = () => rec ? aufnahmeSenden() : senden();
-$("txt").oninput = () => { groesse(); knopf(); if ($("txt").value && Date.now() - tipptGemeldet > 3500 && konv) { tipptGemeldet = Date.now(); post("/tippt", { k: konv }).catch(() => {}); } };
+$("txt").oninput = () => { groesse(); knopf(); mdtSuchen(); if ($("txt").value && Date.now() - tipptGemeldet > 3500 && konv) { tipptGemeldet = Date.now(); post("/tippt", { k: konv }).catch(() => {}); } };
+// 📁 „#“ + Nummer oder Name → Mandanten vorschlagen (24.10.2026, Idee 6); eingefügt wird „#10234 “
+let mdtWahl = [], mdtAkt = 0, mdtT = 0;
+function mdtWort() { const t = $("txt"), v = t.value.slice(0, t.selectionStart), m = v.match(/(^|\s)#([^\s#]{1,30})$/); return m ? { q: m[2], ab: v.length - m[2].length - 1 } : null; }
+function mdtZu() { mdtWahl = []; $("mdtVor").style.display = "none"; }
+function mdtSuchen() {
+  clearTimeout(mdtT); const w = mdtWort(); if (!w || /^\d{1,2}$/.test(w.q)) return mdtZu();
+  mdtT = setTimeout(async () => { try { const l = await api("/mandanten?q=" + encodeURIComponent(w.q)); const w2 = mdtWort(); if (!w2 || w2.q !== w.q) return;
+    mdtWahl = l; mdtAkt = 0; if (!l.length) return mdtZu(); mdtMalen(); $("mdtVor").style.display = "block"; } catch { mdtZu(); } }, 180);
+}
+function mdtMalen() { $("mdtVor").innerHTML = mdtWahl.map((m, i) => `<div data-i="${i}" class="${i === mdtAkt ? "akt" : ""}"><b>${esc(m.nr)}</b> ${esc(m.name)}</div>`).join(""); }
+function mdtNehmen(i) { const m = mdtWahl[i], w = mdtWort(); if (!m || !w) return mdtZu(); const t = $("txt"), rest = t.value.slice(t.selectionStart);
+  t.value = t.value.slice(0, w.ab) + "#" + m.nr + " " + rest.replace(/^\S*/, "").replace(/^\s/, ""); const pos = w.ab + m.nr.length + 2; t.setSelectionRange(pos, pos); mdtZu(); groesse(); knopf(); t.focus(); }
+$("mdtVor").addEventListener("mousedown", e => { const d = e.target.closest("[data-i]"); if (d) { e.preventDefault(); mdtNehmen(+d.dataset.i); } });
+$("txt").addEventListener("keydown", e => { if (!mdtWahl.length) return;
+  if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); mdtAkt = (mdtAkt + (e.key === "ArrowDown" ? 1 : mdtWahl.length - 1)) % mdtWahl.length; mdtMalen(); }
+  else if (e.key === "Enter" || e.key === "Tab") { e.preventDefault(); e.stopImmediatePropagation(); mdtNehmen(mdtAkt); }
+  else if (e.key === "Escape") { e.stopImmediatePropagation(); mdtZu(); } }, true);
 $("txt").onkeydown = e => { if (e.key === "Enter" && !e.shiftKey && !HANDY) { e.preventDefault(); if ($("txt").value.trim()) senden(); } if (e.key === "Escape") leisteZu(); e.stopPropagation(); };
 
 // ---- 📎 Bilder und Dateien (Knopf, Einfügen mit Strg+V, Hineinziehen) – max. 10 MB ----
