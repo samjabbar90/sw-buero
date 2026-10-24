@@ -23,7 +23,7 @@
   /* Gesprächs-Pille am PC (23.10.2026, Sam: Layout A/C „Fenster viel zu groß“): ?klein=1 – schmale Leiste unten, Annehmen schon in der Karte */
   html.klein, html.klein body { background:transparent; padding:0; overflow:hidden; }
   html.klein body { display:block; }
-  html.klein #inhalt { display:flex; align-items:center; gap:10px; background:rgba(22,24,29,.94); border:1px solid rgba(255,255,255,.14); border-radius:34px; padding:7px 8px 7px 12px; height:62px; text-align:left; }
+  html.klein #inhalt { position:fixed; left:0; right:0; bottom:0; display:flex; align-items:center; gap:10px; background:rgba(22,24,29,.94); border:1px solid rgba(255,255,255,.14); border-radius:34px; padding:7px 8px 7px 12px; height:62px; text-align:left; }
   html.klein .gs { width:40px; height:40px; font-size:14px; margin:0; flex:none; } html.klein h1 { font-size:14.5px; margin:0; } html.klein p { margin:0; font-size:12px; }
   html.klein .mitte { flex:1; min-width:0; } html.klein .mitte h1, html.klein .mitte p { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   html.klein .kn { width:40px; height:40px; border-radius:50%; border:0; font-size:17px; cursor:pointer; color:#fff; flex:none; background:rgba(255,255,255,.16); }
@@ -75,118 +75,172 @@ function gehe(url) { if (weg) return; weg = true; clearInterval(takt); freiton(f
   try { if (imBuero && typeof WA !== "undefined" && WA.nav) return WA.nav.goToPage(url); } catch (e) { /* weiter unten */ }
   try { window.top.location.href = url; } catch (e) { location.href = url; } }
 function zurueck() { if (KLEIN) return schliessen(); freiton(false); if (imBuero) { try { WA.player.state.saveVariable("swAktion", { was: /iPhone|Android|Mobile/i.test(navigator.userAgent) ? "handyListe" : "allesZu" /* 23.10.2026: am Handy nach dem Anruf zurück zur Übersicht */, t: Date.now() }, { public: false, persist: false }); } catch (e) {} } else location.href = "handy.html"; }
-// ---- Variante A (23.10.2026, Sam): Gespräch direkt hier, ohne Karte – Ton per WebRTC von Gerät zu Gerät (verschlüsselt).
+// ---- Gespräch direkt hier, ohne Karte (23.10.2026, Sam: Variante A) – Ton per WebRTC von Gerät zu Gerät (verschlüsselt).
 // Unser Server reicht nur die Verbindungsdaten weiter (/anruf/:id/signal). STUN (Cloudflare/Google) sieht nur die IP-Adressen, keinen Ton.
-// Nur wenn der Server modus „web“ meldet (Test Sam + Leutrim), sonst wie bisher der WorkAdventure-Gesprächsraum.
+// Gruppen-Anruf (24.10.2026, Sam: „＋ im Anruf und Alle anrufen im Gruppen-Chat“): je anderer Person eine eigene Verbindung (peers);
+// das Angebot macht immer die Person mit der kleineren ID (sonst würden beide gleichzeitig anbieten). ＋ holt jemanden dazu.
 const STUN = [{ urls: "stun:stun.cloudflare.com:3478" }, { urls: "stun:stun.l.google.com:19302" }];
-let pc = null, mikro = null, sigAb = 0, sigTakt = null, iceWarte = [], holt = false, gStart = 0, uhrTakt = null, sperre = null, stumm = false;
+let mikro = null, sigAb = 0, sigTakt = null, holt = false, gStart = 0, uhrTakt = null, sperre = null, stumm = false, laeuftUI = false, ICH = "", TN = [];
+const peers = new Map(); // id → { pc, iceWarte, ton (audio), angeboten }
 async function mikroHolen() { if (!mikro) { try { if (navigator.audioSession && !KLEIN) navigator.audioSession.type = "play-and-record"; } catch (e) { /* alt */ } } if (!mikro) mikro = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false }); return mikro; }
-const signal = d => fetch(B + "/" + encodeURIComponent(ID) + "/signal", { method: "POST", headers: H(), body: JSON.stringify({ d }) }).catch(() => {});
+const signal = (an, d) => fetch(B + "/" + encodeURIComponent(ID) + "/signal", { method: "POST", headers: H(), body: JSON.stringify({ an, d }) }).catch(() => {});
+const vname = n => String(n || "").split(/\s+/)[0];
+const tnText = () => { const andere = TN.filter(t => !t.ich && (t.status === "drin" || t.status === "klingelt"));
+  return andere.map(t => vname(t.name) + (t.status === "klingelt" ? " (klingelt)" : "")).join(", ") || "allein im Gespräch"; };
 function gespraechUI(a) {
-  if (KLEIN) $("inhalt").innerHTML = `<div class="gs">${esc(kuerzel(a.mit))}</div><div class="mitte"><h1>${esc(a.mit)} · <span id="zust">verbinde …</span></h1><p id="diagT"></p></div><audio id="ton" autoplay playsinline></audio>
-      <button class="kn" id="tonAn" hidden title="Tippen zum Hören">🔊</button><button class="kn" id="stumm" title="Stumm">🎙</button><button class="kn nein" id="auflegen" title="Auflegen">📵</button><div class="fe" id="fe" hidden></div>`;
-  else $("inhalt").innerHTML = `<div class="gs">${esc(kuerzel(a.mit))}</div><h1>${esc(a.mit)}</h1><p id="zust">Verbinde …</p><div id="diagT" style="margin:-18px 0 18px;font-size:12.5px;opacity:.8"></div><audio id="ton" autoplay playsinline></audio>
-    <button id="tonAn" hidden style="margin:-12px 0 20px;border:0;border-radius:12px;padding:10px 16px;font:inherit;font-weight:700;background:#fff;color:#0f766e">🔊 Tippen zum Hören</button>
-    <div class="knoepfe"><div><button id="stumm" style="background:rgba(255,255,255,.2)">🎙</button><small id="stummT">Stumm</small></div><div><button id="laut" style="background:rgba(255,255,255,.2)">🔈</button><small>Lautsprecher</small></div><div><button class="nein" id="auflegen">📵</button><small>Auflegen</small></div></div><div class="fe" id="fe"></div>`;
+  laeuftUI = true;
+  if (KLEIN) $("inhalt").innerHTML = `<div class="gs" id="gsK">${a.gruppe ? "👥" : esc(kuerzel(a.mit))}</div><div class="mitte"><h1><span id="tnK">${esc(a.mit)}</span> · <span id="zust">verbinde …</span></h1><p id="diagT"></p></div><div id="toene" hidden></div>
+      <button class="kn" id="tonAn" hidden title="Tippen zum Hören">🔊</button><button class="kn" id="dazu" title="Jemanden dazuholen">＋</button><button class="kn" id="stumm" title="Stumm">🎙</button><button class="kn nein" id="auflegen" title="Auflegen">📵</button><div class="fe" id="fe" hidden></div>`;
+  else $("inhalt").innerHTML = `<div class="gs">${a.gruppe ? "👥" : esc(kuerzel(a.mit))}</div><h1 id="tnG">${esc(a.gruppe || a.mit)}</h1><p id="zust">Verbinde …</p><div id="diagT" style="margin:-18px 0 6px;font-size:12.5px;opacity:.8"></div>
+    <div id="tnListe" style="font-size:13px;opacity:.9;margin:0 0 18px"></div><div id="toene" hidden></div>
+    <button id="tonAn" hidden style="margin:-6px 0 20px;border:0;border-radius:12px;padding:10px 16px;font:inherit;font-weight:700;background:#fff;color:#0f766e">🔊 Tippen zum Hören</button>
+    <div class="knoepfe"><div><button id="stumm" style="background:rgba(255,255,255,.2)">🎙</button><small id="stummT">Stumm</small></div><div><button id="dazu" style="background:rgba(255,255,255,.2)">＋</button><small>Dazuholen</small></div><div><button id="laut" style="background:rgba(255,255,255,.2)">🔈</button><small>Lautsprecher</small></div><div><button class="nein" id="auflegen">📵</button><small>Auflegen</small></div></div><div class="fe" id="fe"></div>`;
   if ($("laut")) $("laut").onclick = () => { laut = !laut; ausgabe(); $("laut").textContent = laut ? "🔊" : "🔈"; $("laut").style.background = laut ? "#fff" : "rgba(255,255,255,.2)"; $("laut").style.color = laut ? "#0f766e" : "#fff"; };
-  $("tonAn").onclick = () => { $("ton").play().then(() => { $("tonAn").hidden = true; tonFehler = ""; }).catch(() => {}); };
+  $("tonAn").onclick = () => { Promise.all([...peers.values()].map(p => p.ton.play())).then(() => { $("tonAn").hidden = true; tonFehler = ""; }).catch(() => {}); };
   $("stumm").onclick = () => { stumm = !stumm; if (mikro) mikro.getAudioTracks().forEach(t => { t.enabled = !stumm; }); $("stumm").textContent = stumm ? "🔇" : "🎙"; if ($("stummT")) $("stummT").textContent = stumm ? "Stumm aus" : "Stumm"; $("stumm").style.background = stumm ? "#f59e0b" : "rgba(255,255,255,.2)"; };
   $("auflegen").onclick = async () => { gespraechEnde(); try { malen(await api("/" + ID + "/ende", { method: "POST", body: "{}" })); } catch (e) { zurueck(); } };
+  $("dazu").onclick = dazuAuswahl;
+  tnZeigen();
 }
+function tnZeigen() {
+  const t = tnText(); if ($("tnK")) $("tnK").textContent = t;
+  // Überschrift: Gruppe bleibt, sonst die Person(en), die gerade drin sind
+  const drinN = TN.filter(x => !x.ich && x.status === "drin").map(x => x.name); if ($("tnG") && !(AKTUELL && AKTUELL.gruppe) && drinN.length) $("tnG").textContent = drinN.length > 1 ? drinN.map(vname).join(", ") : drinN[0]; if ($("tnListe")) $("tnListe").textContent = TN.filter(x => !x.ich && ["drin", "klingelt"].includes(x.status)).length > 1 || (AKTUELL && AKTUELL.gruppe) ? "👥 " + t : (TN.some(x => x.status === "klingelt" && !x.ich) ? t : "");
+}
+// ＋ Dazuholen: Liste der Kollegen (ohne die, die schon dabei sind); in der Pille wird das Fenster dafür größer
+let dazuOffen = false;
+async function fensterHoehe(px) { if (!KLEIN) return; try { const w = (await WA.ui.website.getAll()).find(x => String(x.url || "").split("#")[0] === START); if (w && w.size) w.size.height = px + "px"; } catch (e) { /* alt */ } }
+async function dazuAuswahl() {
+  if (dazuOffen) return dazuZu(); dazuOffen = true;
+  let leute = []; try { const r = await fetch("https://swdigitaltest.de/buero-praesenz/chat/personen", { headers: H() }); leute = await r.json(); if (!Array.isArray(leute)) leute = []; } catch (e) { leute = []; }
+  const dabei = new Set(TN.filter(t => ["drin", "klingelt"].includes(t.status)).map(t => t.id)), frei = leute.filter(p => !dabei.has(p.id));
+  const box = document.createElement("div"); box.id = "dazuBox";
+  box.style.cssText = KLEIN ? "position:fixed;left:0;right:0;bottom:70px;max-height:220px;overflow:auto;background:rgba(22,24,29,.97);border:1px solid rgba(255,255,255,.14);border-radius:14px;padding:6px;text-align:left"
+    : "margin:14px auto 0;max-width:300px;max-height:240px;overflow:auto;background:rgba(0,0,0,.25);border-radius:12px;padding:6px;text-align:left";
+  box.innerHTML = '<div style="font-size:12px;opacity:.75;padding:4px 6px">Wen dazuholen?</div>' + (frei.length ? frei.map(p => `<button data-p="${esc(p.id)}" style="display:flex;width:100%;align-items:center;gap:8px;border:0;background:none;color:#fff;font:inherit;font-size:14px;padding:7px 6px;border-radius:8px;cursor:pointer;text-align:left">
+    <span style="width:26px;height:26px;border-radius:50%;background:#5DCAA5 center/cover no-repeat;${p.foto ? `background-image:url('${esc(p.foto)}')` : ""};color:#04342C;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none">${p.foto ? "" : esc(kuerzel(p.name))}</span>${esc(p.name)}<span style="margin-left:auto;color:#5eead4">＋</span></button>`).join("") : '<div style="padding:6px;font-size:13px">Niemand weiter da.</div>');
+  (KLEIN ? document.body : $("inhalt")).appendChild(box); if (KLEIN) await fensterHoehe(300);
+  box.querySelectorAll("[data-p]").forEach(b => b.onclick = async () => { b.disabled = true;
+    try { const r = await fetch(B + "/" + encodeURIComponent(ID) + "/dazu", { method: "POST", headers: H(), body: JSON.stringify({ an: b.dataset.p }) }); const d = await r.json().catch(() => ({}));
+      if (!r.ok) { b.lastElementChild.textContent = d.besetzt ? "im Gespräch" : "geht nicht"; return; }
+      TN = d.teilnehmer || TN; tnZeigen(); dazuZu(); } catch (e) { b.disabled = false; } });
+}
+function dazuZu() { dazuOffen = false; const x = $("dazuBox"); if (x) x.remove(); fensterHoehe(64); }
 // Hörer / Lautsprecher am Handy (23.10.2026, Sam: „direkt auf laut – muss normal sein, Lautsprecher wählbar“). Im Browser nur eingeschränkt
 // steuerbar: iPhone über die Audio-Sitzung (Safari ab 16.4), Android über die Ausgabe-Geräte – wo beides fehlt, bleibt es, wie das Gerät will.
 let laut = false;
 async function ausgabe() {
   try { if (navigator.audioSession) navigator.audioSession.type = laut ? "playback" : "play-and-record"; } catch (e) { /* nicht unterstützt */ }
-  const el = $("ton"); if (!el || !el.setSinkId) return;
-  try { const g = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === "audiooutput");
-    const z = g.find(d => (laut ? /speaker|lautsprecher/i : /earpiece|hörer|receiver|telefon/i).test(d.label)); if (z) await el.setSinkId(z.deviceId); } catch (e) { /* nicht unterstützt */ }
+  for (const p of peers.values()) { const el = p.ton; if (!el || !el.setSinkId) continue;
+    try { const g = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === "audiooutput");
+      const z = g.find(d => (laut ? /speaker|lautsprecher/i : /earpiece|hörer|receiver|telefon/i).test(d.label)); if (z) await el.setSinkId(z.deviceId); } catch (e) { /* nicht unterstützt */ } }
 }
 function zustand() {
-  const z = pc ? pc.connectionState : "closed", el = $("zust"); if (!el) return;
-  if (z === "connected") { if (!gStart) { gStart = Date.now(); uhrTakt = setInterval(() => { const s = Math.floor((Date.now() - gStart) / 1000); if ($("zust")) $("zust").textContent = "🟢 " + Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); }, 1000); } }
-  else if (z === "disconnected") el.textContent = "Verbindung wackelt …";
-  else if (z === "failed") el.textContent = "⚠️ Keine Verbindung möglich (Netz blockiert) – bitte über WLAN nochmal versuchen";
+  const el = $("zust"); if (!el) return; const st = [...peers.values()].map(p => p.pc.connectionState);
+  if (st.includes("connected")) { if (!gStart) { gStart = Date.now(); uhrTakt = setInterval(() => { const s = Math.floor((Date.now() - gStart) / 1000); if ($("zust")) $("zust").textContent = "🟢 " + Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); }, 1000); } }
+  else if (st.includes("disconnected")) el.textContent = "Verbindung wackelt …";
+  else if (st.length && st.every(s => s === "failed")) el.textContent = "⚠️ Keine Verbindung möglich (Netz blockiert) – bitte über WLAN nochmal versuchen";
+}
+function peerHolen(id) {
+  let p = peers.get(id); if (p) return p;
+  const pc = new RTCPeerConnection({ iceServers: STUN }), ton = document.createElement("audio"); ton.autoplay = true; ton.playsInline = true; ($("toene") || document.body).appendChild(ton);
+  p = { pc, ton, iceWarte: [], angeboten: false }; peers.set(id, p);
+  if (mikro) mikro.getTracks().forEach(t => pc.addTrack(t, mikro)); else pc.addTransceiver("audio", { direction: "recvonly" });
+  pc.ontrack = e => { ton.srcObject = e.streams[0] || new MediaStream([e.track]); ton.play().then(() => { if ($("tonAn")) $("tonAn").hidden = true; tonFehler = ""; }).catch(er => { tonFehler = "blockiert:" + (er && er.name); if ($("tonAn")) $("tonAn").hidden = false; }); };
+  pc.onicecandidate = e => { if (e.candidate) signal(id, { ice: e.candidate.toJSON() }); };
+  pc.onconnectionstatechange = zustand;
+  if (laut) ausgabe();
+  return p;
+}
+function peerWeg(id) { const p = peers.get(id); if (!p) return; try { p.pc.close(); } catch (e) {} try { p.ton.remove(); } catch (e) {} peers.delete(id); zustand(); }
+// mit allen verbinden, die drin sind; wer gegangen ist, wird getrennt
+async function peersAbgleichen() {
+  if (!sigTakt) return;
+  const drin = TN.filter(t => !t.ich && t.status === "drin").map(t => t.id);
+  for (const id of [...peers.keys()]) if (!drin.includes(id)) peerWeg(id);
+  for (const id of drin) { const p = peerHolen(id);
+    if (ICH < id && !p.angeboten) { p.angeboten = true; const o = await p.pc.createOffer(); await p.pc.setLocalDescription(o); signal(id, { sdp: p.pc.localDescription.toJSON() }); } }
+  tnZeigen();
 }
 async function gespraechStarten(a) {
-  if (pc) return;
-  AKTUELL = a;
-  try { await mikroHolen(); } catch (e) { mikroFehler = String(e && e.name || e).slice(0, 60); $("fe").textContent = "🎙 Kein Zugriff aufs Mikrofon – bitte im Browser erlauben."; }
-  pc = new RTCPeerConnection({ iceServers: STUN });
-  if (mikro) mikro.getTracks().forEach(t => pc.addTrack(t, mikro)); else pc.addTransceiver("audio", { direction: "recvonly" });
-  pc.ontrack = e => { const el = $("ton"); if (!el) return; el.srcObject = e.streams[0] || new MediaStream([e.track]); el.play().then(() => { $("tonAn").hidden = true; tonFehler = ""; }).catch(e => { tonFehler = "blockiert:" + (e && e.name); $("tonAn").hidden = false; }); };
-  pc.onicecandidate = e => { if (e.candidate) signal({ ice: e.candidate.toJSON() }); };
-  pc.onconnectionstatechange = zustand;
+  if (sigTakt) return;
+  AKTUELL = a; ICH = a.ich;
+  try { await mikroHolen(); } catch (e) { mikroFehler = String(e && e.name || e).slice(0, 60); if ($("fe")) $("fe").textContent = "🎙 Kein Zugriff aufs Mikrofon – bitte im Browser erlauben."; }
   sigTakt = setInterval(abholen, 700); diagN = 0; diagTakt = setInterval(diag, 4000);
-  if (a.rolle === "von") { const o = await pc.createOffer(); await pc.setLocalDescription(o); signal({ sdp: pc.localDescription.toJSON() }); }
-  abholen();
+  await peersAbgleichen(); abholen();
   try { sperre = await navigator.wakeLock.request("screen"); } catch (e) { /* nicht überall */ } // Bildschirm bleibt an – sonst bricht iOS ab
 }
 async function abholen() {
-  if (holt || !pc) return; holt = true;
+  if (holt || !sigTakt) return; holt = true;
   try {
     const d = await (await fetch(B + "/" + encodeURIComponent(ID) + "/signal?ab=" + sigAb, { headers: H() })).json(); sigAb = d.bis || sigAb;
-    for (const m of d.neu || []) { if (!m || !pc) continue;
-      if (m.sdp) { await pc.setRemoteDescription(m.sdp); for (const c of iceWarte.splice(0)) await pc.addIceCandidate(c).catch(() => {});
-        if (m.sdp.type === "offer") { const an = await pc.createAnswer(); await pc.setLocalDescription(an); signal({ sdp: pc.localDescription.toJSON() }); } }
-      else if (m.ice) { if (pc.remoteDescription) await pc.addIceCandidate(m.ice).catch(() => {}); else iceWarte.push(m.ice); } }
+    if (Array.isArray(d.teilnehmer)) { const namen = {}; TN.forEach(t => { namen[t.id] = t.name; }); TN = d.teilnehmer.map(t => ({ ...t, name: namen[t.id] || t.name || "?", ich: t.id === ICH })); }
+    for (const m of d.neu || []) { if (!m || !m.d || !sigTakt) continue; const von = m.von, x = m.d;
+      if (!von) continue; const p = peerHolen(von);
+      if (x.sdp) { await p.pc.setRemoteDescription(x.sdp); for (const c of p.iceWarte.splice(0)) await p.pc.addIceCandidate(c).catch(() => {});
+        if (x.sdp.type === "offer") { const an = await p.pc.createAnswer(); await p.pc.setLocalDescription(an); signal(von, { sdp: p.pc.localDescription.toJSON() }); } }
+      else if (x.ice) { if (p.pc.remoteDescription) await p.pc.addIceCandidate(x.ice).catch(() => {}); else p.iceWarte.push(x.ice); } }
+    await peersAbgleichen();
     if (["beendet", "abgelehnt", "verpasst"].includes(d.status)) { gespraechEnde(); laden(); }
   } catch (e) { /* nächstes Mal */ }
   holt = false;
 }
-// Diagnose (23.10.2026, „wir hören uns nicht“): alle 4 s die ersten 2 Minuten Zustand + Netzwege + Bytes an den Server (pm2-Log)
+// Diagnose (23.10.2026, „wir hören uns nicht“): alle 4 s die ersten 2 Minuten Zustand + Netzwege + Bytes an den Server (pm2-Log) – je Verbindung
 let diagTakt = null, diagN = 0, mikroFehler = "", tonFehler = "", bytesVorher = 0;
 async function diag() {
-  if (!pc || ++diagN > 30) { clearInterval(diagTakt); diagTakt = null; return; }
-  const d = { rolle: AKTUELL && AKTUELL.rolle, handy: /iPhone|Android|Mobile/i.test(navigator.userAgent), mikro: mikro ? "ok" : (mikroFehler || "fehlt"), ton: tonFehler || "ok",
-    pc: pc.connectionState, ice: pc.iceConnectionState, sig: pc.signalingState, lokal: [], fern: [], paar: "", rein: 0, raus: 0 };
-  try { const st = await pc.getStats(); const kand = {};
-    st.forEach(r => { if (r.type === "local-candidate") { kand[r.id] = r.candidateType + "/" + r.protocol; d.lokal.push(r.candidateType + "/" + r.protocol); }
-      if (r.type === "remote-candidate") { kand[r.id] = r.candidateType + "/" + r.protocol; d.fern.push(r.candidateType + "/" + r.protocol); }
-      if (r.type === "inbound-rtp" && r.kind === "audio") d.rein = r.bytesReceived || 0; if (r.type === "outbound-rtp" && r.kind === "audio") d.raus = r.bytesSent || 0; });
-    st.forEach(r => { if (r.type === "candidate-pair" && r.state === "succeeded" && r.nominated) d.paar = (kand[r.localCandidateId] || "?") + " ↔ " + (kand[r.remoteCandidateId] || "?"); });
-  } catch (e) { d.stats = String(e).slice(0, 80); }
-  d.lokal = [...new Set(d.lokal)]; d.fern = [...new Set(d.fern)];
-  if ($("zust") && pc.connectionState === "connected") { const kommt = d.rein > bytesVorher; bytesVorher = d.rein; const t = $("diagT"); if (t) t.textContent = kommt ? "Ton kommt an ✓" : "⚠️ Es kommt kein Ton an"; }
-  fetch(B + "/" + encodeURIComponent(ID) + "/diag", { method: "POST", headers: H(), body: JSON.stringify(d) }).catch(() => {});
+  if (!peers.size || ++diagN > 30) { if (diagN > 30) { clearInterval(diagTakt); diagTakt = null; } return; }
+  const v = []; let rein = 0;
+  for (const [id, p] of peers) { const x = { mit: id.slice(0, 4), pc: p.pc.connectionState, paar: "", rein: 0, raus: 0 };
+    try { const st = await p.pc.getStats(), kand = {};
+      st.forEach(r => { if (r.type === "local-candidate" || r.type === "remote-candidate") kand[r.id] = r.candidateType + "/" + r.protocol; if (r.type === "inbound-rtp" && r.kind === "audio") x.rein = r.bytesReceived || 0; if (r.type === "outbound-rtp" && r.kind === "audio") x.raus = r.bytesSent || 0; });
+      st.forEach(r => { if (r.type === "candidate-pair" && r.state === "succeeded" && r.nominated) x.paar = (kand[r.localCandidateId] || "?") + " ↔ " + (kand[r.remoteCandidateId] || "?"); });
+    } catch (e) { x.stats = String(e).slice(0, 60); }
+    rein += x.rein; v.push(x); }
+  if ($("zust") && v.some(x => x.pc === "connected")) { const kommt = rein > bytesVorher; bytesVorher = rein; const t = $("diagT"); if (t) t.textContent = kommt ? "Ton kommt an ✓" : "⚠️ Es kommt kein Ton an"; }
+  fetch(B + "/" + encodeURIComponent(ID) + "/diag", { method: "POST", headers: H(), body: JSON.stringify({ handy: /iPhone|Android|Mobile/i.test(navigator.userAgent), mikro: mikro ? "ok" : (mikroFehler || "fehlt"), ton: tonFehler || "ok", verbindungen: v }) }).catch(() => {});
 }
 let AKTUELL = null;
 function gespraechEnde() { if (diagTakt) { diag(); clearInterval(diagTakt); diagTakt = null; }
-  clearInterval(sigTakt); clearInterval(uhrTakt); sigTakt = uhrTakt = null;
-  try { pc && pc.close(); } catch (e) {} pc = null;
+  clearInterval(sigTakt); clearInterval(uhrTakt); sigTakt = uhrTakt = null; laeuftUI = false;
+  for (const id of [...peers.keys()]) peerWeg(id);
   try { mikro && mikro.getTracks().forEach(t => t.stop()); } catch (e) {} mikro = null;
   try { sperre && sperre.release(); } catch (e) {} sperre = null;
 }
 let letzterStatus = "";
+const ENDE = ["beendet", "abgelehnt", "verpasst"];
 function malen(a) {
-  letzterStatus = a.status;
-  if (a.modus === "web" && a.status === "laeuft") { freiton(false); if (!pc) { gespraechUI(a); gespraechStarten(a); } return; }
-  if (pc) gespraechEnde();
+  letzterStatus = a.status; if (a.teilnehmer) { TN = a.teilnehmer; ICH = a.ich || ICH; }
+  const mein = a.meinStatus || (a.rolle === "an" && a.status === "klingelt" ? "klingelt" : "drin");
+  // im Gespräch: ich bin drin und mindestens eine weitere Person ist drin (läuft) – Liste/Verbindungen nur auffrischen
+  if (a.modus === "web" && mein === "drin" && a.status === "laeuft") { freiton(false); AKTUELL = a; if (!laeuftUI) { gespraechUI(a); gespraechStarten(a); } else { tnZeigen(); peersAbgleichen(); } return; }
+  if (laeuftUI && !ENDE.includes(a.status) && mein === "drin") { tnZeigen(); return; } // läuft weiter (z. B. nur noch Klingeln bei anderen)
+  if (sigTakt || laeuftUI) gespraechEnde();
+  const ichKlingle = mein === "klingelt" && !ENDE.includes(a.status), ichWarte = mein === "drin" && a.status === "klingelt";
   // Mikrofon-Frage schon beim Klingeln – danach darf das iPhone auch den Freiton spielen (vorher blockiert es Töne)
-  if (a.modus === "web" && a.status === "klingelt" && a.rolle === "von" && !mikro) mikroHolen().then(() => { if (freiTakt && !imBuero) { try { tonCtx && tonCtx.resume(); } catch (e) {} freiEinmal(); } }).catch(() => {});
-  if (KLEIN) return malenKlein(a);
-  document.body.className = a.status === "klingelt" ? "klingelt" : "";
-  freiton(a.status === "klingelt" && a.rolle !== "an" && !weg);
-  const kopf = `<div class="gs">${esc(kuerzel(a.mit))}</div>`;
-  if (a.status === "laeuft") { $("inhalt").innerHTML = kopf + `<h1>${esc(a.mit)}</h1><p>Verbinde mit dem Gesprächsraum …</p>`; return gehe(ziel(a)); }
-  if (a.status === "klingelt" && a.rolle === "an") $("inhalt").innerHTML = kopf + `<h1>${esc(a.von)}</h1><p>ruft an …</p><div class="knoepfe"><div><button class="nein" id="nein">✕</button><small>Ablehnen</small></div><div><button class="ja" id="ja">📞</button><small>Annehmen</small></div></div><div class="fe" id="fe"></div>`;
-  else if (a.status === "klingelt") $("inhalt").innerHTML = kopf + `<h1>${esc(a.an)}</h1><p>Es klingelt …</p><div class="knoepfe"><div><button class="nein" id="nein">✕</button><small>Auflegen</small></div></div>`;
-  else { $("inhalt").innerHTML = kopf + `<h1>${esc(a.mit)}</h1><p>${a.status === "abgelehnt" ? (a.rolle === "von" ? "hat gerade keine Zeit." : "Abgelehnt.") : a.status === "verpasst" ? "nicht erreicht." : "Gespräch beendet."}</p><div class="knoepfe"><div><button class="nein" id="zu" style="background:rgba(255,255,255,.2)">✓</button><small>Schließen</small></div></div>`;
+  if (a.modus === "web" && ichWarte && !mikro) mikroHolen().then(() => { if (freiTakt && !imBuero) { try { tonCtx && tonCtx.resume(); } catch (e) {} freiEinmal(); } }).catch(() => {});
+  if (KLEIN) return malenKlein(a, ichKlingle, ichWarte);
+  document.body.className = ichKlingle || ichWarte ? "klingelt" : "";
+  freiton(ichWarte && !weg);
+  const kopf = `<div class="gs">${esc(kuerzel(ichKlingle ? a.von : a.mit))}</div>`;
+  if (a.modus !== "web" && a.status === "laeuft") { $("inhalt").innerHTML = kopf + `<h1>${esc(a.mit)}</h1><p>Verbinde mit dem Gesprächsraum …</p>`; return gehe(ziel(a)); }
+  if (ichKlingle) $("inhalt").innerHTML = kopf + `<h1>${esc(a.von)}</h1><p>${a.gruppe ? "ruft an · 👥 " + esc(a.gruppe) : "ruft an …"}</p><div class="knoepfe"><div><button class="nein" id="nein">✕</button><small>Ablehnen</small></div><div><button class="ja" id="ja">📞</button><small>Annehmen</small></div></div><div class="fe" id="fe"></div>`;
+  else if (ichWarte) $("inhalt").innerHTML = kopf + `<h1>${esc(a.an)}</h1><p>Es klingelt …</p><div class="knoepfe"><div><button class="nein" id="nein">✕</button><small>Auflegen</small></div></div>`;
+  else { $("inhalt").innerHTML = kopf + `<h1>${esc(a.mit)}</h1><p>${a.status === "abgelehnt" ? (a.rolle === "von" ? (a.gruppe ? "Keiner hat Zeit." : "hat gerade keine Zeit.") : "Abgelehnt.") : a.status === "verpasst" ? "nicht erreicht." : "Gespräch beendet."}</p><div class="knoepfe"><div><button class="nein" id="zu" style="background:rgba(255,255,255,.2)">✓</button><small>Schließen</small></div></div>`;
     clearInterval(takt); $("zu").onclick = zurueck; return; }
   if ($("ja")) $("ja").onclick = async () => { try { if (a.modus === "web") await mikroHolen().catch(() => {}); /* Mikrofon im Tipp freigeben (iPhone) */ malen(await api("/" + ID + "/annehmen", { method: "POST", body: "{}" })); } catch (e) { $("fe").textContent = e.message; } };
   if ($("nein")) $("nein").onclick = async () => { try { malen(await api("/" + ID + "/ablehnen", { method: "POST", body: "{}" })); } catch (e) { zurueck(); } };
 }
 // Pille: klingelt (Anrufer) · nimmt automatisch an (Angerufener hat in der Karte „Annehmen“ getippt) · Ende → nach 3 s zu
-function malenKlein(a) {
-  document.body.className = ""; freiton(a.status === "klingelt" && a.rolle !== "an" && !weg);
-  const kopf = `<div class="gs">${esc(kuerzel(a.mit))}</div>`;
-  if (a.status === "klingelt" && a.rolle === "an") {
+function malenKlein(a, ichKlingle, ichWarte) {
+  document.body.className = ""; freiton(ichWarte && !weg);
+  const kopf = `<div class="gs">${esc(kuerzel(ichKlingle ? a.von : a.mit))}</div>`;
+  if (ichKlingle) {
     if (AUTO && !angenommen) { angenommen = true; $("inhalt").innerHTML = kopf + `<div class="mitte"><h1>${esc(a.von)}</h1><p>verbinde …</p></div>`;
       mikroHolen().catch(() => {}).then(() => api("/" + ID + "/annehmen", { method: "POST", body: "{}" })).then(malen).catch(e => { $("inhalt").innerHTML = kopf + `<div class="mitte"><h1>${esc(a.von)}</h1><p>${esc(e.message)}</p></div>`; setTimeout(schliessen, 2500); }); }
     return; }
-  if (a.status === "klingelt") { $("inhalt").innerHTML = kopf + `<div class="mitte"><h1>${esc(a.an)}</h1><p>📞 Es klingelt …</p></div><button class="kn nein" id="nein" title="Auflegen">📵</button>`;
+  if (ichWarte) { $("inhalt").innerHTML = kopf + `<div class="mitte"><h1>${esc(a.an)}</h1><p>📞 Es klingelt …</p></div><button class="kn nein" id="nein" title="Auflegen">📵</button>`;
     $("nein").onclick = async () => { try { malen(await api("/" + ID + "/ablehnen", { method: "POST", body: "{}" })); } catch (e) { schliessen(); } }; return; }
-  $("inhalt").innerHTML = kopf + `<div class="mitte"><h1>${esc(a.mit)}</h1><p>${a.status === "abgelehnt" ? (a.rolle === "von" ? "hat gerade keine Zeit." : "Abgelehnt.") : a.status === "verpasst" ? "nicht erreicht." : "Gespräch beendet."}</p></div><button class="kn" id="zu" title="Schließen">✕</button>`;
+  $("inhalt").innerHTML = kopf + `<div class="mitte"><h1>${esc(a.mit)}</h1><p>${a.status === "abgelehnt" ? (a.rolle === "von" ? (a.gruppe ? "Keiner hat Zeit." : "hat gerade keine Zeit.") : "Abgelehnt.") : a.status === "verpasst" ? "nicht erreicht." : "Gespräch beendet."}</p></div><button class="kn" id="zu" title="Schließen">✕</button>`;
   clearInterval(takt); $("zu").onclick = schliessen; setTimeout(schliessen, 3000);
 }
 async function laden() { try { malen(await api("/" + encodeURIComponent(ID))); } catch (e) { clearInterval(takt); $("inhalt").innerHTML = `<div class="gs">📵</div><h1>${esc(e.message)}</h1><p></p><div class="knoepfe"><div><button class="nein" id="zu" style="background:rgba(255,255,255,.2)">✓</button><small>Schließen</small></div></div>`; $("zu").onclick = zurueck; } }

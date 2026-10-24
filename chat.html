@@ -247,7 +247,7 @@ async function verlaufLaden(erstes) {
     const kb = (d.bild || "") + d.typ + (d.mit && d.mit.online ? 1 : 0); if ($("kopfBild").dataset.b !== kb) { $("kopfBild").dataset.b = kb; $("kopfBild").innerHTML = ava(d.bild, d.name, d.typ === "gruppe", d.mit && d.mit.online, true); }
     $("mitName").innerHTML = esc(d.name) + "<small>" + (d.typ === "gruppe" ? esc(d.mitglieder.map(m => m.name).join(", ")) : d.mit.imGespraech ? "📞 im Gespräch" : d.mit.online ? "im Büro" : "nicht im Büro") + "</small>";
     const kk = d.typ === "gruppe" ? "gr" : "dm"; if ($("kopfKnoepfe").dataset.t !== kk) { $("kopfKnoepfe").dataset.t = kk;
-      $("kopfKnoepfe").innerHTML = d.typ === "gruppe" ? '<button id="grMenue" title="Gruppe">⚙</button>' : '<button id="anrufen" aria-label="Anrufen" title="Anrufen">📞</button>';
+      $("kopfKnoepfe").innerHTML = d.typ === "gruppe" ? '<button id="anrufen" aria-label="Alle anrufen" title="Alle anrufen">📞</button> <button id="grMenue" title="Gruppe">⚙</button>' : '<button id="anrufen" aria-label="Anrufen" title="Anrufen">📞</button>'; // 24.10.2026: 📞 auch in Gruppen (alle anrufen)
       if ($("anrufen")) $("anrufen").onclick = anrufen; if ($("grMenue")) $("grMenue").onclick = gruppeMenue; }
     $("tippt").textContent = d.tippt.length ? d.tippt.join(", ") + (d.tippt.length > 1 ? " schreiben …" : " schreibt …") : "";
     zeichnen(d, erstes);
@@ -334,6 +334,9 @@ function rueckrufAngebot(ziel, an, text) {
   ziel.appendChild(d); return d;
 }
 async function anrufen() {
+  // 👥 Gruppen-Chat: „Alle anrufen“ (24.10.2026) – klingelt bei allen Mitgliedern, die frei sind
+  if (daten && daten.typ === "gruppe") { try { const r = await fetch("https://swdigitaltest.de/buero-praesenz/anruf/gruppe", { method: "POST", headers: H(), body: JSON.stringify({ k: daten.k }) }); const g = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(g.error || "Anruf geht gerade nicht"); clearInterval(takt); location.href = "anruf.html?id=" + encodeURIComponent(g.id) + mitS(); } catch (e) { hinweis("📞 " + e.message); } return; }
   if (!daten || !daten.mit) return;
   try { const r = await fetch("https://swdigitaltest.de/buero-praesenz/anruf/start", { method: "POST", headers: H(), body: JSON.stringify({ an: daten.mit.id }) }); const d = await r.json().catch(() => ({}));
     if (d.besetzt) { rueckrufAngebot($("verlauf") || $("inhalt"), d.an, d.error); $("inhalt").scrollTop = $("inhalt").scrollHeight; return; }
